@@ -35,12 +35,19 @@ listLayout.Padding = UDim.new(0,4)
 local selectedPlayer = nil
 
 local function refreshPlayers()
-    playerScroll:ClearAllChildren()
-    listLayout.Parent = playerScroll
+
+    -- apagar apenas botões antigos
+    for _,child in pairs(playerScroll:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
 
     for _,p in pairs(Players:GetPlayers()) do
         if p ~= plr then
-            local btn = Instance.new("TextButton", playerScroll)
+
+            local btn = Instance.new("TextButton")
+            btn.Parent = playerScroll
             btn.Size = UDim2.new(1,-4,0,28)
             btn.Text = p.Name
             btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
@@ -51,6 +58,7 @@ local function refreshPlayers()
                 selectedPlayer = p
                 title.Text = "Selected: "..p.Name
             end)
+
         end
     end
 
