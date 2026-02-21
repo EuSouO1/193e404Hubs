@@ -120,7 +120,6 @@ itemToggle.MouseButton1Click:Connect(function()
     itemToggle.Text = flingItem and "FlingItem ON" or "FlingItem OFF"
     itemToggle.BackgroundColor3 = flingItem and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
 end)
-
 -- fling
 local function flingLoop(target)
     local spin = 0
@@ -132,22 +131,31 @@ local function flingLoop(target)
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local thrp = target.Character:FindFirstChild("HumanoidRootPart")
         local thum = target.Character:FindFirstChildOfClass("Humanoid")
-        if not hrp or not thrp then break end
+        if not hrp or not thrp or not thum then break end
 
-        -- anti sit
-        if flingItem and thum and thum.Sit then
+        -- ===== VERIFICA SENTAR =====
+        if flingItem and thum.Sit then
+            -- joga você no void
             hrp.CFrame = hrp.CFrame - Vector3.new(0,2048,0)
+
+            -- para completamente
+            running = false
+            toggle.Text = "Fling OFF"
+            toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
             break
         end
 
+        -- ===== FLING ITEM =====
         if flingItem then
-            -- olhar para o alvo (modo item)
-            local pos = thrp.Position - (thrp.CFrame.LookVector * 2)
+            -- fica sempre olhando pro alvo
+            local pos = thrp.Position - (thrp.CFrame.LookVector * 2.5)
             hrp.CFrame = CFrame.new(pos, thrp.Position)
-            hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
-            hrp.AssemblyAngularVelocity = Vector3.new(0,0,0)
+
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+
         else
-            -- modo antigo
+            -- ===== FLING NORMAL =====
             spin += 45
             local radius = 2.2
             local pos = thrp.Position + Vector3.new(
@@ -164,7 +172,6 @@ local function flingLoop(target)
         RunService.Heartbeat:Wait()
     end
 end
-
 -- toggle principal
 toggle.MouseButton1Click:Connect(function()
     running = not running
