@@ -15,7 +15,7 @@ end
 
 --// GUI
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "PlayerHub"
+gui.Name = "TPHub"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
@@ -28,7 +28,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,32)
 title.BackgroundTransparency = 1
-title.Text = "Player Hub"
+title.Text = "TP Hub"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
