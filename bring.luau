@@ -1,13 +1,7 @@
 --// Player
 local plr = game.Players.LocalPlayer
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")
-
-local function getHum()
-    local char = plr.Character or plr.CharacterAdded:Wait()
-    return char:WaitForChild("Humanoid")
-end
 
 local function getHRP(char)
     return char and char:FindFirstChild("HumanoidRootPart")
@@ -32,7 +26,7 @@ title.Text = "TP Hub"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
--- scroll
+-- MAIN SCROLL
 local scroll = Instance.new("ScrollingFrame", frame)
 scroll.Size = UDim2.new(1,-10,1,-45)
 scroll.Position = UDim2.new(0,5,0,40)
@@ -42,84 +36,77 @@ scroll.ScrollBarThickness = 6
 scroll.CanvasSize = UDim2.new(0,0,0,0)
 
 local layout = Instance.new("UIListLayout", scroll)
-layout.Padding = UDim.new(0,6)
+layout.Padding = UDim.new(0,8)
 
 local function updateCanvas()
     task.wait()
-    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+10)
+    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+12)
 end
 
--- sections
-local function section(text)
-    local lbl = Instance.new("TextLabel",scroll)
-    lbl.Size = UDim2.new(1,-8,0,26)
-    lbl.BackgroundColor3 = Color3.fromRGB(20,20,20)
-    lbl.TextColor3 = Color3.new(1,1,1)
-    lbl.TextScaled = true
-    lbl.Text = text
-    updateCanvas()
-end
+-- ================= PLAYERS HEADER =================
+local playersTitle = Instance.new("TextLabel",scroll)
+playersTitle.Size = UDim2.new(1,-8,0,26)
+playersTitle.BackgroundColor3 = Color3.fromRGB(20,20,20)
+playersTitle.Text = "Players"
+playersTitle.TextColor3 = Color3.new(1,1,1)
+playersTitle.TextScaled = true
 
-local targetLabel = Instance.new("TextLabel")
-targetLabel.Size = UDim2.new(1,-8,0,24)
+local targetLabel = Instance.new("TextLabel",scroll)
+targetLabel.Size = UDim2.new(1,-8,0,22)
 targetLabel.BackgroundTransparency = 1
 targetLabel.TextColor3 = Color3.fromRGB(200,200,200)
 targetLabel.TextScaled = true
 targetLabel.Text = "Alvo: Nenhum"
-targetLabel.Parent = scroll
+
+-- PLAYER LIST CONTAINER
+local playersContainer = Instance.new("Frame",scroll)
+playersContainer.BackgroundTransparency = 1
+playersContainer.Size = UDim2.new(1,-8,0,0)
+
+local pLayout = Instance.new("UIListLayout",playersContainer)
+pLayout.Padding = UDim.new(0,4)
 
 local selectedPlayer=nil
-local onlyUnanchored=false
 
--- PLAYERS SECTION
-section("Players")
-targetLabel.Parent = scroll
-
-local function playerButton(p)
-    local btn = Instance.new("TextButton",scroll)
-    btn.Size = UDim2.new(1,-8,0,26)
-    btn.BackgroundColor3 = Color3.fromRGB(45,45,45)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.TextScaled = true
-    btn.Text = p.Name
-
-    btn.MouseButton1Click:Connect(function()
-        selectedPlayer=p
-        targetLabel.Text="Alvo: "..p.Name
-    end)
-    updateCanvas()
-end
-
-local function refreshPlayers()
-    for _,v in pairs(scroll:GetChildren()) do
-        if v:IsA("TextButton") and v~=targetLabel then
-            if v:GetAttribute("player") then v:Destroy() end
-        end
+local function rebuildPlayers()
+    for _,v in ipairs(playersContainer:GetChildren()) do
+        if v:IsA("TextButton") then v:Destroy() end
     end
-    for _,p in pairs(Players:GetPlayers()) do
-        if p~=plr then
-            local b=Instance.new("TextButton")
-            b:SetAttribute("player",true)
-            b.Parent=scroll
-            b.Size=UDim2.new(1,-8,0,26)
-            b.BackgroundColor3=Color3.fromRGB(45,45,45)
-            b.TextColor3=Color3.new(1,1,1)
-            b.TextScaled=true
-            b.Text=p.Name
-            b.MouseButton1Click:Connect(function()
-                selectedPlayer=p
-                targetLabel.Text="Alvo: "..p.Name
+
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p ~= plr then
+            local btn = Instance.new("TextButton",playersContainer)
+            btn.Size = UDim2.new(1,0,0,26)
+            btn.BackgroundColor3 = Color3.fromRGB(45,45,45)
+            btn.TextColor3 = Color3.new(1,1,1)
+            btn.TextScaled = true
+            btn.Text = p.Name
+
+            btn.MouseButton1Click:Connect(function()
+                selectedPlayer = p
+                targetLabel.Text = "Alvo: "..p.Name
             end)
         end
     end
+
+    task.wait()
+    playersContainer.Size = UDim2.new(1,-8,0,pLayout.AbsoluteContentSize.Y)
     updateCanvas()
 end
-Players.PlayerAdded:Connect(refreshPlayers)
-Players.PlayerRemoving:Connect(refreshPlayers)
-refreshPlayers()
 
--- OPTIONS SECTION
-section("Opções")
+Players.PlayerAdded:Connect(rebuildPlayers)
+Players.PlayerRemoving:Connect(rebuildPlayers)
+rebuildPlayers()
+
+-- ================= OPTIONS HEADER =================
+local optionsTitle = Instance.new("TextLabel",scroll)
+optionsTitle.Size = UDim2.new(1,-8,0,26)
+optionsTitle.BackgroundColor3 = Color3.fromRGB(20,20,20)
+optionsTitle.Text = "Opções"
+optionsTitle.TextColor3 = Color3.new(1,1,1)
+optionsTitle.TextScaled = true
+
+local onlyUnanchored=false
 
 local function action(name,func)
     local b=Instance.new("TextButton",scroll)
@@ -130,6 +117,7 @@ local function action(name,func)
     b.Text=name
     b.MouseButton1Click:Connect(func)
     updateCanvas()
+    return b
 end
 
 local function validPart(p)
