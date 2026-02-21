@@ -1,32 +1,24 @@
-```lua
---// LOAD CHECK (anti crash executor)
-repeat task.wait() until game:IsLoaded()
+--// Player
+local plr = game.Players.LocalPlayer
 local Players = game:GetService("Players")
-local plr = Players.LocalPlayer
-repeat task.wait() until plr
-repeat task.wait() until plr.Character
+local RunService = game:GetService("RunService")
+local workspace = game:GetService("Workspace")
 
-local function getChar()
-    return plr.Character or plr.CharacterAdded:Wait()
+local function getHum()
+    local char = plr.Character or plr.CharacterAdded:Wait()
+    return char:WaitForChild("Humanoid")
 end
 
-local function getHRP()
-    return getChar():WaitForChild("HumanoidRootPart")
-end
+local hum = getHum()
 
---// GUI PARENT (works in executors)
-local parentGui = (gethui and gethui()) or game:GetService("CoreGui")
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "UniversalTPHub"
+--// GUI
+local gui = Instance.new("ScreenGui", plr.PlayerGui)
+gui.Name = "PlayerHub"
 gui.ResetOnSpawn = false
-gui.Parent = parentGui
 
--- MAIN FRAME
-local frame = Instance.new("Frame")
-frame.Parent = gui
-frame.Size = UDim2.new(0,360,0,360)
-frame.Position = UDim2.new(0.5,-180,0.5,-180)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,320,0,420)
+frame.Position = UDim2.new(0.5,-160,0.5,-210)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.Active = true
 frame.Draggable = true
@@ -34,14 +26,15 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Universal Hub"
+title.Text = "Player Hub"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
--- SCROLL ACTIONS
+-- SCROLL
 local scroll = Instance.new("ScrollingFrame", frame)
-scroll.Size = UDim2.new(1,-10,0,170)
+scroll.Size = UDim2.new(1,-10,1,-45)
 scroll.Position = UDim2.new(0,5,0,35)
+scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.BackgroundColor3 = Color3.fromRGB(30,30,30)
 scroll.BorderSizePixel = 0
 scroll.ScrollBarThickness = 6
@@ -54,169 +47,157 @@ local function updateCanvas()
     scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+10)
 end
 
+-- =========================
 -- PLAYER LIST
-local playerFrame = Instance.new("Frame", frame)
-playerFrame.Size = UDim2.new(1,-10,0,120)
-playerFrame.Position = UDim2.new(0,5,1,-125)
-playerFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+-- =========================
 
-local ptitle = Instance.new("TextLabel", playerFrame)
-ptitle.Size = UDim2.new(1,0,0,25)
-ptitle.BackgroundTransparency = 1
-ptitle.Text = "Players"
-ptitle.TextScaled = true
-ptitle.TextColor3 = Color3.new(1,1,1)
+local selectedPlayer = nil
+local onlyUnanchored = false
 
-local pscroll = Instance.new("ScrollingFrame", playerFrame)
-pscroll.Size = UDim2.new(1,-6,1,-30)
-pscroll.Position = UDim2.new(0,3,0,27)
-pscroll.BackgroundColor3 = Color3.fromRGB(35,35,35)
-pscroll.BorderSizePixel = 0
-pscroll.ScrollBarThickness = 5
+local function playerButton(p)
+    local btn = Instance.new("TextButton", scroll)
+    btn.Size = UDim2.new(1,-8,0,28)
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.TextScaled = true
+    btn.Text = p.Name
 
-local playout = Instance.new("UIListLayout", pscroll)
-playout.Padding = UDim.new(0,4)
-
-local selectedPlayer=nil
-local onlyUnanchored=false
-
-local function refreshPlayers()
-    for _,v in pairs(pscroll:GetChildren()) do
-        if v:IsA("TextButton") then v:Destroy() end
-    end
-
-    for _,p in ipairs(Players:GetPlayers()) do
-        if p~=plr then
-            local b=Instance.new("TextButton",pscroll)
-            b.Size=UDim2.new(1,-4,0,28)
-            b.Text=p.Name
-            b.TextScaled=true
-            b.BackgroundColor3=Color3.fromRGB(50,50,50)
-            b.TextColor3=Color3.new(1,1,1)
-
-            b.MouseButton1Click:Connect(function()
-                selectedPlayer=p
-                for _,x in pairs(pscroll:GetChildren()) do
-                    if x:IsA("TextButton") then
-                        x.BackgroundColor3=Color3.fromRGB(50,50,50)
-                    end
-                end
-                b.BackgroundColor3=Color3.fromRGB(0,120,200)
-            end)
-        end
-    end
-
-    task.wait()
-    pscroll.CanvasSize=UDim2.new(0,0,0,playout.AbsoluteContentSize.Y+5)
+    btn.MouseButton1Click:Connect(function()
+        selectedPlayer = p
+        btn.Text = ">> "..p.Name
+    end)
+    updateCanvas()
 end
 
-refreshPlayers()
+local function refreshPlayers()
+    for _,v in pairs(scroll:GetChildren()) do
+        if v.Name == "PLAYERBTN" then v:Destroy() end
+    end
+
+    for _,p in pairs(Players:GetPlayers()) do
+        if p ~= plr then
+            playerButton(p)
+        end
+    end
+end
+
 Players.PlayerAdded:Connect(refreshPlayers)
 Players.PlayerRemoving:Connect(refreshPlayers)
+refreshPlayers()
 
--- BUTTON CREATOR
-local function makeButton(text,callback)
-    local btn=Instance.new("TextButton",scroll)
-    btn.Size=UDim2.new(1,-8,0,40)
-    btn.BackgroundColor3=Color3.fromRGB(70,70,70)
-    btn.TextColor3=Color3.new(1,1,1)
-    btn.TextScaled=true
-    btn.Text=text
+-- =========================
+-- UTIL FUNCS
+-- =========================
+
+local function getHRP(character)
+    return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function validPart(p)
+    if not p:IsA("BasePart") then return false end
+    if onlyUnanchored and p.Anchored then return false end
+    return true
+end
+
+-- =========================
+-- ACTION BUTTON MAKER
+-- =========================
+
+local function makeAction(text,callback)
+    local btn = Instance.new("TextButton",scroll)
+    btn.Size = UDim2.new(1,-8,0,40)
+    btn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.TextScaled = true
+    btn.Text = text
+
     btn.MouseButton1Click:Connect(callback)
     updateCanvas()
 end
 
-local function makeToggle(text,callback)
-    local state=false
-    local btn=Instance.new("TextButton",scroll)
-    btn.Size=UDim2.new(1,-8,0,40)
-    btn.BackgroundColor3=Color3.fromRGB(170,0,0)
-    btn.TextColor3=Color3.new(1,1,1)
-    btn.TextScaled=true
-    btn.Text=text.." OFF"
+-- =========================
+-- ACTIONS
+-- =========================
 
-    btn.MouseButton1Click:Connect(function()
-        state=not state
-        btn.Text=text.." "..(state and "ON" or "OFF")
-        btn.BackgroundColor3=state and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
-        callback(state)
-    end)
+-- Bring all tools
+makeAction("Bring Tools",function()
+    local hrp = getHRP(plr.Character)
+    if not hrp then return end
 
-    updateCanvas()
-end
-
--- TOGGLE
-makeToggle("Only UnAnchored",function(v)
-    onlyUnanchored=v
+    for _,v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Tool") and v:FindFirstChild("Handle") then
+            v.Handle.CFrame = hrp.CFrame
+        end
+    end
 end)
 
--- FUNCTIONS
-local function bringTools()
-    local hrp=getHRP()
-    for _,t in pairs(workspace:GetDescendants()) do
-        if t:IsA("Tool") and t:FindFirstChild("Handle") then
-            if onlyUnanchored and t.Handle.Anchored then continue end
-            t.Handle.CFrame=hrp.CFrame
-        end
-    end
-end
+-- Player to all tools
+makeAction("TP to Tools",function()
+    local hrp = getHRP(plr.Character)
+    if not hrp then return end
 
-local function gotoTools()
-    local hrp=getHRP()
-    for _,t in pairs(workspace:GetDescendants()) do
-        if t:IsA("Tool") and t:FindFirstChild("Handle") then
-            if onlyUnanchored and t.Handle.Anchored then continue end
-            hrp.CFrame=t.Handle.CFrame
-            task.wait(0.2)
-        end
-    end
-end
-
-local function bringParts()
-    local hrp=getHRP()
     for _,v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            if onlyUnanchored and v.Anchored then continue end
-            v.CFrame=hrp.CFrame
+        if v:IsA("Tool") and v:FindFirstChild("Handle") then
+            hrp.CFrame = v.Handle.CFrame
+            task.wait(0.1)
         end
     end
-end
+end)
 
-local function tpToPlayer()
-    if selectedPlayer and selectedPlayer.Character then
-        getHRP().CFrame = selectedPlayer.Character:WaitForChild("HumanoidRootPart").CFrame
+-- Bring parts
+makeAction("Bring Parts",function()
+    local hrp = getHRP(plr.Character)
+    if not hrp then return end
+
+    for _,v in pairs(workspace:GetDescendants()) do
+        if validPart(v) then
+            v.CFrame = hrp.CFrame
+        end
     end
-end
+end)
 
-local function bringPlayer()
-    if selectedPlayer and selectedPlayer.Character then
-        selectedPlayer.Character:WaitForChild("HumanoidRootPart").CFrame = getHRP().CFrame
+-- TP to player
+makeAction("Goto Player",function()
+    if not selectedPlayer then return end
+    local target = getHRP(selectedPlayer.Character)
+    local hrp = getHRP(plr.Character)
+    if target and hrp then
+        hrp.CFrame = target.CFrame
     end
-end
+end)
 
-local function bringAll()
+-- Bring player
+makeAction("Bring Player",function()
+    if not selectedPlayer then return end
+    local target = getHRP(selectedPlayer.Character)
+    local hrp = getHRP(plr.Character)
+    if target and hrp then
+        target.CFrame = hrp.CFrame
+    end
+end)
+
+-- Bring all players
+makeAction("Bring All Players",function()
+    local hrp = getHRP(plr.Character)
+    if not hrp then return end
+
     for _,p in pairs(Players:GetPlayers()) do
-        if p~=plr and p.Character then
-            p.Character:WaitForChild("HumanoidRootPart").CFrame=getHRP().CFrame
+        if p ~= plr then
+            local target = getHRP(p.Character)
+            if target then
+                target.CFrame = hrp.CFrame
+            end
         end
     end
-end
+end)
 
--- BUTTONS
-makeButton("Bring Tools",bringTools)
-makeButton("Goto Tools",gotoTools)
-makeButton("Bring Parts",bringParts)
-makeButton("TP To Player",tpToPlayer)
-makeButton("Bring Player",bringPlayer)
-makeButton("Bring All Players",bringAll)
+-- Only unanchored toggle
+makeAction("Only UnAnchored: OFF",function(btn)
+end)
 
--- CLOSE
-local close=Instance.new("TextButton",frame)
-close.Size=UDim2.new(0,25,0,25)
-close.Position=UDim2.new(1,-28,0,4)
-close.Text="X"
-close.BackgroundColor3=Color3.fromRGB(170,0,0)
-close.TextScaled=true
-close.TextColor3=Color3.new(1,1,1)
-close.MouseButton1Click:Connect(function() gui:Destroy() end)
-```
+local toggleBtn = scroll:FindFirstChildOfClass("TextButton")
+toggleBtn.Text = "Only UnAnchored OFF"
+toggleBtn.MouseButton1Click:Connect(function()
+    onlyUnanchored = not onlyUnanchored
+    toggleBtn.Text = "Only UnAnchored "..(onlyUnanchored and "ON" or "OFF")
+end)
