@@ -104,12 +104,9 @@ local function action(name,callback)
 end
 
 -- Only unanchored toggle
-action("Only UnAnchored: OFF",function(self)
-    onlyUnanchored = not onlyUnanchored
-end)
+action("
 
-local function isMovablePart(part)
-    if not part:IsA("BasePart") then return false end
+
     if part.Anchored then return false end
     
     -- tenta verificar ownership de física
@@ -152,17 +149,7 @@ action("TP To Tools",function()
 end)
 
 -- bring parts
-action("Bring Movable Parts",function()
-    local hrp = getHRP(plr.Character)
-    if not hrp then return end
-    for _,v in ipairs(workspace:GetDescendants()) do
-        if isMovablePart(v) and (not onlyUnanchored or not v.Anchored) then
-            v.AssemblyLinearVelocity = Vector3.zero
-            v.AssemblyAngularVelocity = Vector3.zero
-            v.CFrame = hrp.CFrame
-        end
-    end
-end)
+
 
 -- tp to player
 action("TP To Selected",function()
@@ -201,3 +188,4 @@ close.BackgroundColor3 = Color3.fromRGB(170,0,0)
 close.TextScaled = true
 close.TextColor3 = Color3.new(1,1,1)
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
+
