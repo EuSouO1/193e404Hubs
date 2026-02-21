@@ -209,5 +209,5 @@ close.Text="X"
 close.BackgroundColor3=Color3.fromRGB(170,0,0)
 close.TextScaled=true
 close.TextColor3=Color3.new(1,1,1)
-close.MouseButton1Click:Connect(function() gui:Destroy() end)
-```
+close.MouseButton1Click:Connect(function() gui:Destroy() 
+end)
