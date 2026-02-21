@@ -123,6 +123,7 @@ end)
 -- fling
 local function flingLoop(target)
     local spin = 0
+    local voidDropping = false
 
     while running and target and target.Character do
         local char = plr.Character
@@ -133,21 +134,27 @@ local function flingLoop(target)
         local thum = target.Character:FindFirstChildOfClass("Humanoid")
         if not hrp or not thrp or not thum then break end
 
-        -- ===== VERIFICA SENTAR =====
+        -- ==============================
+        -- MODO VOID DROP
+        -- ==============================
         if flingItem and thum.Sit then
-            -- joga você no void
-            hrp.CFrame = hrp.CFrame - Vector3.new(0,2048,0)
-
-            -- para completamente
-            running = false
-            toggle.Text = "Fling OFF"
-            toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
-            break
+            voidDropping = true
         end
 
-        -- ===== FLING ITEM =====
+        if voidDropping then
+            -- teleporta continuamente pro void
+            hrp.CFrame = hrp.CFrame - Vector3.new(0,2048,0)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+
+            RunService.Heartbeat:Wait()
+            continue
+        end
+
+        -- ==============================
+        -- FLING ITEM NORMAL
+        -- ==============================
         if flingItem then
-            -- fica sempre olhando pro alvo
             local pos = thrp.Position - (thrp.CFrame.LookVector * 2.5)
             hrp.CFrame = CFrame.new(pos, thrp.Position)
 
@@ -155,7 +162,9 @@ local function flingLoop(target)
             hrp.AssemblyAngularVelocity = Vector3.zero
 
         else
-            -- ===== FLING NORMAL =====
+            -- ==============================
+            -- FLING NORMAL GIRATÓRIO
+            -- ==============================
             spin += 45
             local radius = 2.2
             local pos = thrp.Position + Vector3.new(
