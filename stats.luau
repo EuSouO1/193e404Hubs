@@ -101,6 +101,22 @@ end
 local saved = {hum.WalkSpeed, hum.JumpPower, workspace.Gravity}
 local locking = false
 local noclip = false
+local lockPosition = false
+local lockedCFrame = nil
+
+makeToggle("LockPosição",function(state)
+    lockPosition = state
+    
+    if state then
+        local char = plr.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                lockedCFrame = hrp.CFrame
+            end
+        end
+    end
+end)
 
 -- caixas
 makeBox("Speed",hum.WalkSpeed,function(v) saved[1]=v hum.WalkSpeed=v end)
@@ -148,6 +164,15 @@ RunService.Stepped:Connect(function()
             if v:IsA("BasePart") then
                 v.CanCollide = false
             end
+        end
+    end
+    -- lock posição
+    if lockPosition and lockedCFrame then
+        local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = lockedCFrame
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
         end
     end
 end)
