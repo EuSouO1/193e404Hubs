@@ -7,8 +7,8 @@ gui.Name = "FlingGui"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,300,0,260)
-frame.Position = UDim2.new(0.5,-150,0.5,-130)
+frame.Size = UDim2.new(0,300,0,300)
+frame.Position = UDim2.new(0.5,-150,0.5,-150)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.Active = true
 frame.Draggable = true
@@ -28,7 +28,7 @@ box.TextScaled = true
 box.BackgroundColor3 = Color3.fromRGB(40,40,40)
 box.TextColor3 = Color3.new(1,1,1)
 
--- LISTA DE PLAYERS
+-- LISTA
 local listFrame = Instance.new("ScrollingFrame", frame)
 listFrame.Size = UDim2.new(0.9,0,0,110)
 listFrame.Position = UDim2.new(0.05,0,0.32,0)
@@ -41,13 +41,23 @@ local layout = Instance.new("UIListLayout", listFrame)
 layout.Padding = UDim.new(0,4)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 
+-- BOTÃO NORMAL
 local toggle = Instance.new("TextButton", frame)
 toggle.Size = UDim2.new(0.8,0,0,35)
-toggle.Position = UDim2.new(0.1,0,0.78,0)
+toggle.Position = UDim2.new(0.1,0,0.75,0)
 toggle.Text = "OFF"
 toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
 toggle.TextScaled = true
 toggle.TextColor3 = Color3.new(1,1,1)
+
+-- BOTÃO MULTI
+local multi = Instance.new("TextButton", frame)
+multi.Size = UDim2.new(0.8,0,0,30)
+multi.Position = UDim2.new(0.1,0,0.62,0)
+multi.Text = "MULTI: OFF"
+multi.BackgroundColor3 = Color3.fromRGB(80,80,80)
+multi.TextScaled = true
+multi.TextColor3 = Color3.new(1,1,1)
 
 local close = Instance.new("TextButton", frame)
 close.Size = UDim2.new(0,25,0,25)
@@ -94,61 +104,68 @@ game.Players.PlayerRemoving:Connect(refreshPlayers)
 -- procurar player parecido
 local function findPlayer(str)
     str = str:lower()
-    local best,score
-
     for _,p in ipairs(game.Players:GetPlayers()) do
-        if p ~= plr then
-            local name = p.Name:lower()
-            local s = 0
-
-            for i=1,#str do
-                if name:sub(i,i) == str:sub(i,i) then
-                    s = s + 1
-                end
-            end
-
-            if not score or s > score then
-                score = s
-                best = p
-            end
+        if p ~= plr and p.Name:lower():find(str,1,true) then
+            return p
         end
     end
-
-    return best
 end
 
--- fling
+-- fling base
 local running = false
+local multiMode = false
 
-local function flingLoop(target)
+local function flingTarget(target, duration)
     local char = plr.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
+    local start = tick()
     local spin = 0
 
-    while running and target and target.Character do
+    while running and target and target.Character and tick()-start < duration do
         local thrp = target.Character:FindFirstChild("HumanoidRootPart")
         if not thrp then break end
 
-        spin += 45
+        spin += 60
 
-        local radius = 2.2
+        local radius = 2.5
         local pos = thrp.Position + Vector3.new(
             math.cos(math.rad(spin))*radius,
-            math.sin(math.rad(spin*2))*1.5,
+            1.5,
             math.sin(math.rad(spin))*radius
         )
 
         hrp.CFrame = CFrame.new(pos, thrp.Position)
-        hrp.AssemblyLinearVelocity = (thrp.Position - pos).Unit * -350
+        hrp.AssemblyLinearVelocity = (thrp.Position - pos).Unit * -400
         hrp.AssemblyAngularVelocity = Vector3.new(0,9999,0)
 
         RunService.Heartbeat:Wait()
     end
 end
 
--- toggle
+-- LOOP MULTI
+local function multiFlingLoop()
+    while running do
+        for _,p in ipairs(game.Players:GetPlayers()) do
+            if not running then break end
+            if p ~= plr then
+                flingTarget(p,1.2)
+                task.wait(0.15)
+            end
+        end
+        task.wait(0.2)
+    end
+end
+
+-- botão multi
+multi.MouseButton1Click:Connect(function()
+    multiMode = not multiMode
+    multi.Text = multiMode and "MULTI: ON" or "MULTI: OFF"
+    multi.BackgroundColor3 = multiMode and Color3.fromRGB(0,120,255) or Color3.fromRGB(80,80,80)
+end)
+
+-- botão principal
 toggle.MouseButton1Click:Connect(function()
     running = not running
 
@@ -156,14 +173,18 @@ toggle.MouseButton1Click:Connect(function()
         toggle.Text = "ON"
         toggle.BackgroundColor3 = Color3.fromRGB(0,170,0)
 
-        local target = findPlayer(box.Text)
-        if target then
-            task.spawn(function()
-                flingLoop(target)
-            end)
+        if multiMode then
+            task.spawn(multiFlingLoop)
         else
-            toggle.Text = "NOT FOUND"
-            running = false
+            local target = findPlayer(box.Text)
+            if target then
+                task.spawn(function()
+                    flingTarget(target,999)
+                end)
+            else
+                toggle.Text = "NOT FOUND"
+                running = false
+            end
         end
     else
         toggle.Text = "OFF"
