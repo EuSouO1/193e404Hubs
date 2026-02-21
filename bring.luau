@@ -1,14 +1,30 @@
 ```lua
---// PLAYER
-local plr = game.Players.LocalPlayer
-local workspace = game:GetService("Workspace")
+--// LOAD CHECK (anti crash executor)
+repeat task.wait() until game:IsLoaded()
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+repeat task.wait() until plr
+repeat task.wait() until plr.Character
 
---// GUI
-local gui = Instance.new("ScreenGui", plr.PlayerGui)
+local function getChar()
+    return plr.Character or plr.CharacterAdded:Wait()
+end
+
+local function getHRP()
+    return getChar():WaitForChild("HumanoidRootPart")
+end
+
+--// GUI PARENT (works in executors)
+local parentGui = (gethui and gethui()) or game:GetService("CoreGui")
+
+local gui = Instance.new("ScreenGui")
 gui.Name = "UniversalTPHub"
 gui.ResetOnSpawn = false
+gui.Parent = parentGui
 
-local frame = Instance.new("Frame", gui)
+-- MAIN FRAME
+local frame = Instance.new("Frame")
+frame.Parent = gui
 frame.Size = UDim2.new(0,360,0,360)
 frame.Position = UDim2.new(0.5,-180,0.5,-180)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
@@ -22,11 +38,10 @@ title.Text = "Universal Hub"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
--- SCROLL
+-- SCROLL ACTIONS
 local scroll = Instance.new("ScrollingFrame", frame)
 scroll.Size = UDim2.new(1,-10,0,170)
 scroll.Position = UDim2.new(0,5,0,35)
-scroll.CanvasSize = UDim2.new(0,0,0,0)
 scroll.BackgroundColor3 = Color3.fromRGB(30,30,30)
 scroll.BorderSizePixel = 0
 scroll.ScrollBarThickness = 6
@@ -70,7 +85,7 @@ local function refreshPlayers()
         if v:IsA("TextButton") then v:Destroy() end
     end
 
-    for _,p in ipairs(game.Players:GetPlayers()) do
+    for _,p in ipairs(Players:GetPlayers()) do
         if p~=plr then
             local b=Instance.new("TextButton",pscroll)
             b.Size=UDim2.new(1,-4,0,28)
@@ -96,8 +111,8 @@ local function refreshPlayers()
 end
 
 refreshPlayers()
-game.Players.PlayerAdded:Connect(refreshPlayers)
-game.Players.PlayerRemoving:Connect(refreshPlayers)
+Players.PlayerAdded:Connect(refreshPlayers)
+Players.PlayerRemoving:Connect(refreshPlayers)
 
 -- BUTTON CREATOR
 local function makeButton(text,callback)
@@ -137,8 +152,7 @@ end)
 
 -- FUNCTIONS
 local function bringTools()
-    local hrp=plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local hrp=getHRP()
     for _,t in pairs(workspace:GetDescendants()) do
         if t:IsA("Tool") and t:FindFirstChild("Handle") then
             if onlyUnanchored and t.Handle.Anchored then continue end
@@ -148,8 +162,7 @@ local function bringTools()
 end
 
 local function gotoTools()
-    local hrp=plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local hrp=getHRP()
     for _,t in pairs(workspace:GetDescendants()) do
         if t:IsA("Tool") and t:FindFirstChild("Handle") then
             if onlyUnanchored and t.Handle.Anchored then continue end
@@ -160,8 +173,7 @@ local function gotoTools()
 end
 
 local function bringParts()
-    local hrp=plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local hrp=getHRP()
     for _,v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             if onlyUnanchored and v.Anchored then continue end
@@ -172,23 +184,20 @@ end
 
 local function tpToPlayer()
     if selectedPlayer and selectedPlayer.Character then
-        plr.Character.HumanoidRootPart.CFrame=
-        selectedPlayer.Character.HumanoidRootPart.CFrame
+        getHRP().CFrame = selectedPlayer.Character:WaitForChild("HumanoidRootPart").CFrame
     end
 end
 
 local function bringPlayer()
     if selectedPlayer and selectedPlayer.Character then
-        selectedPlayer.Character.HumanoidRootPart.CFrame=
-        plr.Character.HumanoidRootPart.CFrame
+        selectedPlayer.Character:WaitForChild("HumanoidRootPart").CFrame = getHRP().CFrame
     end
 end
 
 local function bringAll()
-    for _,p in pairs(game.Players:GetPlayers()) do
+    for _,p in pairs(Players:GetPlayers()) do
         if p~=plr and p.Character then
-            p.Character.HumanoidRootPart.CFrame=
-            plr.Character.HumanoidRootPart.CFrame
+            p.Character:WaitForChild("HumanoidRootPart").CFrame=getHRP().CFrame
         end
     end
 end
@@ -209,5 +218,5 @@ close.Text="X"
 close.BackgroundColor3=Color3.fromRGB(170,0,0)
 close.TextScaled=true
 close.TextColor3=Color3.new(1,1,1)
-close.MouseButton1Click:Connect(function() gui:Destroy() 
-end)
+close.MouseButton1Click:Connect(function() gui:Destroy() end)
+```
