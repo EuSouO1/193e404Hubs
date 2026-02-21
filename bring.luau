@@ -108,8 +108,22 @@ action("Only UnAnchored: OFF",function(self)
     onlyUnanchored = not onlyUnanchored
 end)
 
-local function validPart(part)
+local function isMovablePart(part)
     if not part:IsA("BasePart") then return false end
+    if part.Anchored then return false end
+    
+    -- tenta verificar ownership de física
+    local owner
+    pcall(function()
+        owner = part:GetNetworkOwner()
+    end)
+
+    if owner and owner ~= plr then
+        return false
+    end
+
+    return true
+end
     if onlyUnanchored and part.Anchored then return false end
     return true
 end
@@ -138,11 +152,13 @@ action("TP To Tools",function()
 end)
 
 -- bring parts
-action("Bring Parts",function()
+action("Bring Movable Parts",function()
     local hrp = getHRP(plr.Character)
     if not hrp then return end
     for _,v in ipairs(workspace:GetDescendants()) do
-        if validPart(v) then
+        if isMovablePart(v) and (not onlyUnanchored or not v.Anchored) then
+            v.AssemblyLinearVelocity = Vector3.zero
+            v.AssemblyAngularVelocity = Vector3.zero
             v.CFrame = hrp.CFrame
         end
     end
