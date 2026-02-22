@@ -50,6 +50,13 @@ local function hum()
     return char:WaitForChild("Humanoid")
 end
 
+local function isGrounded(humanoid)
+    local state = humanoid:GetState()
+    return state ~= Enum.HumanoidStateType.Freefall
+       and state ~= Enum.HumanoidStateType.Jumping
+       and state ~= Enum.HumanoidStateType.FallingDown
+end
+
 --====================================================
 -- STATES
 --====================================================
@@ -60,6 +67,7 @@ local targetPlayer=nil
 local autoJump=false
 local proxJump=false
 local espColor=Color3.fromRGB(0,170,255)
+local espEnabled=true
 
 --====================================================
 -- PLAYER LIST
@@ -97,22 +105,16 @@ for _,p in ipairs(Players:GetPlayers()) do addPlayer(p) end
 Players.PlayerAdded:Connect(addPlayer)
 
 --====================================================
--- OPTIONS SCROLL
+-- OPTIONS
 --====================================================
 local options = Instance.new("ScrollingFrame", frame)
 options.Size=UDim2.new(1,-10,0,230)
 options.Position=UDim2.new(0,5,0,175)
-options.CanvasSize=UDim2.new(0,0,0,0)
 options.ScrollBarThickness=6
 options.BackgroundColor3=Color3.fromRGB(30,30,30)
 
 local optLayout=Instance.new("UIListLayout",options)
 optLayout.Padding=UDim.new(0,5)
-
-local function updateOpt()
-    task.wait()
-    options.CanvasSize=UDim2.new(0,0,0,optLayout.AbsoluteContentSize.Y+5)
-end
 
 local function toggle(name,callback)
     local state=false
@@ -129,8 +131,6 @@ local function toggle(name,callback)
         b.BackgroundColor3=state and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
         callback(state)
     end)
-
-    updateOpt()
 end
 
 toggle("Speed 1.25x",function(v) speed=v end)
@@ -138,30 +138,7 @@ toggle("Aimbot",function(v) aimbot=v end)
 toggle("Nearest Target",function(v) nearest=v end)
 toggle("Auto Jump",function(v) autoJump=v end)
 toggle("Jump Proximity",function(v) proxJump=v end)
-
--- ESP color
-local colorBtn=Instance.new("TextButton",options)
-colorBtn.Size=UDim2.new(1,-6,0,35)
-colorBtn.Text="Change ESP Color"
-colorBtn.TextScaled=true
-colorBtn.BackgroundColor3=Color3.fromRGB(50,50,50)
-colorBtn.TextColor3=Color3.new(1,1,1)
-
-local colors={
-    Color3.fromRGB(0,170,255),
-    Color3.fromRGB(255,255,255),
-    Color3.fromRGB(255,60,60),
-    Color3.fromRGB(60,255,60),
-    Color3.fromRGB(255,255,60),
-    Color3.fromRGB(170,60,255)
-}
-local ci=1
-colorBtn.MouseButton1Click:Connect(function()
-    ci=ci%#colors+1
-    espColor=colors[ci]
-end)
-
-updateOpt()
+toggle("ESP",function(v) espEnabled=v end)
 
 --====================================================
 -- ESP
@@ -196,24 +173,27 @@ Players.PlayerAdded:Connect(makeESP)
 -- LOOP
 --====================================================
 RunService.RenderStepped:Connect(function()
+
     local char=plr.Character
     if not char then return end
 
     local myHRP=hrp(char)
     local myHum=hum()
     if not myHRP then return end
-myHum.AutoRotate = not aimbot
+
+    myHum.AutoRotate = not aimbot
 
     -- speed
     myHum.WalkSpeed = speed and 20 or 16
 
-    -- auto jump
-    if autoJump then
+    -- auto jump (FIXED)
+    if autoJump and isGrounded(myHum) then
         if proxJump then
             for _,p in ipairs(Players:GetPlayers()) do
                 if p~=plr and hrp(p.Character) then
                     if (hrp(p.Character).Position-myHRP.Position).Magnitude<10 then
                         myHum:ChangeState(Enum.HumanoidStateType.Jumping)
+                        break
                     end
                 end
             end
@@ -222,56 +202,58 @@ myHum.AutoRotate = not aimbot
         end
     end
 
--- aimbot (camera + body)
-if aimbot then
-    local target=nil
+    -- AIMBOT
+    if aimbot then
+        local target=nil
 
-    if nearest then
-        local dist=math.huge
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p~=plr and hrp(p.Character) then
-                local d=(hrp(p.Character).Position-myHRP.Position).Magnitude
-                if d<dist then dist=d target=p end
+        if nearest then
+            local dist=math.huge
+            for _,p in ipairs(Players:GetPlayers()) do
+                if p~=plr and hrp(p.Character) then
+                    local d=(hrp(p.Character).Position-myHRP.Position).Magnitude
+                    if d<dist then dist=d target=p end
+                end
             end
+        else
+            target=targetPlayer
         end
-    else
-        target=targetPlayer
+
+        if target and hrp(target.Character) then
+            local camPos=camera.CFrame.Position
+            local targetPos=hrp(target.Character).Position+Vector3.new(0,1.5,0)
+
+            local currentLook=camera.CFrame.LookVector
+            local desiredLook=(targetPos-camPos).Unit
+            local dot=math.clamp(currentLook:Dot(desiredLook),-1,1)
+            local angle=math.acos(dot)
+            local speed=math.clamp(angle*12,0.05,1)
+
+            local newLook=currentLook:Lerp(desiredLook,speed)
+            camera.CFrame=CFrame.lookAt(camPos,camPos+newLook)
+
+            local flatTarget=Vector3.new(targetPos.X,myHRP.Position.Y,targetPos.Z)
+            local look=(flatTarget-myHRP.Position).Unit
+            local newCF=CFrame.lookAt(myHRP.Position,myHRP.Position+look)
+
+            myHum.AutoRotate=false
+            myHRP.CFrame=myHRP.CFrame:Lerp(newCF,speed*0.6)
+        end
     end
 
-    if target and hrp(target.Character) then
-        local camPos = camera.CFrame.Position
-        local targetPos = hrp(target.Character).Position + Vector3.new(0,1.5,0)
-
-        -- camera
-        local currentLook = camera.CFrame.LookVector
-        local desiredLook = (targetPos - camPos).Unit
-        local dot = math.clamp(currentLook:Dot(desiredLook), -1, 1)
-        local angle = math.acos(dot)
-        local speed = math.clamp(angle * 12, 0.05, 1)
-
-        local newLook = currentLook:Lerp(desiredLook, speed)
-        camera.CFrame = CFrame.lookAt(camPos, camPos + newLook)
-
-        -- BODY ROTATION
-        local root = myHRP
-        local flatTarget = Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)
-        local look = (flatTarget - root.Position).Unit
-        local newCF = CFrame.lookAt(root.Position, root.Position + look)
-
-        myHum.AutoRotate = false
-        root.CFrame = root.CFrame:Lerp(newCF, speed * 0.6)
-    end
-end
-
-    -- esp update
+    -- ESP UPDATE
     for p,data in pairs(esp) do
         local h,bill,txt=unpack(data)
-        if p.Character and hrp(p.Character) then
+
+        if espEnabled and p.Character and hrp(p.Character) then
+            h.Enabled=true
             h.Adornee=p.Character
             h.OutlineColor=espColor
 
             bill.Parent=p.Character.Head
             txt.Text=p.Name.." ["..math.floor((hrp(p.Character).Position-myHRP.Position).Magnitude).."]"
+        else
+            h.Enabled=false
+            bill.Parent=nil
         end
     end
 end)
