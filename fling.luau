@@ -1,4 +1,4 @@
---// GUI (Mantida fiel ao seu original)
+--// GUI COMPLETA COM SCROLLING FRAME
 local plr = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
@@ -27,6 +27,7 @@ box.TextScaled = true
 box.BackgroundColor3 = Color3.fromRGB(40,40,40)
 box.TextColor3 = Color3.new(1,1,1)
 
+-- LISTA RECOLOCADA AQUI
 local listFrame = Instance.new("ScrollingFrame", frame)
 listFrame.Size = UDim2.new(0.9,0,0,110)
 listFrame.Position = UDim2.new(0.05,0,0.32,0)
@@ -54,17 +55,14 @@ itemToggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
 itemToggle.TextScaled = true
 itemToggle.TextColor3 = Color3.new(1,1,1)
 
--- FECHAR
 local close = Instance.new("TextButton", frame)
 close.Size = UDim2.new(0,25,0,25)
 close.Position = UDim2.new(1,-28,0,4)
 close.Text = "X"
 close.BackgroundColor3 = Color3.fromRGB(170,0,0)
-close.TextScaled = true
-close.TextColor3 = Color3.new(1,1,1)
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
--- ATUALIZAR LISTA
+-- ATUALIZAÇÃO DA LISTA
 local function refreshPlayers()
     for _,v in ipairs(listFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
     for _,p in ipairs(game.Players:GetPlayers()) do
@@ -79,8 +77,12 @@ local function refreshPlayers()
             btn.MouseButton1Click:Connect(function() box.Text = p.Name end)
         end
     end
+    task.wait()
+    listFrame.CanvasSize = UDim2.new(0, layout.AbsoluteContentSize.Y + 5)
 end
 refreshPlayers()
+game.Players.PlayerAdded:Connect(refreshPlayers)
+game.Players.PlayerRemoving:Connect(refreshPlayers)
 
 -- ESTADOS
 local running = false
@@ -114,28 +116,24 @@ local function flingLoop(target)
         local thum = tchar:FindFirstChildOfClass("Humanoid")
         if not hrp or not thrp or not thum then break end
 
-        -- LÓGICA DE VOID EXTREMA
+        -- LÓGICA DE VOID (QUANDO SENTAR)
         if thum.Sit or isVoiding then
             isVoiding = true
-            -- Forçamos o CFrame de ambos para baixo drasticamente
-            -- O "-500" é pra garantir que passe do chão, e o loop contínuo garante que não volte
-            local voidPos = Vector3.new(thrp.Position.X, -3000, thrp.Position.Z)
-            
-            hrp.CFrame = CFrame.new(voidPos)
-            -- Tentamos forçar a posição do alvo também (isso ajuda se você tiver Network Owner)
-            thrp.CFrame = hrp.CFrame 
-            
+            -- Teleporta para o void profundo e trava lá
+            hrp.CFrame = CFrame.new(thrp.Position.X, -3000, thrp.Position.Z)
             hrp.Velocity = Vector3.new(0, -5000, 0)
         else
-            -- MOVIMENTAÇÃO DE FLING
+            -- LÓGICA DE ATAQUE
             if flingItem then
+                -- Auto-Equip Tool
                 local tool = plr.Backpack:FindFirstChildOfClass("Tool")
                 if tool then char.Humanoid:EquipTool(tool) end
                 
-                -- Colamos no alvo para ele sentar na tool
+                -- Perseguição com Jitter (1-4 studs)
                 hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, currentDist)
                 hrp.Velocity = Vector3.new(0, 0, 0)
             else
+                -- Fling Normal
                 spin += 60
                 local pos = thrp.Position + Vector3.new(math.cos(spin)*2.5, 0, math.sin(spin)*2.5)
                 hrp.CFrame = CFrame.new(pos, thrp.Position)
@@ -160,6 +158,8 @@ toggle.MouseButton1Click:Connect(function()
             task.spawn(function() flingLoop(target) end)
         else
             running = false
+            toggle.Text = "Not Found"
+            task.wait(1)
             toggle.Text = "Fling OFF"
         end
     else
