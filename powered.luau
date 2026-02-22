@@ -221,31 +221,43 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- aimbot (camera only)
-    if aimbot then
-        local target=nil
+-- aimbot (camera only) MELHORADO
+if aimbot then
+    local target=nil
 
-        if nearest then
-            local dist=math.huge
-            for _,p in ipairs(Players:GetPlayers()) do
-                if p~=plr and hrp(p.Character) then
-                    local d=(hrp(p.Character).Position-myHRP.Position).Magnitude
-                    if d<dist then dist=d target=p end
-                end
+    if nearest then
+        local dist=math.huge
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p~=plr and hrp(p.Character) then
+                local d=(hrp(p.Character).Position-myHRP.Position).Magnitude
+                if d<dist then dist=d target=p end
             end
-        else
-            target=targetPlayer
         end
-
-        if target and hrp(target.Character) then
-            local camCF=camera.CFrame
-            local camPos=camCF.Position
-            local lookPos=hrp(target.Character).Position
-
-            local goal=CFrame.lookAt(camPos,lookPos)
-            camera.CFrame=camCF:Lerp(goal,0.2)
-        end
+    else
+        target=targetPlayer
     end
+
+    if target and hrp(target.Character) then
+        local camPos = camera.CFrame.Position
+        local targetPos = hrp(target.Character).Position + Vector3.new(0,1.5,0) -- mira na cabeça
+
+        -- direção atual e desejada
+        local currentLook = camera.CFrame.LookVector
+        local desiredLook = (targetPos - camPos).Unit
+
+        -- ângulo entre as direções
+        local dot = math.clamp(currentLook:Dot(desiredLook), -1, 1)
+        local angle = math.acos(dot)
+
+        -- velocidade angular adaptativa
+        local speed = math.clamp(angle * 12, 0.05, 1)
+
+        -- rotação suave porém precisa
+        local newLook = currentLook:Lerp(desiredLook, speed)
+
+        camera.CFrame = CFrame.lookAt(camPos, camPos + newLook)
+    end
+end
 
     -- esp update
     for p,data in pairs(esp) do
