@@ -5,19 +5,32 @@ local plr = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
 -- GUI
-local gui = Instance.new("ScreenGui", plr:WaitForChild("PlayerGui"))
+local gui = Instance.new("ScreenGui")
 gui.Name = "PoweredHub"
 gui.ResetOnSpawn = false
+gui.Parent = plr:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,340,0,360)
-frame.Position = UDim2.new(0.5,-170,0.5,-180)
+frame.Size = UDim2.new(0,340,0,420)
+frame.Position = UDim2.new(0.5,-170,0.5,-210)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.Active=true
 frame.Draggable=true
 
+-- botão fechar
+local close = Instance.new("TextButton", frame)
+close.Size = UDim2.new(0,28,0,28)
+close.Position = UDim2.new(1,-32,0,2)
+close.Text = "X"
+close.BackgroundColor3 = Color3.fromRGB(170,0,0)
+close.TextScaled=true
+close.TextColor3=Color3.new(1,1,1)
+close.MouseButton1Click:Connect(function()
+    gui:Destroy()
+end)
+
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,30)
+title.Size = UDim2.new(1,-30,0,30)
 title.BackgroundTransparency=1
 title.Text="Powered Hub"
 title.TextScaled=true
@@ -43,14 +56,22 @@ local espColor=Color3.fromRGB(0,170,255)
 local autoJump=false
 local jumpProx=false
 
--- player list
+------------------------------------------------------------------
+-- PLAYER LIST
+------------------------------------------------------------------
 local list = Instance.new("ScrollingFrame", frame)
 list.Size=UDim2.new(1,-10,0,120)
 list.Position=UDim2.new(0,5,0,35)
 list.CanvasSize=UDim2.new(0,0,0,0)
 list.ScrollBarThickness=6
 list.BackgroundColor3=Color3.fromRGB(35,35,35)
+
 local layout=Instance.new("UIListLayout",list)
+
+local function updateList()
+    task.wait()
+    list.CanvasSize=UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+5)
+end
 
 local function addPlayer(p)
     local b=Instance.new("TextButton",list)
@@ -62,18 +83,33 @@ local function addPlayer(p)
     b.MouseButton1Click:Connect(function()
         aimbotTarget=p
     end)
-    task.wait();list.CanvasSize=UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+5)
+    updateList()
 end
+
 for _,p in ipairs(Players:GetPlayers()) do addPlayer(p) end
 Players.PlayerAdded:Connect(addPlayer)
 
--- buttons area
-local y=165
+------------------------------------------------------------------
+-- OPTIONS SCROLL
+------------------------------------------------------------------
+local options = Instance.new("ScrollingFrame", frame)
+options.Size = UDim2.new(1,-10,0,220)
+options.Position = UDim2.new(0,5,0,165)
+options.CanvasSize = UDim2.new(0,0,0,0)
+options.ScrollBarThickness = 6
+options.BackgroundColor3 = Color3.fromRGB(30,30,30)
+
+local optLayout = Instance.new("UIListLayout", options)
+optLayout.Padding = UDim.new(0,5)
+
+local function updateOptions()
+    task.wait()
+    options.CanvasSize = UDim2.new(0,0,0,optLayout.AbsoluteContentSize.Y+5)
+end
+
 local function toggle(text,callback)
-    local b=Instance.new("TextButton",frame)
-    b.Size=UDim2.new(1,-10,0,35)
-    b.Position=UDim2.new(0,5,0,y)
-    y=y+40
+    local b=Instance.new("TextButton",options)
+    b.Size=UDim2.new(1,-6,0,35)
     b.BackgroundColor3=Color3.fromRGB(170,0,0)
     b.Text=text.." OFF"
     b.TextScaled=true
@@ -85,6 +121,7 @@ local function toggle(text,callback)
         b.BackgroundColor3=state and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
         callback(state)
     end)
+    updateOptions()
 end
 
 -- speed
@@ -98,7 +135,9 @@ toggle("Nearest Target",function(s) aimbotNearest=s end)
 toggle("Auto Jump",function(s) autoJump=s end)
 toggle("Jump Proximity",function(s) jumpProx=s end)
 
--- ESP colors
+------------------------------------------------------------------
+-- ESP COLORS
+------------------------------------------------------------------
 local colors={
     Azul=Color3.fromRGB(0,170,255),
     Branco=Color3.fromRGB(255,255,255),
@@ -108,9 +147,8 @@ local colors={
     Roxo=Color3.fromRGB(170,60,255)
 }
 
-local colorBtn=Instance.new("TextButton",frame)
-colorBtn.Size=UDim2.new(1,-10,0,35)
-colorBtn.Position=UDim2.new(0,5,1,-40)
+local colorBtn=Instance.new("TextButton",options)
+colorBtn.Size=UDim2.new(1,-6,0,35)
 colorBtn.Text="Mudar cor ESP"
 colorBtn.BackgroundColor3=Color3.fromRGB(50,50,50)
 colorBtn.TextColor3=Color3.new(1,1,1)
@@ -120,7 +158,11 @@ colorBtn.MouseButton1Click:Connect(function()
     for _,c in pairs(colors) do espColor=c break end
 end)
 
--- esp objects
+updateOptions()
+
+------------------------------------------------------------------
+-- ESP OBJECTS
+------------------------------------------------------------------
 local espObjects={}
 local function createESP(p)
     if p==plr then return end
@@ -134,7 +176,9 @@ end
 for _,p in ipairs(Players:GetPlayers()) do createESP(p) end
 Players.PlayerAdded:Connect(createESP)
 
--- main loop
+------------------------------------------------------------------
+-- MAIN LOOP
+------------------------------------------------------------------
 RunService.RenderStepped:Connect(function()
     local char=plr.Character
     if not char then return end
