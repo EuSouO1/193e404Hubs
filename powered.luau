@@ -222,7 +222,7 @@ myHum.AutoRotate = not aimbot
         end
     end
 
--- aimbot (camera only) MELHORADO
+-- aimbot (camera + body)
 if aimbot then
     local target=nil
 
@@ -240,31 +240,26 @@ if aimbot then
 
     if target and hrp(target.Character) then
         local camPos = camera.CFrame.Position
-        local targetPos = hrp(target.Character).Position + Vector3.new(0,1.5,0) -- mira na cabeça
+        local targetPos = hrp(target.Character).Position + Vector3.new(0,1.5,0)
 
-        -- direção atual e desejada
+        -- camera
         local currentLook = camera.CFrame.LookVector
         local desiredLook = (targetPos - camPos).Unit
-
-        -- ângulo entre as direções
         local dot = math.clamp(currentLook:Dot(desiredLook), -1, 1)
         local angle = math.acos(dot)
-
-        -- velocidade angular adaptativa
         local speed = math.clamp(angle * 12, 0.05, 1)
 
-        -- rotação suave porém precisa
         local newLook = currentLook:Lerp(desiredLook, speed)
-
         camera.CFrame = CFrame.lookAt(camPos, camPos + newLook)
--- girar o personagem junto
-local root = myHRP
-local flatTarget = Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)
 
-local look = (flatTarget - root.Position).Unit
-local newCF = CFrame.lookAt(root.Position, root.Position + look)
+        -- BODY ROTATION
+        local root = myHRP
+        local flatTarget = Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)
+        local look = (flatTarget - root.Position).Unit
+        local newCF = CFrame.lookAt(root.Position, root.Position + look)
 
-root.CFrame = root.CFrame:Lerp(newCF, speed * 0.6)
+        myHum.AutoRotate = false
+        root.CFrame = root.CFrame:Lerp(newCF, speed * 0.6)
     end
 end
 
