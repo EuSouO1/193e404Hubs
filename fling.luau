@@ -39,29 +39,32 @@ listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y -- Faz o scroll funcionar s
 local layout = Instance.new("UIListLayout", listFrame)
 layout.Padding = UDim.new(0,4)
 
-local toggle = Instance.new("TextButton", frame)
-toggle.Size = UDim2.new(0.8,0,0,30)
-toggle.Position = UDim2.new(0.1,0,0.75,0)
-toggle.Text = "Fling OFF"
-toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
-toggle.TextScaled = true
-toggle.TextColor3 = Color3.new(1,1,1)
-
-local itemToggle = Instance.new("TextButton", frame)
-itemToggle.Size = UDim2.new(0.8,0,0,30)
-itemToggle.Position = UDim2.new(0.1,0,0.87,0)
-itemToggle.Text = "FlingItem OFF"
-itemToggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
-itemToggle.TextScaled = true
-itemToggle.TextColor3 = Color3.new(1,1,1)
-
+-- BOTÃO: FLING ALL (NOVO)
 local flingAllBtn = Instance.new("TextButton", frame)
-flingAllBtn.Size = UDim2.new(0.8,0,0,30)
-flingAllBtn.Position = UDim2.new(0.1,0,0.63,0) -- Posicionado acima do Fling OFF
+flingAllBtn.Size = UDim2.new(0.8, 0, 0, 30)
+flingAllBtn.Position = UDim2.new(0.1, 0, 0.70, 0) -- Posição ajustada
 flingAllBtn.Text = "Fling All OFF"
-flingAllBtn.BackgroundColor3 = Color3.fromRGB(170,0,0)
+flingAllBtn.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
 flingAllBtn.TextScaled = true
-flingAllBtn.TextColor3 = Color3.new(1,1,1)
+flingAllBtn.TextColor3 = Color3.new(1, 1, 1)
+
+-- BOTÃO: FLING SINGLE (O ORIGINAL)
+local toggle = Instance.new("TextButton", frame)
+toggle.Size = UDim2.new(0.8, 0, 0, 30)
+toggle.Position = UDim2.new(0.1, 0, 0.81, 0) -- Posição ajustada
+toggle.Text = "Fling OFF"
+toggle.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+toggle.TextScaled = true
+toggle.TextColor3 = Color3.new(1, 1, 1)
+
+-- BOTÃO: FLING ITEM
+local itemToggle = Instance.new("TextButton", frame)
+itemToggle.Size = UDim2.new(0.8, 0, 0, 30)
+itemToggle.Position = UDim2.new(0.1, 0, 0.92, 0) -- Posição ajustada
+itemToggle.Text = "FlingItem OFF"
+itemToggle.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+itemToggle.TextScaled = true
+itemToggle.TextColor3 = Color3.new(1, 1, 1)
 
 local close = Instance.new("TextButton", frame)
 close.Size = UDim2.new(0,25,0,25)
@@ -94,32 +97,24 @@ game.Players.PlayerRemoving:Connect(refreshPlayers)
 local running = false
 local flingItem = false
 local currentDist = 2
+-- LOGICA DO FLING ALL
 local flingAllActive = false
 
 flingAllBtn.MouseButton1Click:Connect(function()
     flingAllActive = not flingAllActive
-    
     if flingAllActive then
         flingAllBtn.Text = "Fling All ON"
-        flingAllBtn.BackgroundColor3 = Color3.fromRGB(0,170,0)
+        flingAllBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
         
         task.spawn(function()
             while flingAllActive do
-                local players = game.Players:GetPlayers()
-                for _, target in ipairs(players) do
+                for _, p in ipairs(game.Players:GetPlayers()) do
                     if not flingAllActive then break end
-                    
-                    -- Ignora a si mesmo e verifica se o personagem existe
-                    if target ~= plr and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                        running = true -- Ativa a lógica de movimentação do seu flingLoop
-                        
-                        -- Inicia o ataque no alvo atual
-                        task.spawn(function()
-                            flingLoop(target)
-                        end)
-                        
-                        task.wait(0.5) -- Tempo de ataque por pessoa
-                        running = false -- Para o ataque para resetar o loop e ir pro próximo
+                    if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        running = true
+                        task.spawn(function() flingLoop(p) end)
+                        task.wait(0.5) -- Tempo em cada alvo
+                        running = false 
                     end
                 end
                 task.wait(0.1)
@@ -127,7 +122,7 @@ flingAllBtn.MouseButton1Click:Connect(function()
         end)
     else
         flingAllBtn.Text = "Fling All OFF"
-        flingAllBtn.BackgroundColor3 = Color3.fromRGB(170,0,0)
+        flingAllBtn.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
         running = false
     end
 end)
