@@ -1,4 +1,4 @@
---// GUI (Mantive sua estrutura, apenas atualizei a lógica interna)
+--// GUI
 local plr = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
@@ -15,7 +15,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Fling Player Pro"
+title.Text = "Fling Item Pro"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -54,11 +54,9 @@ itemToggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
 itemToggle.TextScaled = true
 itemToggle.TextColor3 = Color3.new(1,1,1)
 
--- LÓGICA DE ATUALIZAÇÃO DE LISTA
+-- REFRESH LIST
 local function refreshPlayers()
-    for _,v in ipairs(listFrame:GetChildren()) do
-        if v:IsA("TextButton") then v:Destroy() end
-    end
+    for _,v in ipairs(listFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
     for _,p in ipairs(game.Players:GetPlayers()) do
         if p ~= plr then
             local btn = Instance.new("TextButton")
@@ -71,20 +69,16 @@ local function refreshPlayers()
             btn.MouseButton1Click:Connect(function() box.Text = p.Name end)
         end
     end
-    task.wait()
     listFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 5)
 end
-
 refreshPlayers()
-game.Players.PlayerAdded:Connect(refreshPlayers)
-game.Players.PlayerRemoving:Connect(refreshPlayers)
 
--- CONFIGURAÇÕES DE ESTADO
+-- ESTADOS
 local running = false
 local flingItem = false
 local currentDist = 2
 
--- DISTÂNCIA DINÂMICA (JITTER)
+-- JITTER (1-5 studs a cada 0.1s)
 task.spawn(function()
     while true do
         currentDist = math.random(1, 5)
@@ -100,7 +94,6 @@ end)
 
 local function flingLoop(target)
     local spin = 0
-    
     while running and target and target.Character do
         local char = plr.Character
         local tchar = target.Character
@@ -109,52 +102,30 @@ local function flingLoop(target)
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local thrp = tchar:FindFirstChild("HumanoidRootPart")
         local thum = tchar:FindFirstChildOfClass("Humanoid")
-        
         if not hrp or not thrp or not thum then break end
 
-        -- 1. EQUIPAR TOOL
-        if flingItem then
-            local tool = plr.Backpack:FindFirstChildOfClass("Tool")
-            if tool then
-                char.Humanoid:EquipTool(tool)
-            end
-        end
-
-        -- 2. VERIFICAR SE ALVO SENTOU (VOID DROP)
--- Substitua o trecho do 'if thum.Sit then' dentro do flingLoop por este:
-if thum.Sit then
-    -- Forçar o alvo a levantar (opcional, ajuda a quebrar a trava do assento)
-    thum.Jump = true 
-    
-    -- Teleporte agressivo: Repete o teleporte várias vezes em um frame
-    -- para garantir que a física do motor do Roblox registre a queda
-    for i = 1, 5 do
-        hrp.CFrame = CFrame.new(thrp.Position.X, -2000, thrp.Position.Z)
-        hrp.AssemblyLinearVelocity = Vector3.new(0, -5000, 0) -- Velocidade extrema para baixo
-    end
-    
-    -- Se você quiser garantir que o alvo vá junto, o segredo é manter
-    -- a ferramenta equipada enquanto você cai.
-else
-    -- ... (resto do código de aproximação 1-5 studs)
-    local jitterDist = math.random(1, 5) -- Distância dinâmica que você pediu
-    hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, jitterDist)
-    
-    -- Deixa a física "solta" para o item bater no alvo
-    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0) 
-end
-            -- 3. MOVIMENTAÇÃO DE FLING
+        -- LÓGICA DE VOID DROP (QUANDO O ALVO SENTA)
+        if thum.Sit then
+            -- Força o teleporte contínuo para o void
+            hrp.CFrame = CFrame.new(thrp.Position.X, -2000, thrp.Position.Z)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, -9000, 0)
+        else
+            -- LÓGICA DE MOVIMENTAÇÃO (FLING ITEM OU NORMAL)
             if flingItem then
-                -- Fling Item com distância variada (currentDist)
+                -- Equipar Tool 1 do Inventário
+                local tool = plr.Backpack:FindFirstChildOfClass("Tool")
+                if tool then char.Humanoid:EquipTool(tool) end
+
+                -- Segue o alvo com distância dinâmica (1-5 studs)
                 hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, currentDist)
-                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.AssemblyLinearVelocity = Vector3.zero
             else
                 -- Fling Normal Rotacional
                 spin += 60
                 local pos = thrp.Position + Vector3.new(math.cos(spin)*2.5, 0, math.sin(spin)*2.5)
                 hrp.CFrame = CFrame.new(pos, thrp.Position)
-                hrp.Velocity = (thrp.Position - hrp.Position).Unit * 500
-                hrp.RotVelocity = Vector3.new(0, 10000, 0)
+                hrp.AssemblyLinearVelocity = (thrp.Position - hrp.Position).Unit * 500
+                hrp.AssemblyAngularVelocity = Vector3.new(0, 10000, 0)
             end
         end
         RunService.Heartbeat:Wait()
@@ -168,14 +139,13 @@ toggle.MouseButton1Click:Connect(function()
         for _, p in pairs(game.Players:GetPlayers()) do
             if p.Name:lower():find(box.Text:lower()) then target = p break end
         end
-
         if target then
             toggle.Text = "Flinging..."
             toggle.BackgroundColor3 = Color3.fromRGB(0,170,0)
             task.spawn(function() flingLoop(target) end)
         else
-            toggle.Text = "Target Missing"
             running = false
+            toggle.Text = "Not Found"
             task.wait(1)
             toggle.Text = "Fling OFF"
         end
