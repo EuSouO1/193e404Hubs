@@ -203,18 +203,22 @@ RunService.RenderStepped:Connect(function()
             target=aimbotTarget
         end
 if target and getHRP(target.Character) then
+    local camCF = camera.CFrame
+    local camPos = camCF.Position
+
     local targetPos = getHRP(target.Character).Position
-    local camPos = camera.CFrame.Position
-    
+
     -- direção desejada
-    local look = CFrame.lookAt(camPos, targetPos)
+    local direction = (targetPos - camPos).Unit
 
-    -- suavidade (quanto menor mais humano)
-    local smoothness = 0.18
+    -- CFrame só de rotação (não move posição)
+    local newLook = CFrame.lookAt(camPos, camPos + direction)
 
-    camera.CFrame = camera.CFrame:Lerp(look, smoothness)
+    -- suavidade
+    local smooth = 0.22
+
+    camera.CFrame = camCF:Lerp(newLook, smooth)
 end
-
     -- autojump
     if autoJump then
         if jumpProx then
