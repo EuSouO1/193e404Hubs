@@ -1,4 +1,4 @@
---// GUI COMPLETA COM SCROLLING FRAME
+--// GUI
 local plr = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
@@ -27,14 +27,14 @@ box.TextScaled = true
 box.BackgroundColor3 = Color3.fromRGB(40,40,40)
 box.TextColor3 = Color3.new(1,1,1)
 
--- LISTA RECOLOCADA AQUI
+-- LISTA COM SCROLLING CORRIGIDO
 local listFrame = Instance.new("ScrollingFrame", frame)
 listFrame.Size = UDim2.new(0.9,0,0,110)
 listFrame.Position = UDim2.new(0.05,0,0.32,0)
-listFrame.CanvasSize = UDim2.new(0,0,0,0)
 listFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 listFrame.BorderSizePixel = 0
 listFrame.ScrollBarThickness = 6
+listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y -- Faz o scroll funcionar sozinho
 
 local layout = Instance.new("UIListLayout", listFrame)
 layout.Padding = UDim.new(0,4)
@@ -77,8 +77,6 @@ local function refreshPlayers()
             btn.MouseButton1Click:Connect(function() box.Text = p.Name end)
         end
     end
-    task.wait()
-    listFrame.CanvasSize = UDim2.new(0, layout.AbsoluteContentSize.Y + 5)
 end
 refreshPlayers()
 game.Players.PlayerAdded:Connect(refreshPlayers)
@@ -116,29 +114,26 @@ local function flingLoop(target)
         local thum = tchar:FindFirstChildOfClass("Humanoid")
         if not hrp or not thrp or not thum then break end
 
-        -- LÓGICA DE VOID (QUANDO SENTAR)
+        -- LÓGICA DE VOID (TRAVA AO SENTAR)
         if thum.Sit or isVoiding then
             isVoiding = true
-            -- Teleporta para o void profundo e trava lá
             hrp.CFrame = CFrame.new(thrp.Position.X, -3000, thrp.Position.Z)
-            hrp.Velocity = Vector3.new(0, -5000, 0)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, -5000, 0)
         else
             -- LÓGICA DE ATAQUE
             if flingItem then
-                -- Auto-Equip Tool
                 local tool = plr.Backpack:FindFirstChildOfClass("Tool")
                 if tool then char.Humanoid:EquipTool(tool) end
                 
-                -- Perseguição com Jitter (1-4 studs)
                 hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, currentDist)
-                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             else
                 -- Fling Normal
                 spin += 60
                 local pos = thrp.Position + Vector3.new(math.cos(spin)*2.5, 0, math.sin(spin)*2.5)
                 hrp.CFrame = CFrame.new(pos, thrp.Position)
-                hrp.Velocity = (thrp.Position - hrp.Position).Unit * 500
-                hrp.RotVelocity = Vector3.new(0, 10000, 0)
+                hrp.AssemblyLinearVelocity = (thrp.Position - hrp.Position).Unit * 500
+                hrp.AssemblyAngularVelocity = Vector3.new(0, 10000, 0)
             end
         end
         RunService.Heartbeat:Wait()
