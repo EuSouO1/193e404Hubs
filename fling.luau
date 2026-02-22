@@ -15,7 +15,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Fling Item Pro"
+title.Text = "Fling Player Pro"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -54,9 +54,21 @@ itemToggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
 itemToggle.TextScaled = true
 itemToggle.TextColor3 = Color3.new(1,1,1)
 
--- REFRESH LIST
+-- FECHAR
+local close = Instance.new("TextButton", frame)
+close.Size = UDim2.new(0,25,0,25)
+close.Position = UDim2.new(1,-28,0,4)
+close.Text = "X"
+close.BackgroundColor3 = Color3.fromRGB(170,0,0)
+close.TextScaled = true
+close.TextColor3 = Color3.new(1,1,1)
+close.MouseButton1Click:Connect(function() gui:Destroy() end)
+
+-- ATUALIZAR LISTA
 local function refreshPlayers()
-    for _,v in ipairs(listFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+    for _,v in ipairs(listFrame:GetChildren()) do
+        if v:IsA("TextButton") then v:Destroy() end
+    end
     for _,p in ipairs(game.Players:GetPlayers()) do
         if p ~= plr then
             local btn = Instance.new("TextButton")
@@ -69,16 +81,19 @@ local function refreshPlayers()
             btn.MouseButton1Click:Connect(function() box.Text = p.Name end)
         end
     end
+    task.wait()
     listFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 5)
 end
 refreshPlayers()
+game.Players.PlayerAdded:Connect(refreshPlayers)
+game.Players.PlayerRemoving:Connect(refreshPlayers)
 
 -- ESTADOS
 local running = false
 local flingItem = false
 local currentDist = 2
+local isVoiding = false -- Nova trava para o void
 
--- JITTER (1-5 studs a cada 0.1s)
 task.spawn(function()
     while true do
         currentDist = math.random(1, 5)
@@ -94,6 +109,8 @@ end)
 
 local function flingLoop(target)
     local spin = 0
+    isVoiding = false -- Reseta a trava ao começar
+    
     while running and target and target.Character do
         local char = plr.Character
         local tchar = target.Character
@@ -104,28 +121,27 @@ local function flingLoop(target)
         local thum = tchar:FindFirstChildOfClass("Humanoid")
         if not hrp or not thrp or not thum then break end
 
-        -- LÓGICA DE VOID DROP (QUANDO O ALVO SENTA)
-        if thum.Sit then
-            -- Força o teleporte contínuo para o void
-            hrp.CFrame = CFrame.new(thrp.Position.X, -2000, thrp.Position.Z)
-            hrp.AssemblyLinearVelocity = Vector3.new(0, -9000, 0)
+        -- MODO VOID DROP (SÓ EXECUTA SE O ALVO SENTAR)
+        if thum.Sit or isVoiding then
+            isVoiding = true -- Ativa a trava para não voltar para cima
+            hrp.CFrame = CFrame.new(thrp.Position.X, -1000, thrp.Position.Z)
+            hrp.Velocity = Vector3.new(0, -2000, 0)
         else
-            -- LÓGICA DE MOVIMENTAÇÃO (FLING ITEM OU NORMAL)
+            -- MOVIMENTAÇÃO DE FLING NORMAL/ITEM
             if flingItem then
-                -- Equipar Tool 1 do Inventário
+                -- Equipar Tool
                 local tool = plr.Backpack:FindFirstChildOfClass("Tool")
                 if tool then char.Humanoid:EquipTool(tool) end
-
-                -- Segue o alvo com distância dinâmica (1-5 studs)
+                
+                -- Aproximação com Jitter
                 hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, currentDist)
-                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.Velocity = Vector3.new(0, 0, 0)
             else
-                -- Fling Normal Rotacional
                 spin += 60
                 local pos = thrp.Position + Vector3.new(math.cos(spin)*2.5, 0, math.sin(spin)*2.5)
                 hrp.CFrame = CFrame.new(pos, thrp.Position)
-                hrp.AssemblyLinearVelocity = (thrp.Position - hrp.Position).Unit * 500
-                hrp.AssemblyAngularVelocity = Vector3.new(0, 10000, 0)
+                hrp.Velocity = (thrp.Position - hrp.Position).Unit * 500
+                hrp.RotVelocity = Vector3.new(0, 10000, 0)
             end
         end
         RunService.Heartbeat:Wait()
@@ -139,13 +155,14 @@ toggle.MouseButton1Click:Connect(function()
         for _, p in pairs(game.Players:GetPlayers()) do
             if p.Name:lower():find(box.Text:lower()) then target = p break end
         end
+
         if target then
             toggle.Text = "Flinging..."
             toggle.BackgroundColor3 = Color3.fromRGB(0,170,0)
             task.spawn(function() flingLoop(target) end)
         else
-            running = false
             toggle.Text = "Not Found"
+            running = false
             task.wait(1)
             toggle.Text = "Fling OFF"
         end
