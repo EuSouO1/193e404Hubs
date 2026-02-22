@@ -55,6 +55,14 @@ itemToggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
 itemToggle.TextScaled = true
 itemToggle.TextColor3 = Color3.new(1,1,1)
 
+local flingAllBtn = Instance.new("TextButton", frame)
+flingAllBtn.Size = UDim2.new(0.8,0,0,30)
+flingAllBtn.Position = UDim2.new(0.1,0,0.63,0) -- Posicionado acima do Fling OFF
+flingAllBtn.Text = "Fling All OFF"
+flingAllBtn.BackgroundColor3 = Color3.fromRGB(170,0,0)
+flingAllBtn.TextScaled = true
+flingAllBtn.TextColor3 = Color3.new(1,1,1)
+
 local close = Instance.new("TextButton", frame)
 close.Size = UDim2.new(0,25,0,25)
 close.Position = UDim2.new(1,-28,0,4)
@@ -86,6 +94,43 @@ game.Players.PlayerRemoving:Connect(refreshPlayers)
 local running = false
 local flingItem = false
 local currentDist = 2
+local flingAllActive = false
+
+flingAllBtn.MouseButton1Click:Connect(function()
+    flingAllActive = not flingAllActive
+    
+    if flingAllActive then
+        flingAllBtn.Text = "Fling All ON"
+        flingAllBtn.BackgroundColor3 = Color3.fromRGB(0,170,0)
+        
+        task.spawn(function()
+            while flingAllActive do
+                local players = game.Players:GetPlayers()
+                for _, target in ipairs(players) do
+                    if not flingAllActive then break end
+                    
+                    -- Ignora a si mesmo e verifica se o personagem existe
+                    if target ~= plr and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                        running = true -- Ativa a lógica de movimentação do seu flingLoop
+                        
+                        -- Inicia o ataque no alvo atual
+                        task.spawn(function()
+                            flingLoop(target)
+                        end)
+                        
+                        task.wait(0.5) -- Tempo de ataque por pessoa
+                        running = false -- Para o ataque para resetar o loop e ir pro próximo
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    else
+        flingAllBtn.Text = "Fling All OFF"
+        flingAllBtn.BackgroundColor3 = Color3.fromRGB(170,0,0)
+        running = false
+    end
+end)
 
 task.spawn(function()
     while true do
