@@ -121,10 +121,28 @@ local function flingLoop(target)
         end
 
         -- 2. VERIFICAR SE ALVO SENTOU (VOID DROP)
-        if thum.Sit then
-            hrp.CFrame = CFrame.new(thrp.Position - Vector3.new(0, 2048, 0))
-            hrp.Velocity = Vector3.new(0, -1000, 0) -- Força a queda
-        else
+-- Substitua o trecho do 'if thum.Sit then' dentro do flingLoop por este:
+if thum.Sit then
+    -- Forçar o alvo a levantar (opcional, ajuda a quebrar a trava do assento)
+    thum.Jump = true 
+    
+    -- Teleporte agressivo: Repete o teleporte várias vezes em um frame
+    -- para garantir que a física do motor do Roblox registre a queda
+    for i = 1, 5 do
+        hrp.CFrame = CFrame.new(thrp.Position.X, -2000, thrp.Position.Z)
+        hrp.AssemblyLinearVelocity = Vector3.new(0, -5000, 0) -- Velocidade extrema para baixo
+    end
+    
+    -- Se você quiser garantir que o alvo vá junto, o segredo é manter
+    -- a ferramenta equipada enquanto você cai.
+else
+    -- ... (resto do código de aproximação 1-5 studs)
+    local jitterDist = math.random(1, 5) -- Distância dinâmica que você pediu
+    hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, jitterDist)
+    
+    -- Deixa a física "solta" para o item bater no alvo
+    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0) 
+end
             -- 3. MOVIMENTAÇÃO DE FLING
             if flingItem then
                 -- Fling Item com distância variada (currentDist)
