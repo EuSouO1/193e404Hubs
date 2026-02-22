@@ -1,66 +1,71 @@
--- Powered Hub
+--// Powered Hub (clean rewrite)
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local plr = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
+repeat task.wait() until plr.Character
+
+--====================================================
 -- GUI
+--====================================================
 local gui = Instance.new("ScreenGui")
 gui.Name = "PoweredHub"
 gui.ResetOnSpawn = false
 gui.Parent = plr:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,340,0,420)
-frame.Position = UDim2.new(0.5,-170,0.5,-210)
+frame.Size = UDim2.new(0,360,0,430)
+frame.Position = UDim2.new(0.5,-180,0.5,-215)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-frame.Active=true
-frame.Draggable=true
-
--- botão fechar
-local close = Instance.new("TextButton", frame)
-close.Size = UDim2.new(0,28,0,28)
-close.Position = UDim2.new(1,-32,0,2)
-close.Text = "X"
-close.BackgroundColor3 = Color3.fromRGB(170,0,0)
-close.TextScaled=true
-close.TextColor3=Color3.new(1,1,1)
-close.MouseButton1Click:Connect(function()
-    gui:Destroy()
-end)
+frame.Active = true
+frame.Draggable = true
 
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,-30,0,30)
+title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency=1
 title.Text="Powered Hub"
 title.TextScaled=true
 title.TextColor3=Color3.new(1,1,1)
 
--- helpers
-local function getHRP(char)
+local close = Instance.new("TextButton", frame)
+close.Size = UDim2.new(0,28,0,28)
+close.Position = UDim2.new(1,-32,0,2)
+close.Text="X"
+close.TextScaled=true
+close.BackgroundColor3=Color3.fromRGB(170,0,0)
+close.TextColor3=Color3.new(1,1,1)
+close.MouseButton1Click:Connect(function() gui:Destroy() end)
+
+--====================================================
+-- HELPERS
+--====================================================
+local function hrp(char)
     return char and char:FindFirstChild("HumanoidRootPart")
 end
 
-local function getHum()
+local function hum()
     local char = plr.Character or plr.CharacterAdded:Wait()
     return char:WaitForChild("Humanoid")
 end
 
--- states
+--====================================================
+-- STATES
+--====================================================
 local speed=false
 local aimbot=false
-local aimbotTarget=nil
-local aimbotNearest=false
-local esp=false
-local espColor=Color3.fromRGB(0,170,255)
+local nearest=false
+local targetPlayer=nil
 local autoJump=false
-local jumpProx=false
+local proxJump=false
+local espColor=Color3.fromRGB(0,170,255)
 
-------------------------------------------------------------------
+--====================================================
 -- PLAYER LIST
-------------------------------------------------------------------
+--====================================================
 local list = Instance.new("ScrollingFrame", frame)
-list.Size=UDim2.new(1,-10,0,120)
+list.Size=UDim2.new(1,-10,0,130)
 list.Position=UDim2.new(0,5,0,35)
 list.CanvasSize=UDim2.new(0,0,0,0)
 list.ScrollBarThickness=6
@@ -68,7 +73,7 @@ list.BackgroundColor3=Color3.fromRGB(35,35,35)
 
 local layout=Instance.new("UIListLayout",list)
 
-local function updateList()
+local function updateCanvas()
     task.wait()
     list.CanvasSize=UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+5)
 end
@@ -80,163 +85,177 @@ local function addPlayer(p)
     b.TextScaled=true
     b.BackgroundColor3=Color3.fromRGB(60,60,60)
     b.TextColor3=Color3.new(1,1,1)
+
     b.MouseButton1Click:Connect(function()
-        aimbotTarget=p
+        targetPlayer=p
     end)
-    updateList()
+
+    updateCanvas()
 end
 
 for _,p in ipairs(Players:GetPlayers()) do addPlayer(p) end
 Players.PlayerAdded:Connect(addPlayer)
 
-------------------------------------------------------------------
+--====================================================
 -- OPTIONS SCROLL
-------------------------------------------------------------------
+--====================================================
 local options = Instance.new("ScrollingFrame", frame)
-options.Size = UDim2.new(1,-10,0,220)
-options.Position = UDim2.new(0,5,0,165)
-options.CanvasSize = UDim2.new(0,0,0,0)
-options.ScrollBarThickness = 6
-options.BackgroundColor3 = Color3.fromRGB(30,30,30)
+options.Size=UDim2.new(1,-10,0,230)
+options.Position=UDim2.new(0,5,0,175)
+options.CanvasSize=UDim2.new(0,0,0,0)
+options.ScrollBarThickness=6
+options.BackgroundColor3=Color3.fromRGB(30,30,30)
 
-local optLayout = Instance.new("UIListLayout", options)
-optLayout.Padding = UDim.new(0,5)
+local optLayout=Instance.new("UIListLayout",options)
+optLayout.Padding=UDim.new(0,5)
 
-local function updateOptions()
+local function updateOpt()
     task.wait()
-    options.CanvasSize = UDim2.new(0,0,0,optLayout.AbsoluteContentSize.Y+5)
+    options.CanvasSize=UDim2.new(0,0,0,optLayout.AbsoluteContentSize.Y+5)
 end
 
-local function toggle(text,callback)
+local function toggle(name,callback)
+    local state=false
     local b=Instance.new("TextButton",options)
     b.Size=UDim2.new(1,-6,0,35)
-    b.BackgroundColor3=Color3.fromRGB(170,0,0)
-    b.Text=text.." OFF"
+    b.Text=name.." OFF"
     b.TextScaled=true
+    b.BackgroundColor3=Color3.fromRGB(170,0,0)
     b.TextColor3=Color3.new(1,1,1)
-    local state=false
+
     b.MouseButton1Click:Connect(function()
         state=not state
-        b.Text=text..(state and " ON" or " OFF")
+        b.Text=name..(state and " ON" or " OFF")
         b.BackgroundColor3=state and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
         callback(state)
     end)
-    updateOptions()
+
+    updateOpt()
 end
 
--- speed
-toggle("Speed 1.25x",function(s) speed=s end)
+toggle("Speed 1.25x",function(v) speed=v end)
+toggle("Aimbot",function(v) aimbot=v end)
+toggle("Nearest Target",function(v) nearest=v end)
+toggle("Auto Jump",function(v) autoJump=v end)
+toggle("Jump Proximity",function(v) proxJump=v end)
 
--- aimbot
-toggle("Aimbot",function(s) aimbot=s end)
-toggle("Nearest Target",function(s) aimbotNearest=s end)
-
--- autojump
-toggle("Auto Jump",function(s) autoJump=s end)
-toggle("Jump Proximity",function(s) jumpProx=s end)
-
-------------------------------------------------------------------
--- ESP COLORS
-------------------------------------------------------------------
-local colors={
-    Azul=Color3.fromRGB(0,170,255),
-    Branco=Color3.fromRGB(255,255,255),
-    Vermelho=Color3.fromRGB(255,60,60),
-    Verde=Color3.fromRGB(60,255,60),
-    Amarelo=Color3.fromRGB(255,255,60),
-    Roxo=Color3.fromRGB(170,60,255)
-}
-
+-- ESP color
 local colorBtn=Instance.new("TextButton",options)
 colorBtn.Size=UDim2.new(1,-6,0,35)
-colorBtn.Text="Mudar cor ESP"
+colorBtn.Text="Change ESP Color"
+colorBtn.TextScaled=true
 colorBtn.BackgroundColor3=Color3.fromRGB(50,50,50)
 colorBtn.TextColor3=Color3.new(1,1,1)
-colorBtn.TextScaled=true
 
+local colors={
+    Color3.fromRGB(0,170,255),
+    Color3.fromRGB(255,255,255),
+    Color3.fromRGB(255,60,60),
+    Color3.fromRGB(60,255,60),
+    Color3.fromRGB(255,255,60),
+    Color3.fromRGB(170,60,255)
+}
+local ci=1
 colorBtn.MouseButton1Click:Connect(function()
-    for _,c in pairs(colors) do espColor=c break end
+    ci=ci%#colors+1
+    espColor=colors[ci]
 end)
 
-updateOptions()
+updateOpt()
 
-------------------------------------------------------------------
--- ESP OBJECTS
-------------------------------------------------------------------
-local espObjects={}
-local function createESP(p)
+--====================================================
+-- ESP
+--====================================================
+local esp={}
+
+local function makeESP(p)
     if p==plr then return end
+
     local h=Instance.new("Highlight")
     h.FillTransparency=1
-    h.OutlineColor=espColor
     h.Parent=workspace
-    espObjects[p]=h
+
+    local bill=Instance.new("BillboardGui")
+    bill.Size=UDim2.new(0,200,0,40)
+    bill.StudsOffset=Vector3.new(0,3,0)
+    bill.AlwaysOnTop=true
+
+    local txt=Instance.new("TextLabel",bill)
+    txt.Size=UDim2.new(1,0,1,0)
+    txt.BackgroundTransparency=1
+    txt.TextColor3=Color3.new(1,1,1)
+    txt.TextScaled=true
+
+    esp[p]={h,bill,txt}
 end
 
-for _,p in ipairs(Players:GetPlayers()) do createESP(p) end
-Players.PlayerAdded:Connect(createESP)
+for _,p in ipairs(Players:GetPlayers()) do makeESP(p) end
+Players.PlayerAdded:Connect(makeESP)
 
-------------------------------------------------------------------
--- MAIN LOOP
-------------------------------------------------------------------
+--====================================================
+-- LOOP
+--====================================================
 RunService.RenderStepped:Connect(function()
     local char=plr.Character
     if not char then return end
-    local hum=getHum()
-    local hrp=getHRP(char)
-    if not hrp then return end
 
-    if speed then hum.WalkSpeed=hum.WalkSpeed*1.25 end
+    local myHRP=hrp(char)
+    local myHum=hum()
+    if not myHRP then return end
 
--- aimbot
-if aimbot then
-    local target=nil
+    -- speed
+    myHum.WalkSpeed = speed and 20 or 16
 
-    if aimbotNearest then
-        local dist=math.huge
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p~=plr and getHRP(p.Character) then
-                local d=(getHRP(p.Character).Position-hrp.Position).Magnitude
-                if d<dist then
-                    dist=d
-                    target=p
-                end
-            end
-        end
-    else
-        target=aimbotTarget
-    end
-
-    if target and getHRP(target.Character) then
-        local camCF = camera.CFrame
-        local camPos = camCF.Position
-        local targetPos = getHRP(target.Character).Position
-
-        local direction = (targetPos - camPos).Unit
-        local newLook = CFrame.lookAt(camPos, camPos + direction)
-
-        local smooth = 0.22
-        camera.CFrame = camCF:Lerp(newLook, smooth)
-    end
-end
-    -- autojump
+    -- auto jump
     if autoJump then
-        if jumpProx then
+        if proxJump then
             for _,p in ipairs(Players:GetPlayers()) do
-                if p~=plr and getHRP(p.Character) and (getHRP(p.Character).Position-hrp.Position).Magnitude<10 then
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                if p~=plr and hrp(p.Character) then
+                    if (hrp(p.Character).Position-myHRP.Position).Magnitude<10 then
+                        myHum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end
                 end
             end
         else
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            myHum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+
+    -- aimbot (camera only)
+    if aimbot then
+        local target=nil
+
+        if nearest then
+            local dist=math.huge
+            for _,p in ipairs(Players:GetPlayers()) do
+                if p~=plr and hrp(p.Character) then
+                    local d=(hrp(p.Character).Position-myHRP.Position).Magnitude
+                    if d<dist then dist=d target=p end
+                end
+            end
+        else
+            target=targetPlayer
+        end
+
+        if target and hrp(target.Character) then
+            local camCF=camera.CFrame
+            local camPos=camCF.Position
+            local lookPos=hrp(target.Character).Position
+
+            local goal=CFrame.lookAt(camPos,lookPos)
+            camera.CFrame=camCF:Lerp(goal,0.2)
         end
     end
 
     -- esp update
-    for p,h in pairs(espObjects) do
-        if p.Character and getHRP(p.Character) then
+    for p,data in pairs(esp) do
+        local h,bill,txt=unpack(data)
+        if p.Character and hrp(p.Character) then
             h.Adornee=p.Character
             h.OutlineColor=espColor
+
+            bill.Parent=p.Character.Head
+            txt.Text=p.Name.." ["..math.floor((hrp(p.Character).Position-myHRP.Position).Magnitude).."]"
         end
     end
 end)
