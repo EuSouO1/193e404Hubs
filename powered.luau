@@ -202,41 +202,52 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- AIMBOT
+-- AIMBOT
     if aimbot then
-        local target=nil
+        local target = nil
 
         if nearest then
-            local dist=math.huge
-            for _,p in ipairs(Players:GetPlayers()) do
-                if p~=plr and hrp(p.Character) then
-                    local d=(hrp(p.Character).Position-myHRP.Position).Magnitude
-                    if d<dist then dist=d target=p end
+            local dist = math.huge
+            for _, p in ipairs(Players:GetPlayers()) do
+                -- VERIFICAÇÃO: Se o player existe, tem corpo, e a VIDA é maior que 0
+                if p ~= plr and hrp(p.Character) and p.Character:FindFirstChildOfClass("Humanoid") then
+                    if p.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                        local d = (hrp(p.Character).Position - myHRP.Position).Magnitude
+                        if d < dist then 
+                            dist = d 
+                            target = p 
+                        end
+                    end
                 end
             end
         else
-            target=targetPlayer
+            -- Se for alvo selecionado manualmente, também checa se está vivo
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                if targetPlayer.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                    target = targetPlayer
+                end
+            end
         end
 
         if target and hrp(target.Character) then
-            local camPos=camera.CFrame.Position
-            local targetPos=hrp(target.Character).Position+Vector3.new(0,1.5,0)
+            local camPos = camera.CFrame.Position
+            local targetPos = hrp(target.Character).Position + Vector3.new(0, 1.5, 0)
 
-            local currentLook=camera.CFrame.LookVector
-            local desiredLook=(targetPos-camPos).Unit
-            local dot=math.clamp(currentLook:Dot(desiredLook),-1,1)
-            local angle=math.acos(dot)
-            local speed=math.clamp(angle*12,0.05,1)
+            local currentLook = camera.CFrame.LookVector
+            local desiredLook = (targetPos - camPos).Unit
+            local dot = math.clamp(currentLook:Dot(desiredLook), -1, 1)
+            local angle = math.acos(dot)
+            local lookSpeed = math.clamp(angle * 12, 0.05, 1) -- renomeado para não conflitar com a var speed do walk
 
-            local newLook=currentLook:Lerp(desiredLook,speed)
-            camera.CFrame=CFrame.lookAt(camPos,camPos+newLook)
+            local newLook = currentLook:Lerp(desiredLook, lookSpeed)
+            camera.CFrame = CFrame.lookAt(camPos, camPos + newLook)
 
-            local flatTarget=Vector3.new(targetPos.X,myHRP.Position.Y,targetPos.Z)
-            local look=(flatTarget-myHRP.Position).Unit
-            local newCF=CFrame.lookAt(myHRP.Position,myHRP.Position+look)
+            local flatTarget = Vector3.new(targetPos.X, myHRP.Position.Y, targetPos.Z)
+            local look = (flatTarget - myHRP.Position).Unit
+            local newCF = CFrame.lookAt(myHRP.Position, myHRP.Position + look)
 
-            myHum.AutoRotate=false
-            myHRP.CFrame=myHRP.CFrame:Lerp(newCF,speed*0.6)
+            myHum.AutoRotate = false
+            myHRP.CFrame = myHRP.CFrame:Lerp(newCF, lookSpeed * 0.6)
         end
     end
 
