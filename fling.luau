@@ -136,11 +136,11 @@ local function flingLoop()
             hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, currentDist)
             hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         else
-            spin += 60
+            spin += 120
             local pos = thrp.Position + Vector3.new(math.cos(spin)*2.5, 0, math.sin(spin)*2.5)
             hrp.CFrame = CFrame.new(pos, thrp.Position)
-            hrp.AssemblyLinearVelocity = (thrp.Position - hrp.Position).Unit * 500
-            hrp.AssemblyAngularVelocity = Vector3.new(0, 10000, 0)
+            hrp.AssemblyLinearVelocity = (thrp.Position - hrp.Position).Unit * 3000
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 75000, 0)
         end
         RunService.Heartbeat:Wait()
     end
