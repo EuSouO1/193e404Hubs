@@ -1,4 +1,4 @@
--- FlingHub (Powered Hub Style)
+-- Fling Hub (Clean Rewrite)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local plr = Players.LocalPlayer
@@ -6,7 +6,7 @@ local plr = Players.LocalPlayer
 repeat task.wait() until plr.Character
 
 --====================================================
--- GUI (Visual idêntico ao Powered Hub)
+-- GUI (Mesmo Visual do Powered Hub)
 --====================================================
 local gui = Instance.new("ScreenGui")
 gui.Name = "FlingHub"
@@ -24,8 +24,7 @@ local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency=1
 title.Text="Fling Hub"
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 20
+title.TextScaled=true
 title.TextColor3=Color3.new(1,1,1)
 
 local close = Instance.new("TextButton", frame)
@@ -38,11 +37,15 @@ close.TextColor3=Color3.new(1,1,1)
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
 --====================================================
--- STATES & VARIABLES
+-- STATES & HELPERS
 --====================================================
-local targetPlayer = nil
 local flingActive = false
 local flingItemActive = false
+local targetPlayer = nil
+
+local function getHRP(char)
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
 
 --====================================================
 -- PLAYER LIST
@@ -65,14 +68,14 @@ local function addPlayer(p)
     if p == plr then return end
     local b=Instance.new("TextButton",list)
     b.Size=UDim2.new(1,-6,0,28)
-    b.Text=p.DisplayName.." (@"..p.Name..")"
+    b.Text=p.Name
     b.TextScaled=true
     b.BackgroundColor3=Color3.fromRGB(60,60,60)
     b.TextColor3=Color3.new(1,1,1)
 
     b.MouseButton1Click:Connect(function()
         targetPlayer = p
-        title.Text = "Target: " .. p.Name
+        title.Text = "Target: " .. p.DisplayName
     end)
     updateCanvas()
 end
@@ -81,7 +84,7 @@ for _,p in ipairs(Players:GetPlayers()) do addPlayer(p) end
 Players.PlayerAdded:Connect(addPlayer)
 
 --====================================================
--- TOGGLE SYSTEM
+-- OPTIONS
 --====================================================
 local options = Instance.new("ScrollingFrame", frame)
 options.Size=UDim2.new(1,-10,0,230)
@@ -96,78 +99,82 @@ local function toggle(name, callback)
     local state = false
     local b = Instance.new("TextButton", options)
     b.Size = UDim2.new(1,-6,0,35)
-    b.Text = name.." OFF"
+    b.Text = name .. " OFF"
     b.TextScaled = true
     b.BackgroundColor3 = Color3.fromRGB(170,0,0)
     b.TextColor3 = Color3.new(1,1,1)
 
     b.MouseButton1Click:Connect(function()
         state = not state
-        b.Text = name..(state and " ON" or " OFF")
+        b.Text = name .. (state and " ON" or " OFF")
         b.BackgroundColor3 = state and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
         callback(state)
     end)
 end
 
---====================================================
--- FLING LOGIC
---====================================================
-toggle("Fling", function(v) 
-    flingActive = v 
-    if not v then
-        -- Resetar velocidade ao desligar
-        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            plr.Character.HumanoidRootPart.RotVelocity = Vector3.new(0,0,0)
-            plr.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
-        end
-    end
-end)
-
-toggle("Fling Item", function(v) flingItemActive = v end)
+toggle("Fling Mode", function(v) flingActive = v end)
+toggle("Fling Item (Seat)", function(v) flingItemActive = v end)
 
 --====================================================
--- MAIN LOOP
+-- CORE LOGIC
 --====================================================
-RunService.Stepped:Connect(function()
-    if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = plr.Character.HumanoidRootPart
+
+RunService.PostSimulation:Connect(function()
+    local char = plr.Character
+    local hrp = getHRP(char)
+    if not hrp or not targetPlayer or not targetPlayer.Character then return end
     
-    -- Lógica do Fling Normal (Girar e Seguir)
-    if flingActive and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local targetHRP = targetPlayer.Character.HumanoidRootPart
+    local targetHRP = getHRP(targetPlayer.Character)
+    if not targetHRP then return end
+
+    -- FUNÇÃO: FLING (Girar e Atropelar)
+    if flingActive then
+        -- Torna o player "fantasma" para não colidir mas manter força
+        for _, v in pairs(char:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
         
-        -- Movimentação e Rotação Extrema
-        hrp.Velocity = Vector3.new(500000, 500000, 500000)
-        hrp.RotVelocity = Vector3.new(500000, 500000, 500000)
-        hrp.CFrame = targetHRP.CFrame * CFrame.Angles(math.rad(math.random(0,360)), math.rad(math.random(0,360)), math.rad(math.random(0,360)))
+        -- Velocidade angular massiva para o Fling
+        hrp.Velocity = Vector3.new(0, 500, 0) -- Força vertical pra instabilizar
+        hrp.RotVelocity = Vector3.new(0, 10000, 0) -- Giro ultra rápido
+        
+        -- Teleporte contínuo para o alvo
+        hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 0)
     end
 
-    -- Lógica do Fling Item (Tool + Seat)
-    if flingItemActive and targetPlayer and targetPlayer.Character then
-        local tool = plr.Backpack:FindFirstChildOfClass("Tool") or plr.Character:FindFirstChildOfClass("Tool")
+    -- FUNÇÃO: FLING ITEM (Matar com Seat/Tool)
+    if flingItemActive then
+        local tool = plr.Backpack:FindFirstChildOfClass("Tool") or char:FindFirstChildOfClass("Tool")
         
         if tool then
-            if tool.Parent ~= plr.Character then tool.Parent = plr.Character end -- Equipa a tool
+            if tool.Parent ~= char then tool.Parent = char end -- Equipa se não estiver equipado
             
-            local targetHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if targetHRP then
-                -- Alterna posição entre 1 e 5 studs
-                local offset = math.random(1, 5)
-                hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, -offset) * CFrame.Angles(0, math.rad(180), 0)
-                
-                -- Verifica se o alvo sentou no item
-                local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid and humanoid.SeatPart and humanoid.SeatPart:IsDescendantOf(tool) then
-                    -- Teleporta para o Void e desliga
+            -- Lógica de aproximação (1 a 5 studs variando)
+            local dist = math.random(1, 5)
+            hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, dist) * CFrame.Angles(0, math.rad(180), 0)
+            
+            -- Verifica se o alvo sentou no Seat da Tool (comum em scripts de "kill script")
+            local seat = tool:FindFirstChildWhichIsA("VehicleSeat", true) or tool:FindFirstChildWhichIsA("Seat", true)
+            if seat and seat.Occupant then
+                if seat.Occupant.Parent == targetPlayer.Character then
+                    -- Teleporta para o void e desliga
                     hrp.CFrame = CFrame.new(0, -500, 0)
                     flingItemActive = false
                     print("Alvo capturado! Teleportando para o void.")
                 end
             end
         end
-        task.wait(0.1) -- Delay conforme pedido
     end
 end)
 
--- Notificação de inicialização
-print("FlingHub Loaded - Select a player to begin.")
+-- Anti-Die/Ragdoll simples para o Fling não te matar
+RunService.Stepped:Connect(function()
+    if flingActive or flingItemActive then
+        local hrp = getHRP(plr.Character)
+        if hrp then
+            for _, v in pairs(plr.Character:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = false end
+            end
+        end
+    end
+end)
