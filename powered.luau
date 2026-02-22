@@ -202,6 +202,7 @@ RunService.RenderStepped:Connect(function()
     local myHRP=hrp(char)
     local myHum=hum()
     if not myHRP then return end
+myHum.AutoRotate = not aimbot
 
     -- speed
     myHum.WalkSpeed = speed and 20 or 16
@@ -256,6 +257,14 @@ if aimbot then
         local newLook = currentLook:Lerp(desiredLook, speed)
 
         camera.CFrame = CFrame.lookAt(camPos, camPos + newLook)
+-- girar o personagem junto
+local root = myHRP
+local flatTarget = Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)
+
+local look = (flatTarget - root.Position).Unit
+local newCF = CFrame.lookAt(root.Position, root.Position + look)
+
+root.CFrame = root.CFrame:Lerp(newCF, speed * 0.6)
     end
 end
 
