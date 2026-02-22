@@ -188,36 +188,36 @@ RunService.RenderStepped:Connect(function()
 
     if speed then hum.WalkSpeed=hum.WalkSpeed*1.25 end
 
-    -- aimbot
-    if aimbot then
-        local target=nil
-        if aimbotNearest then
-            local dist=math.huge
-            for _,p in ipairs(Players:GetPlayers()) do
-                if p~=plr and getHRP(p.Character) then
-                    local d=(getHRP(p.Character).Position-hrp.Position).Magnitude
-                    if d<dist then dist=d target=p end
+-- aimbot
+if aimbot then
+    local target=nil
+
+    if aimbotNearest then
+        local dist=math.huge
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p~=plr and getHRP(p.Character) then
+                local d=(getHRP(p.Character).Position-hrp.Position).Magnitude
+                if d<dist then
+                    dist=d
+                    target=p
                 end
             end
-        else
-            target=aimbotTarget
         end
-if target and getHRP(target.Character) then
-    local camCF = camera.CFrame
-    local camPos = camCF.Position
+    else
+        target=aimbotTarget
+    end
 
-    local targetPos = getHRP(target.Character).Position
+    if target and getHRP(target.Character) then
+        local camCF = camera.CFrame
+        local camPos = camCF.Position
+        local targetPos = getHRP(target.Character).Position
 
-    -- direção desejada
-    local direction = (targetPos - camPos).Unit
+        local direction = (targetPos - camPos).Unit
+        local newLook = CFrame.lookAt(camPos, camPos + direction)
 
-    -- CFrame só de rotação (não move posição)
-    local newLook = CFrame.lookAt(camPos, camPos + direction)
-
-    -- suavidade
-    local smooth = 0.22
-
-    camera.CFrame = camCF:Lerp(newLook, smooth)
+        local smooth = 0.22
+        camera.CFrame = camCF:Lerp(newLook, smooth)
+    end
 end
     -- autojump
     if autoJump then
