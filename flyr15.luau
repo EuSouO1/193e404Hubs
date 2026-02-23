@@ -57,18 +57,44 @@ local function updateAnimations()
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
 
-    if nowe then
-        if hum.MoveDirection.Magnitude > 0 then
-            if trackIdle then trackIdle:Stop(0.3) end
-            if trackMove and not trackMove.IsPlaying then trackMove:Play(0.3) end
-        else
-            if trackMove then trackMove:Stop(0.3) end
-            if trackIdle and not trackIdle.IsPlaying then trackIdle:Play(0.3) end
+-- Coloque isso dentro da função onof.MouseButton1Down onde o voo liga:
+
+if nowe == true then
+    -- ... (seu código de ligar o voo)
+    
+    local char = speaker.Character
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    
+    -- O SEGREDO: Forçar o estado de Física para que o Animate padrão pare
+    hum:ChangeState(Enum.HumanoidStateType.Physics) 
+    
+    -- Carregar as animações com Prioridade Máxima (Action)
+    trackIdle = hum:LoadAnimation(animIdle)
+    trackMove = hum:LoadAnimation(animMove)
+    
+    trackIdle.Priority = Enum.AnimationPriority.Action
+    trackMove.Priority = Enum.AnimationPriority.Action
+    
+    trackIdle.Looped = true
+    trackMove.Looped = true
+
+    -- Loop de verificação
+    task.spawn(function()
+        while nowe and char and hum do
+            if hum.MoveDirection.Magnitude > 0 then
+                if not trackMove.IsPlaying then
+                    trackIdle:Stop(0.2)
+                    trackMove:Play(0.2)
+                end
+            else
+                if not trackIdle.IsPlaying then
+                    trackMove:Stop(0.2)
+                    trackIdle:Play(0.2)
+                end
+            end
+            task.wait(0.1)
         end
-    else
-        if trackIdle then trackIdle:Stop(0.3) end
-        if trackMove then trackMove:Stop(0.3) end
-    end
+    end)
 end
 
 onof.MouseButton1Down:connect(function()
