@@ -2,12 +2,12 @@
 local plr = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "FlingGui_V2"
+gui.Name = "FlingGui_V3"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,300,0,340)
-frame.Position = UDim2.new(0.5,-150,0.5,-170)
+frame.Size = UDim2.new(0,300,0,300) -- Ajustado para remover o espaço do botão excluído
+frame.Position = UDim2.new(0.5,-150,0.5,-150)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.Active = true
 frame.Draggable = true
@@ -38,24 +38,17 @@ listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 local layout = Instance.new("UIListLayout", listFrame)
 layout.Padding = UDim.new(0,4)
 
+-- BOTÕES RESTANTES
 local toggle = Instance.new("TextButton", frame)
-toggle.Size = UDim2.new(0.8,0,0,30)
-toggle.Position = UDim2.new(0.1,0,0.55,0)
+toggle.Size = UDim2.new(0.8,0,0,35)
+toggle.Position = UDim2.new(0.1,0,0.60,0)
 toggle.Text = "Fling OFF"
 toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
 toggle.TextScaled = true
 toggle.TextColor3 = Color3.new(1,1,1)
 
-local itemToggle = Instance.new("TextButton", frame)
-itemToggle.Size = UDim2.new(0.8,0,0,30)
-itemToggle.Position = UDim2.new(0.1,0,0.65,0)
-itemToggle.Text = "FlingItem OFF"
-itemToggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
-itemToggle.TextScaled = true
-itemToggle.TextColor3 = Color3.new(1,1,1)
-
 local allToggle = Instance.new("TextButton", frame)
-allToggle.Size = UDim2.new(0.8,0,0,30)
+allToggle.Size = UDim2.new(0.8,0,0,35)
 allToggle.Position = UDim2.new(0.1,0,0.75,0)
 allToggle.Text = "Fling All OFF"
 allToggle.BackgroundColor3 = Color3.fromRGB(0, 85, 127)
@@ -69,11 +62,9 @@ close.Text = "X"
 close.BackgroundColor3 = Color3.fromRGB(170,0,0)
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
--- ESTADOS E VARIÁVEIS DO NOVO MÉTODO
+-- ESTADOS
 local running = false
-local flingItem = false
 local flingAllActive = false
-local currentTarget = nil
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
@@ -96,7 +87,7 @@ refreshPlayers()
 game.Players.PlayerAdded:Connect(refreshPlayers)
 game.Players.PlayerRemoving:Connect(refreshPlayers)
 
--- NOVA FUNÇÃO CORE (SKID FLING)
+-- FUNÇÃO CORE (MÉTODO SKID)
 local function SkidFling(TargetPlayer)
     local Character = plr.Character
     local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
@@ -106,7 +97,6 @@ local function SkidFling(TargetPlayer)
 
     local THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
     local TRootPart = THumanoid and THumanoid.RootPart
-    local THead = TCharacter:FindFirstChild("Head")
 
     if RootPart.Velocity.Magnitude < 50 then
         getgenv().OldPos = RootPart.CFrame
@@ -148,13 +138,7 @@ local function SkidFling(TargetPlayer)
     end
 end
 
--- LOGICA BOTOES
-itemToggle.MouseButton1Click:Connect(function()
-    flingItem = not flingItem
-    itemToggle.Text = flingItem and "FlingItem ON" or "FlingItem OFF"
-    itemToggle.BackgroundColor3 = flingItem and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
-end)
-
+-- LOGICA FLING ALL
 allToggle.MouseButton1Click:Connect(function()
     flingAllActive = not flingAllActive
     allToggle.Text = flingAllActive and "Fling All ON" or "Fling All OFF"
@@ -179,6 +163,7 @@ allToggle.MouseButton1Click:Connect(function()
     end
 end)
 
+-- LOGICA FLING INDIVIDUAL
 toggle.MouseButton1Click:Connect(function()
     running = not running
     if running then
