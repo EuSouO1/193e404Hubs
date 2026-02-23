@@ -2,18 +2,33 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local plr = Players.LocalPlayer
-local char = plr.Character or plr.CharacterAdded:Wait()
-local root = char:WaitForChild("HumanoidRootPart")
 
 --// Variáveis de Controle
 local autoFarm = false
 local antiTsunami = false
 local originalPos = nil
-local itensPegos = {} -- Tabela para marcar o que já foi processado
+local itensPegos = {}
 
---// GUI (Estilo solicitado)
+--// Referências Dinâmicas (Atualizam ao morrer)
+local char = plr.Character or plr.CharacterAdded:Wait()
+local root = char:WaitForChild("HumanoidRootPart")
+
+plr.CharacterAdded:Connect(function(newChar)
+    char = newChar
+    root = char:WaitForChild("HumanoidRootPart")
+    
+    -- Se o farm estava ligado, ele retoma o loop automaticamente após renascer
+    if autoFarm then
+        task.wait(1) -- Espera o spawn estabilizar
+        task.spawn(function()
+            -- O loop de startFarm já vai detectar o novo 'root'
+        end)
+    end
+end)
+
+--// GUI (Mesmo Estilo)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "BrainrotHubV2"
+gui.Name = "BrainrotFixV3"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
@@ -26,7 +41,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Brainrot Fix Hub"
+title.Text = "Brainrot Hub (Auto-Respawn)"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -66,58 +81,59 @@ local function makeToggle(text, initialState, callback)
     return btn
 end
 
---// Lógica Anti-Tsunami (Melhorada para não bugar o teleporte do farm)
+--// Lógica Anti-Tsunami (Usa 'root' atualizado)
 RunService.Heartbeat:Connect(function()
-    if antiTsunami and root then
+    if antiTsunami and root and root.Parent then
         for _, obj in pairs(workspace:GetChildren()) do
             if (obj.Name:lower():find("tsunami") or obj.Name:lower():find("wave")) and obj:IsA("BasePart") then
                 local dist = (root.Position.Y - obj.Position.Y)
-                if dist < 20 and (root.Position - obj.Position).Magnitude < 200 then
-                    root.CFrame = root.CFrame * CFrame.new(0, 500, 0)
+                if dist < 25 and (root.Position - obj.Position).Magnitude < 250 then
+                    root.CFrame = root.CFrame + Vector3.new(0, 500, 0)
                 end
             end
         end
     end
 end)
 
---// Lógica Auto-Farm com ProximityPrompt
+--// Lógica Auto-Farm (Usa 'root' atualizado)
 local function startFarm()
-    originalPos = root.CFrame
+    if root then originalPos = root.CFrame end
     
     while autoFarm do
         local alvoEncontrado = false
         
-        -- Busca por todos os ProximityPrompts no mapa
-        for _, prompt in pairs(workspace:GetDescendants()) do
-            if not autoFarm then break end
-            
-            if prompt:IsA("ProximityPrompt") and not itensPegos[prompt] then
-                local itemPart = prompt.Parent
-                if itemPart:IsA("BasePart") or itemPart:IsA("Model") then
-                    alvoEncontrado = true
-                    
-                    -- Teleporta 5 studs acima do item para não cair do mapa
-                    local targetPos = itemPart:GetPivot().Position + Vector3.new(0, 5, 0)
-                    root.CFrame = CFrame.new(targetPos)
-                    
-                    task.wait(0.2) -- Espera o teleporte estabilizar
-                    
-                    -- Interage com o Prompt
-                    fireproximityprompt(prompt)
-                    
-                    -- Marca como pego para não repetir
-                    itensPegos[prompt] = true
-                    task.wait(0.3)
+        -- Garante que o personagem existe antes de tentar mover
+        if root and root.Parent then
+            for _, prompt in pairs(workspace:GetDescendants()) do
+                if not autoFarm then break end
+                
+                if prompt:IsA("ProximityPrompt") and not itensPegos[prompt] then
+                    local itemPart = prompt.Parent
+                    if itemPart and (itemPart:IsA("BasePart") or itemPart:IsA("Model")) then
+                        alvoEncontrado = true
+                        
+                        -- Teleporte com offset para não cair do mapa
+                        local targetPos = itemPart:GetPivot().Position + Vector3.new(0, 7, 0)
+                        root.CFrame = CFrame.new(targetPos)
+                        
+                        task.wait(0.3)
+                        fireproximityprompt(prompt)
+                        
+                        itensPegos[prompt] = true
+                        task.wait(0.2)
+                    end
                 end
             end
         end
         
-        -- Se não houver mais nada novo, volta para a posição original e aguarda
-        if not alvoEncontrado then
-            root.CFrame = originalPos
-            task.wait(2) -- Espera 2 segundos antes de checar se spawmou algo novo
+        -- Se não tiver mais nada, volta pra posição salva ou fica no spawn
+        if not alvoEncontrado and autoFarm then
+            if originalPos and root then
+                root.CFrame = originalPos
+            end
+            task.wait(2) 
         end
-        task.wait()
+        task.wait(0.1)
     end
 end
 
@@ -125,7 +141,7 @@ end
 makeToggle("Auto Farm Brainrots", false, function(state)
     autoFarm = state
     if state then
-        itensPegos = {} -- Reseta a lista ao ligar
+        itensPegos = {} 
         task.spawn(startFarm)
     end
 end)
