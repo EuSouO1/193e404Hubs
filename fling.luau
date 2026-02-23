@@ -6,7 +6,7 @@ gui.Name = "FlingGui_V2"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,300,0,340) -- Aumentei um pouco o tamanho para caber o novo botão
+frame.Size = UDim2.new(0,300,0,340)
 frame.Position = UDim2.new(0.5,-150,0.5,-170)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.Active = true
@@ -38,7 +38,6 @@ listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 local layout = Instance.new("UIListLayout", listFrame)
 layout.Padding = UDim.new(0,4)
 
--- BOTÕES EXISTENTES
 local toggle = Instance.new("TextButton", frame)
 toggle.Size = UDim2.new(0.8,0,0,30)
 toggle.Position = UDim2.new(0.1,0,0.55,0)
@@ -55,7 +54,6 @@ itemToggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
 itemToggle.TextScaled = true
 itemToggle.TextColor3 = Color3.new(1,1,1)
 
--- NOVO BOTÃO: FLING ALL
 local allToggle = Instance.new("TextButton", frame)
 allToggle.Size = UDim2.new(0.8,0,0,30)
 allToggle.Position = UDim2.new(0.1,0,0.75,0)
@@ -71,7 +69,14 @@ close.Text = "X"
 close.BackgroundColor3 = Color3.fromRGB(170,0,0)
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
--- ATUALIZAÇÃO DA LISTA
+-- ESTADOS E VARIÁVEIS DO NOVO MÉTODO
+local running = false
+local flingItem = false
+local flingAllActive = false
+local currentTarget = nil
+getgenv().OldPos = nil
+getgenv().FPDH = workspace.FallenPartsDestroyHeight
+
 local function refreshPlayers()
     for _,v in ipairs(listFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
     for _,p in ipairs(game.Players:GetPlayers()) do
@@ -91,69 +96,72 @@ refreshPlayers()
 game.Players.PlayerAdded:Connect(refreshPlayers)
 game.Players.PlayerRemoving:Connect(refreshPlayers)
 
--- ESTADOS
-local running = false
-local flingItem = false
-local flingAllActive = false
-local currentDist = 2
-local currentTarget = nil
+-- NOVA FUNÇÃO CORE (SKID FLING)
+local function SkidFling(TargetPlayer)
+    local Character = plr.Character
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+    local RootPart = Humanoid and Humanoid.RootPart
+    local TCharacter = TargetPlayer.Character
+    if not TCharacter or not Character or not RootPart then return end
 
-task.spawn(function()
-    while true do
-        currentDist = math.random(1, 4)
-        task.wait(0.1)
+    local THumanoid = TCharacter:FindFirstChildOfClass("Humanoid")
+    local TRootPart = THumanoid and THumanoid.RootPart
+    local THead = TCharacter:FindFirstChild("Head")
+
+    if RootPart.Velocity.Magnitude < 50 then
+        getgenv().OldPos = RootPart.CFrame
     end
-end)
 
+    workspace.FallenPartsDestroyHeight = 0/0
+    
+    local BV = Instance.new("BodyVelocity")
+    BV.Parent = RootPart
+    BV.Velocity = Vector3.new(0, 0, 0)
+    BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+
+    Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+
+    local function FPos(BasePart, Pos, Ang)
+        RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
+        RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+        RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
+    end
+
+    local Time = tick()
+    local Angle = 0
+    repeat
+        if RootPart and THumanoid and TRootPart then
+            Angle = Angle + 100
+            FPos(TRootPart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * TRootPart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0 ,0))
+            task.wait()
+            FPos(TRootPart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * TRootPart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+            task.wait()
+        end
+    until Time + 2 < tick() or not (running or flingAllActive)
+
+    BV:Destroy()
+    Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+
+    if getgenv().OldPos then
+        RootPart.CFrame = getgenv().OldPos
+        workspace.FallenPartsDestroyHeight = getgenv().FPDH
+    end
+end
+
+-- LOGICA BOTOES
 itemToggle.MouseButton1Click:Connect(function()
     flingItem = not flingItem
     itemToggle.Text = flingItem and "FlingItem ON" or "FlingItem OFF"
     itemToggle.BackgroundColor3 = flingItem and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
 end)
 
--- FUNÇÃO CORE DO FLING
-local function flingLoop()
-    local spin = 0
-    while (running or flingAllActive) do
-        local char = plr.Character
-        local target = currentTarget
-        if not char or not target or not target.Character then 
-            RunService.Heartbeat:Wait()
-            continue 
-        end
-
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local thrp = target.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp or not thrp then 
-            RunService.Heartbeat:Wait()
-            continue 
-        end
-
-        -- LÓGICA DE ATAQUE
-        if flingItem then
-            local tool = plr.Backpack:FindFirstChildOfClass("Tool")
-            if tool then char.Humanoid:EquipTool(tool) end
-            hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, currentDist)
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        else
-            spin += 45
-            local pos = thrp.Position + Vector3.new(math.cos(spin)*2.5, 0, math.sin(spin)*2.5)
-            hrp.CFrame = CFrame.new(pos, thrp.Position)
-            hrp.AssemblyLinearVelocity = (thrp.Position - hrp.Position).Unit * 1500
-            hrp.AssemblyAngularVelocity = Vector3.new(0, 30000, 0)
-        end
-        RunService.Heartbeat:Wait()
-    end
-end
-
--- LOGICA FLING ALL
 allToggle.MouseButton1Click:Connect(function()
     flingAllActive = not flingAllActive
     allToggle.Text = flingAllActive and "Fling All ON" or "Fling All OFF"
     allToggle.BackgroundColor3 = flingAllActive and Color3.fromRGB(0,170,0) or Color3.fromRGB(0, 85, 127)
     
     if flingAllActive then
-        running = false -- Desliga o fling individual para não conflitar
+        running = false
         toggle.Text = "Fling OFF"
         toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
         
@@ -162,23 +170,19 @@ allToggle.MouseButton1Click:Connect(function()
                 for _, p in pairs(game.Players:GetPlayers()) do
                     if not flingAllActive then break end
                     if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        currentTarget = p
-                        task.wait(0.5) -- Tempo em cada alvo
+                        SkidFling(p)
                     end
                 end
-                task.wait(0.1)
+                task.wait(0.5)
             end
-            currentTarget = nil
         end)
-        task.spawn(flingLoop)
     end
 end)
 
--- LOGICA FLING INDIVIDUAL
 toggle.MouseButton1Click:Connect(function()
     running = not running
     if running then
-        flingAllActive = false -- Desliga o Fling All
+        flingAllActive = false
         allToggle.Text = "Fling All OFF"
         allToggle.BackgroundColor3 = Color3.fromRGB(0, 85, 127)
 
@@ -188,10 +192,14 @@ toggle.MouseButton1Click:Connect(function()
         end
         
         if target then
-            currentTarget = target
             toggle.Text = "Flinging..."
             toggle.BackgroundColor3 = Color3.fromRGB(0,170,0)
-            task.spawn(flingLoop)
+            task.spawn(function()
+                while running do
+                    SkidFling(target)
+                    task.wait(0.1)
+                end
+            end)
         else
             running = false
             toggle.Text = "Not Found"
@@ -202,6 +210,5 @@ toggle.MouseButton1Click:Connect(function()
     else
         toggle.Text = "Fling OFF"
         toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
-        currentTarget = nil
     end
 end)
