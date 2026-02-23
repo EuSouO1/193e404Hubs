@@ -10,7 +10,7 @@ local originalPos = nil
 local itensPegos = {}
 local limiteBrainrots = 1
 local contadorAtual = 0
-local flySpeed = 150 -- Velocidade ajustada para 150
+local flySpeed = 100 -- Velocidade ajustada para 100
 
 --// Variáveis do Personagem
 local char = plr.Character or plr.CharacterAdded:Wait()
