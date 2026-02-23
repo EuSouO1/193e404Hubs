@@ -1,19 +1,31 @@
---// Services & Player
+--// Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local plr = Players.LocalPlayer
+
+--// Variáveis Globais (Para persistir entre mortes)
+getgenv().AutoCollect = getgenv().AutoCollect or false
+getgenv().AntiTsunami = getgenv().AntiTsunami or false
+local lastPos = nil
+
+--// Função para atualizar as referências do personagem
 local char = plr.Character or plr.CharacterAdded:Wait()
 local root = char:WaitForChild("HumanoidRootPart")
 
---// Variáveis de Controle
-_G.AutoCollect = false
-_G.AntiTsunami = false
-local lastPos = nil
+plr.CharacterAdded:Connect(function(newChar)
+    char = newChar
+    root = newChar:WaitForChild("HumanoidRootPart")
+    -- Se o AutoCollect estava ligado antes de morrer, ele continua após renascer
+end)
 
---// GUI (Estilo original)
+--// GUI (Mesmo estilo, configurada para não sumir ao morrer)
+if plr.PlayerGui:FindFirstChild("BrainrotHubV3") then
+    plr.PlayerGui:FindFirstChild("BrainrotHubV3"):Destroy()
+end
+
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "BrainrotHubV2"
-gui.ResetOnSpawn = false
+gui.Name = "BrainrotHubV3"
+gui.ResetOnSpawn = false -- ISSO GARANTE QUE O MENU NÃO SUMA
 
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0,320,0,320)
@@ -25,9 +37,9 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,35)
 title.BackgroundTransparency = 1
-title.Text = "BRAINROT HUB V2"
+title.Text = "BRAINROT HUB V3 - AUTO RESPAWN"
 title.TextColor3 = Color3.new(1,1,1)
-title.TextSize = 18
+title.TextSize = 15
 
 local scroll = Instance.new("ScrollingFrame", frame)
 scroll.Size = UDim2.new(1,-10,1,-50)
@@ -40,17 +52,15 @@ local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0,8)
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
---// LÓGICA ANTI-TSUNAMI (Melhorada)
+--// LÓGICA ANTI-TSUNAMI
 task.spawn(function()
     while task.wait(0.1) do
-        if _G.AntiTsunami then
-            -- Procura por partes gigantes ou com nomes de água se movendo
+        if getgenv().AntiTsunami and root then
             for _, v in pairs(workspace:GetDescendants()) do
-                if v:IsA("BasePart") and (v.Name:lower():find("tsunami") or v.Name:lower():find("water") or v.Name:lower():find("wave")) then
-                    -- Se a onda estiver vindo na sua direção ou perto
+                if v:IsA("BasePart") and (v.Name:lower():find("tsunami") or v.Name:lower():find("wave") or v.Name:lower():find("water")) then
                     if (v.Position - root.Position).Magnitude < 150 then
                         root.CFrame = root.CFrame + Vector3.new(0, 500, 0)
-                        task.wait(4) -- Tempo para a onda passar
+                        task.wait(5)
                     end
                 end
             end
@@ -58,74 +68,74 @@ task.spawn(function()
     end
 end)
 
---// LÓGICA AUTO COLLECT (Loop Infinito enquanto ON)
+--// LÓGICA AUTO COLLECT (Aprimorada para novos itens e renascimento)
 task.spawn(function()
-    while task.wait(0.5) do
-        if _G.AutoCollect then
+    while task.wait(1) do
+        if getgenv().AutoCollect and root then
+            -- Salva a posição apenas se não estivermos no meio de um teleporte
             if not lastPos then lastPos = root.CFrame end
             
-            local foundItem = false
+            local itensEncontrados = 0
+            
             for _, v in pairs(workspace:GetDescendants()) do
-                if _G.AutoCollect == false then break end
+                if not getgenv().AutoCollect then break end
                 
-                -- Procura por ProximityPrompt ou ClickDetector
+                -- Verifica se é um item coletável (ProximityPrompt ou ClickDetector)
                 local prompt = v:FindFirstChildOfClass("ProximityPrompt") or (v:IsA("ProximityPrompt") and v)
+                local click = v:FindFirstChildOfClass("ClickDetector") or (v:IsA("ClickDetector") and v)
                 
-                if prompt and v.Parent:IsA("BasePart") then
-                    foundItem = true
-                    -- Teleporta levemente acima para não bugar no chão
-                    root.CFrame = v.Parent.CFrame * CFrame.new(0, 3, 0)
-                    task.wait(0.2)
+                if (prompt or click) and v.Parent:IsA("BasePart") then
+                    itensEncontrados = itensEncontrados + 1
                     
-                    -- Simula a interação
-                    if fireproximityprompt then
-                        fireproximityprompt(prompt)
-                    else
-                        -- Caso o executor não tenha fireproximityprompt
-                        prompt:InputHoldBegin()
-                        task.wait(prompt.HoldDuration)
-                        prompt:InputHoldEnd()
-                    end
+                    -- Teleporta e interage
+                    root.CFrame = v.Parent.CFrame * CFrame.new(0, 3, 0)
                     task.wait(0.3)
+                    
+                    if prompt then
+                        fireproximityprompt(prompt)
+                    elseif click then
+                        fireclickdetector(click)
+                    end
+                    task.wait(0.5)
                 end
             end
             
-            if not foundItem and lastPos then
+            -- Se limpou tudo ou desligou, volta pra base
+            if itensEncontrados == 0 and lastPos then
                 root.CFrame = lastPos
                 lastPos = nil
-                _G.AutoCollect = false -- Desliga sozinho se não achar mais nada
+                -- Opcional: print("Todos os Brainrots coletados!")
             end
         end
     end
 end)
 
 --// Função de criar botão (Seu estilo)
-local function makeToggle(text, callback)
-    local state = false
+local function makeToggle(text, startState, callback)
     local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(0, 280, 0, 45)
-    btn.BackgroundColor3 = Color3.fromRGB(170,0,0)
+    btn.BackgroundColor3 = startState and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.TextSize = 16
-    btn.Text = text.." [OFF]"
+    btn.Text = text.." ["..(startState and "ON" or "OFF").."]"
 
     btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.Text = text.." ["..(state and "ON" or "OFF").."]"
-        btn.BackgroundColor3 = state and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
-        callback(state)
+        local newState = not (btn.BackgroundColor3 == Color3.fromRGB(0,170,0))
+        btn.Text = text.." ["..(newState and "ON" or "OFF").."]"
+        btn.BackgroundColor3 = newState and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
+        callback(newState)
     end)
     
     scroll.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 10)
 end
 
 -- Botões
-makeToggle("Auto Collect Brainrots", function(s)
-    _G.AutoCollect = s
+makeToggle("Auto Collect Brainrots", getgenv().AutoCollect, function(s)
+    getgenv().AutoCollect = s
 end)
 
-makeToggle("Anti-Tsunami", function(s)
-    _G.AntiTsunami = s
+makeToggle("Anti-Tsunami", getgenv().AntiTsunami, function(s)
+    getgenv().AntiTsunami = s
 end)
 
 -- Botão Fechar
