@@ -8,6 +8,7 @@ local autoFarm = false
 local antiTsunami = false
 local originalPos = nil
 local itensPegos = {}
+local flySpeed = 100 -- Velocidade do deslocamento
 
 --// Referências Dinâmicas
 local char = plr.Character or plr.CharacterAdded:Wait()
@@ -18,28 +19,36 @@ plr.CharacterAdded:Connect(function(newChar)
     root = char:WaitForChild("HumanoidRootPart")
 end)
 
---// Função de Teleporte Suave (Bypass Anti-TP)
-local function smoothTeleport(targetCFrame)
+--// Função de Movimentação por Velocidade
+local function velocityMove(targetPos)
     if not root then return end
-    local distance = (targetCFrame.Position - root.Position).Magnitude
-    local speed = 5 -- Quantos studs por salto (5 como pedido)
     
-    -- Calcula quantos passos serão necessários
-    local steps = math.floor(distance / speed)
+    -- Cria a força de velocidade
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e6, 1e6, 1e6) -- Força máxima para não cair
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bv.Parent = root
     
-    for i = 1, steps do
-        if not autoFarm or not root then break end
-        -- Move o player 5 studs na direção do alvo
-        root.CFrame = root.CFrame:Lerp(targetCFrame, i/steps)
-        RunService.Heartbeat:Wait() -- Espera um frame do jogo (muito rápido)
+    -- Cria um alinhamento para o corpo não tombar
+    local bg = Instance.new("BodyGyro")
+    bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+    bg.CFrame = root.CFrame
+    bg.Parent = root
+
+    while autoFarm and root and (root.Position - targetPos).Magnitude > 5 do
+        local direction = (targetPos - root.Position).Unit
+        bv.Velocity = direction * flySpeed
+        task.wait()
     end
-    -- Garante que chegou exatamente no local
-    if autoFarm and root then root.CFrame = targetCFrame end
+    
+    bv:Destroy()
+    bg:Destroy()
+    if root then root.Velocity = Vector3.new(0,0,0) end
 end
 
 --// GUI (Estilo original mantido)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "BrainrotBypassHub"
+gui.Name = "VelocityHub"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
@@ -52,7 +61,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Brainrot Bypass Hub"
+title.Text = "Velocity Brainrot Hub"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -92,14 +101,17 @@ local function makeToggle(text, initialState, callback)
     return btn
 end
 
---// Lógica Anti-Tsunami
+--// Lógica Anti-Tsunami (Fuga por Velocidade)
 RunService.Heartbeat:Connect(function()
     if antiTsunami and root and root.Parent then
         for _, obj in pairs(workspace:GetChildren()) do
             if (obj.Name:lower():find("tsunami") or obj.Name:lower():find("wave")) and obj:IsA("BasePart") then
-                local dist = (root.Position.Y - obj.Position.Y)
-                if dist < 25 and (root.Position - obj.Position).Magnitude < 250 then
-                    root.CFrame = root.CFrame + Vector3.new(0, 50, 0) -- Pulo menor para evitar kick
+                local distY = (root.Position.Y - obj.Position.Y)
+                local distXZ = Vector2.new(root.Position.X - obj.Position.X, root.Position.Z - obj.Position.Z).Magnitude
+                
+                if distY < 30 and distXZ < 150 then
+                    -- Aplica um impulso vertical usando Velocity
+                    root.Velocity = Vector3.new(0, 150, 0)
                 end
             end
         end
@@ -108,7 +120,7 @@ end)
 
 --// Lógica Auto-Farm
 local function startFarm()
-    if root then originalPos = root.CFrame end
+    if root then originalPos = root.Position end
     
     while autoFarm do
         local alvoEncontrado = false
@@ -122,17 +134,15 @@ local function startFarm()
                     if itemPart and (itemPart:IsA("BasePart") or itemPart:IsA("Model")) then
                         alvoEncontrado = true
                         
-                        -- Posição alvo (com offset de altura)
-                        local targetCF = CFrame.new(itemPart:GetPivot().Position + Vector3.new(0, 7, 0))
-                        
-                        -- TELEPORTE SUAVE DE 5 EM 5
-                        smoothTeleport(targetCF)
+                        -- Move usando BodyVelocity
+                        local targetPos = itemPart:GetPivot().Position + Vector3.new(0, 8, 0)
+                        velocityMove(targetPos)
                         
                         task.wait(0.2)
                         fireproximityprompt(prompt)
                         
                         itensPegos[prompt] = true
-                        task.wait(0.3)
+                        task.wait(0.5)
                     end
                 end
             end
@@ -140,7 +150,7 @@ local function startFarm()
         
         if not alvoEncontrado and autoFarm then
             if originalPos and root then
-                smoothTeleport(originalPos)
+                velocityMove(originalPos)
             end
             task.wait(2)
         end
@@ -149,7 +159,7 @@ local function startFarm()
 end
 
 --// Controles
-makeToggle("Auto Bypass Farm", false, function(state)
+makeToggle("Velocity Auto Farm", false, function(state)
     autoFarm = state
     if state then
         itensPegos = {}
@@ -157,7 +167,7 @@ makeToggle("Auto Bypass Farm", false, function(state)
     end
 end)
 
-makeToggle("Anti-Tsunami", false, function(state)
+makeToggle("Anti-Tsunami (Impulse)", false, function(state)
     antiTsunami = state
 end)
 
