@@ -10,21 +10,20 @@ local originalPos = nil
 local itensPegos = {}
 local limiteBrainrots = 1
 local contadorAtual = 0
-local flySpeed = 100 -- Velocidade ajustada para 100
+local flySpeed = 100 
 
---// Referências Dinâmicas
-local char = plr.Character or plr.CharacterAdded:Wait()
-local root = char:WaitForChild("HumanoidRootPart")
+--// Função para atualizar referências de forma segura
+local function getCharData()
+    local c = plr.Character
+    if c and c:FindFirstChild("HumanoidRootPart") and c:FindFirstChild("Humanoid") and c.Humanoid.Health > 0 then
+        return c, c.HumanoidRootPart
+    end
+    return nil, nil
+end
 
-plr.CharacterAdded:Connect(function(newChar)
-    char = newChar
-    root = char:WaitForChild("HumanoidRootPart")
-end)
-
---// Função para validar posição além da linha branca (Eixo Z)
+--// Função para validar posição além da linha branca
 local function estaDepoisDaLinha(itemPos)
     if not originalPos then return true end
-    -- Detecta se o campo de jogo expande para Z positivo ou negativo
     local direcaoMapa = (originalPos.Z > 0) and 1 or -1
     if direcaoMapa == 1 then
         return itemPos.Z > (originalPos.Z + 2)
@@ -35,6 +34,9 @@ end
 
 --// Função para buscar o Brainrot mais próximo
 local function getClosestBrainrot()
+    local _, characterRoot = getCharData()
+    if not characterRoot then return nil end
+    
     local closest = nil
     local shortestDist = math.huge
     
@@ -44,7 +46,7 @@ local function getClosestBrainrot()
             if part and (part:IsA("BasePart") or part:IsA("Model")) then
                 local pPos = part:GetPivot().Position
                 if estaDepoisDaLinha(pPos) then
-                    local dist = (root.Position - pPos).Magnitude
+                    local dist = (characterRoot.Position - pPos).Magnitude
                     if dist < shortestDist then
                         shortestDist = dist
                         closest = prompt
@@ -56,30 +58,32 @@ local function getClosestBrainrot()
     return closest
 end
 
---// Função de Movimentação por Velocidade (BodyVelocity)
+--// Função de Movimentação por Velocidade (Persistente)
 local function velocityMove(targetPos)
-    if not root or not root.Parent then return end
+    local c, r = getCharData()
+    if not r then return end
     
-    local bv = Instance.new("BodyVelocity", root)
+    local bv = Instance.new("BodyVelocity", r)
     bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-    
-    local bg = Instance.new("BodyGyro", root)
+    local bg = Instance.new("BodyGyro", r)
     bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
-    bg.CFrame = root.CFrame
+    bg.CFrame = r.CFrame
 
-    while autoFarm and root and root.Parent and char.Humanoid.Health > 0 and (root.Position - targetPos).Magnitude > 6 do
-        bv.Velocity = (targetPos - root.Position).Unit * flySpeed
+    -- Loop de movimento checando vida a cada passo
+    while autoFarm and r and r.Parent and c.Humanoid.Health > 0 and (r.Position - targetPos).Magnitude > 6 do
+        bv.Velocity = (targetPos - r.Position).Unit * flySpeed
         task.wait()
+        c, r = getCharData() -- Revalida o personagem durante o voo
+        if not r then break end
     end
     
-    bv:Destroy()
-    bg:Destroy()
-    if root then root.Velocity = Vector3.new(0,0,0) end
+    if bv then bv:Destroy() end
+    if bg then bg:Destroy() end
 end
 
---// GUI (Estilo original restaurado)
+--// GUI
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "BrainrotVelocityHub"
+gui.Name = "BrainrotFixedHub"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
@@ -89,14 +93,12 @@ frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.Active = true
 frame.Draggable = true
 
--- TÍTULO RECOLOCADO
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,35)
 title.BackgroundTransparency = 1
-title.Text = "BRAINROT VELOCITY HUB"
+title.Text = "BRAINROT PERSISTENTE"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
-title.Font = Enum.Font.SourceSansBold
 
 local scroll = Instance.new("ScrollingFrame", frame)
 scroll.Size = UDim2.new(1,-10,1,-50)
@@ -108,18 +110,11 @@ scroll.BorderSizePixel = 0
 local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0,6)
 
-local function updateCanvas()
-    task.wait()
-    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+10)
-end
-
--- TextBox de Limite
 local limitBox = Instance.new("TextBox", scroll)
 limitBox.Size = UDim2.new(1,-8,0,40)
 limitBox.BackgroundColor3 = Color3.fromRGB(50,50,50)
 limitBox.TextColor3 = Color3.new(1,1,1)
 limitBox.Text = "1"
-limitBox.PlaceholderText = "Limite de Brainrots"
 limitBox.FocusLost:Connect(function() limiteBrainrots = tonumber(limitBox.Text) or 1 end)
 
 local function makeToggle(text, callback)
@@ -136,14 +131,16 @@ local function makeToggle(text, callback)
         btn.BackgroundColor3 = state and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
         callback(state)
     end)
-    updateCanvas()
+    task.wait()
+    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+10)
 end
 
---// Loop Farm Persistente
+--// LOOP PRINCIPAL (Não morre com o Player)
 task.spawn(function()
     while true do
         if autoFarm then
-            if root and root.Parent and char.Humanoid.Health > 0 then
+            local c, r = getCharData()
+            if r then
                 if contadorAtual < limiteBrainrots then
                     local target = getClosestBrainrot()
                     if target then
@@ -151,26 +148,24 @@ task.spawn(function()
                         fireproximityprompt(target)
                         itensPegos[target] = true
                         contadorAtual = contadorAtual + 1
-                        task.wait(0.3)
                     else
                         if originalPos then velocityMove(originalPos) end
-                        task.wait(1)
                     end
                 else
                     autoFarm = false
-                    if originalPos then velocityMove(originalPos) end
                 end
             end
         end
-        task.wait(0.5)
+        task.wait(1) -- Intervalo de segurança
     end
 end)
 
 -- Toggles
-makeToggle("Auto Farm (Pos-Linha)", function(state)
+makeToggle("Auto Farm", function(state)
     autoFarm = state
     if state then
-        originalPos = root.Position
+        local _, r = getCharData()
+        if r then originalPos = r.Position end
         contadorAtual = 0
         itensPegos = {}
     end
@@ -178,24 +173,25 @@ end)
 
 makeToggle("Anti-Tsunami", function(state) antiTsunami = state end)
 
--- Lógica Anti-Tsunami
+-- Lógica Anti-Tsunami (Independente)
 RunService.Heartbeat:Connect(function()
-    if antiTsunami and root and char.Humanoid.Health > 0 then
-        for _, obj in pairs(workspace:GetChildren()) do
-            if (obj.Name:lower():find("tsunami") or obj.Name:lower():find("wave")) and obj:IsA("BasePart") then
-                if (root.Position.Y - obj.Position.Y) < 35 and (root.Position - obj.Position).Magnitude < 180 then
-                    root.Velocity = Vector3.new(0, 150, 0)
+    if antiTsunami then
+        local c, r = getCharData()
+        if r then
+            for _, obj in pairs(workspace:GetChildren()) do
+                if (obj.Name:lower():find("tsunami") or obj.Name:lower():find("wave")) and obj:IsA("BasePart") then
+                    if (r.Position.Y - obj.Position.Y) < 35 and (r.Position - obj.Position).Magnitude < 180 then
+                        r.Velocity = Vector3.new(0, 150, 0)
+                    end
                 end
             end
         end
     end
 end)
 
--- Botão Fechar
 local close = Instance.new("TextButton", frame)
 close.Size = UDim2.new(0,25,0,25)
 close.Position = UDim2.new(1,-28,0,4)
 close.Text = "X"
 close.BackgroundColor3 = Color3.fromRGB(170,0,0)
-close.TextColor3 = Color3.new(1,1,1)
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
