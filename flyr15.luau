@@ -24,7 +24,7 @@ Frame.Size = UDim2.new(0, 190, 0, 57)
 Frame.Active = true
 Frame.Draggable = true
 
--- [CONFIGURAÇÃO DOS BOTÕES]
+-- [ Configuração da UI - Original ]
 up.Name = "up"; up.Parent = Frame; up.BackgroundColor3 = Color3.fromRGB(79, 255, 152); up.Size = UDim2.new(0, 44, 0, 28); up.Text = "UP"
 down.Name = "down"; down.Parent = Frame; down.BackgroundColor3 = Color3.fromRGB(215, 255, 121); down.Position = UDim2.new(0, 0, 0.491228074, 0); down.Size = UDim2.new(0, 44, 0, 28); down.Text = "DOWN"
 onof.Name = "onof"; onof.Parent = Frame; onof.BackgroundColor3 = Color3.fromRGB(255, 249, 74); onof.Position = UDim2.new(0.702823281, 0, 0.491228074, 0); onof.Size = UDim2.new(0, 56, 0, 28); onof.Text = "fly"
@@ -36,162 +36,141 @@ closebutton.Name = "Close"; closebutton.Parent = Frame; closebutton.BackgroundCo
 mini.Name = "minimize"; mini.Parent = Frame; mini.BackgroundColor3 = Color3.fromRGB(192, 150, 230); mini.Size = UDim2.new(0, 45, 0, 28); mini.Text = "-"; mini.Position = UDim2.new(0, 44, -1, 27)
 mini2.Name = "minimize2"; mini2.Parent = Frame; mini2.BackgroundColor3 = Color3.fromRGB(192, 150, 230); mini2.Size = UDim2.new(0, 45, 0, 28); mini2.Text = "+"; mini2.Position = UDim2.new(0, 44, -1, 57); mini2.Visible = false
 
--- VARIAVEIS DE CONTROLE
+-- [ Variáveis e Configuração de Animação ]
 local speeds = 1
 local nowe = false
-local tpwalking = false
-local speaker = game.Players.LocalPlayer
+local speaker = game:GetService("Players").LocalPlayer
 local trackIdle, trackMove
 
--- CONFIGURAÇÃO DE ANIMAÇÕES
 local animIdle = Instance.new("Animation")
 animIdle.AnimationId = "rbxassetid://98353973763565"
 local animMove = Instance.new("Animation")
 animMove.AnimationId = "rbxassetid://117931620432186"
 
-game:GetService("StarterGui"):SetCore("SendNotification", { Title = "FLY GUI V3", Text = "BY XNEO", Duration = 5 })
+game:GetService("StarterGui"):SetCore("SendNotification", { Title = "FLY GUI V3", Text = "BY XNEO", Duration = 5})
 
--- FUNÇÃO DE ATUALIZAÇÃO DE ANIMAÇÃO
-local function updateAnimations()
-    local char = speaker.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hum or not nowe then return end
+-- [ Função para alternar as animações ]
+local function updateFlyAnim()
+	local char = speaker.Character
+	local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+	if not hum or not nowe then return end
 
-    if hum.MoveDirection.Magnitude > 0 then
-        if trackIdle and trackIdle.IsPlaying then trackIdle:Stop(0.3) end
-        if trackMove and not trackMove.IsPlaying then trackMove:Play(0.3) end
-    else
-        if trackMove and trackMove.IsPlaying then trackMove:Stop(0.3) end
-        if trackIdle and not trackIdle.IsPlaying then trackIdle:Play(0.3) end
-    end
+	if hum.MoveDirection.Magnitude > 0 then
+		if trackIdle then trackIdle:Stop(0.3) end
+		if trackMove and not trackMove.IsPlaying then trackMove:Play(0.3) end
+	else
+		if trackMove then trackMove:Stop(0.3) end
+		if trackIdle and not trackIdle.IsPlaying then trackIdle:Play(0.3) end
+	end
 end
 
 onof.MouseButton1Down:connect(function()
-    if nowe == true then
-        nowe = false
-        tpwalking = false
-        if speaker.Character:FindFirstChild("Animate") then
-            speaker.Character.Animate.Disabled = false
-        end
-        if trackIdle then trackIdle:Stop() end
-        if trackMove then trackMove:Stop() end
+	if nowe == true then
+		nowe = false
+		speaker.Character.Animate.Disabled = false
+		if trackIdle then trackIdle:Stop() end
+		if trackMove then trackMove:Stop() end
 
-        local hum = speaker.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            for _, state in pairs(Enum.HumanoidStateType:GetEnumItems()) do
-                hum:SetStateEnabled(state, true)
-            end
-            hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
-            hum.PlatformStand = false
-        end
-    else 
-        nowe = true
-        local char = speaker.Character
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        
-        if char:FindFirstChild("Animate") then
-            char.Animate.Disabled = true
-        end
+		local hum = speaker.Character.Humanoid
+		hum:SetStateEnabled(Enum.HumanoidStateType.Climbing,true)
+		hum:SetStateEnabled(Enum.HumanoidStateType.Running,true)
+		hum:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
+	else 
+		nowe = true
+		local char = speaker.Character
+		local hum = char:FindFirstChildWhichIsA("Humanoid")
+		char.Animate.Disabled = true
 
-        -- Configurar Animações com Prioridade Máxima
-        trackIdle = hum:LoadAnimation(animIdle)
-        trackMove = hum:LoadAnimation(animMove)
-        trackIdle.Priority = Enum.AnimationPriority.Action
-        trackMove.Priority = Enum.AnimationPriority.Action
-        trackIdle.Looped = true
-        trackMove.Looped = true
+		-- Carregar Tracks
+		trackIdle = hum:LoadAnimation(animIdle)
+		trackMove = hum:LoadAnimation(animMove)
+		trackIdle.Priority = Enum.AnimationPriority.Action
+		trackMove.Priority = Enum.AnimationPriority.Action
+		trackIdle.Looped = true
+		trackMove.Looped = true
 
-        -- Forçar estado de voo para animação não bugar
-        hum:ChangeState(Enum.HumanoidStateType.Physics)
+		-- Loop de Animação
+		task.spawn(function()
+			while nowe and char and hum do
+				updateFlyAnim()
+				task.wait(0.1)
+			end
+		end)
 
-        -- Loop de monitoramento de animação
-        task.spawn(function()
-            while nowe and char and hum do
-                updateAnimations()
-                task.wait(0.1)
-            end
-        end)
+		-- TP Walking (Velocidade)
+		task.spawn(function()
+			local hb = game:GetService("RunService").Heartbeat	
+			tpwalking = true
+			while tpwalking and nowe and char and hum do
+				hb:Wait()
+				if hum.MoveDirection.Magnitude > 0 then
+					for i = 1, speeds do
+						char:TranslateBy(hum.MoveDirection)
+					end
+				end
+			end
+		end)
 
-        -- TP Walking Loop (Velocidade)
-        task.spawn(function()
-            tpwalking = true
-            local hb = game:GetService("RunService").Heartbeat
-            while tpwalking and nowe and char and hum do
-                hb:Wait()
-                if hum.MoveDirection.Magnitude > 0 then
-                    for i = 1, speeds do
-                        char:TranslateBy(hum.MoveDirection)
-                    end
-                end
-            end
-        end)
+		-- Voo Físico (R6 ou R15)
+		task.spawn(function()
+			local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+			local bg = Instance.new("BodyGyro", root)
+			bg.P = 9e4
+			bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+			bg.cframe = root.CFrame
+			local bv = Instance.new("BodyVelocity", root)
+			bv.velocity = Vector3.new(0,0.1,0)
+			bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
 
-        -- Sistema de Voo Físico
-        task.spawn(function()
-            local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
-            local bg = Instance.new("BodyGyro", root)
-            bg.P = 9e4
-            bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-            bg.cframe = root.CFrame
-            
-            local bv = Instance.new("BodyVelocity", root)
-            bv.velocity = Vector3.new(0,0.1,0)
-            bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
-
-            hum.PlatformStand = true
-
-            while nowe do
-                game:GetService("RunService").RenderStepped:Wait()
-                bv.velocity = (game.Workspace.CurrentCamera.CoordinateFrame.LookVector * (hum.MoveDirection.Z * -50)) + (game.Workspace.CurrentCamera.CoordinateFrame.RightVector * (hum.MoveDirection.X * 50))
-                bg.cframe = game.Workspace.CurrentCamera.CoordinateFrame
-                if hum.Health == 0 then break end
-            end
-
-            bg:Destroy()
-            bv:Destroy()
-        end)
-    end
+			hum.PlatformStand = true
+			while nowe do
+				game:GetService("RunService").RenderStepped:Wait()
+				bv.velocity = ((game.Workspace.CurrentCamera.CoordinateFrame.lookVector * (hum.MoveDirection.Z * -50)) + (game.Workspace.CurrentCamera.CoordinateFrame.rightVector * (hum.MoveDirection.X * 50)))
+				bg.cframe = game.Workspace.CurrentCamera.CoordinateFrame
+				if hum.Health == 0 then break end
+			end
+			bg:Destroy()
+			bv:Destroy()
+			hum.PlatformStand = false
+		end)
+	end
 end)
 
--- [CONTROLES DE ALTURA E UI - MANTIDOS]
+-- [ Botões Up / Down ]
 local tis
 up.MouseButton1Down:connect(function()
-    tis = true
-    while tis do
-        task.wait()
-        if speaker.Character then
-            speaker.Character.HumanoidRootPart.CFrame *= CFrame.new(0,1,0)
-        end
-    end
+	tis = true
+	while tis do
+		task.wait()
+		speaker.Character.HumanoidRootPart.CFrame *= CFrame.new(0,1,0)
+	end
 end)
 up.MouseLeave:connect(function() tis = false end)
 up.MouseButton1Up:connect(function() tis = false end)
 
 local dis
 down.MouseButton1Down:connect(function()
-    dis = true
-    while dis do
-        task.wait()
-        if speaker.Character then
-            speaker.Character.HumanoidRootPart.CFrame *= CFrame.new(0,-1,0)
-        end
-    end
+	dis = true
+	while dis do
+		task.wait()
+		speaker.Character.HumanoidRootPart.CFrame *= CFrame.new(0,-1,0)
+	end
 end)
 down.MouseLeave:connect(function() dis = false end)
 down.MouseButton1Up:connect(function() dis = false end)
 
-plus.MouseButton1Down:connect(function() speeds += 1; speed.Text = speeds end)
-mine.MouseButton1Down:connect(function() 
-    if speeds > 1 then speeds -= 1 else speed.Text = "min 1" task.wait(1) end
-    speed.Text = speeds 
+-- [ Velocidade e Minimizar ]
+plus.MouseButton1Down:connect(function() speeds = speeds + 1; speed.Text = speeds end)
+mine.MouseButton1Down:connect(function()
+	if speeds > 1 then speeds = speeds - 1 speed.Text = speeds else speed.Text = 'min 1' task.wait(1) speed.Text = speeds end
 end)
 
 closebutton.MouseButton1Click:Connect(function() main:Destroy() end)
 mini.MouseButton1Click:Connect(function()
-    for _, v in pairs({up, down, onof, plus, speed, mine, mini}) do v.Visible = false end
-    mini2.Visible = true; Frame.BackgroundTransparency = 1; closebutton.Position = UDim2.new(0, 0, -1, 57)
+	for _,v in pairs({up,down,onof,plus,speed,mine,mini}) do v.Visible = false end
+	mini2.Visible = true; Frame.BackgroundTransparency = 1; closebutton.Position = UDim2.new(0, 0, -1, 57)
 end)
 mini2.MouseButton1Click:Connect(function()
-    for _, v in pairs({up, down, onof, plus, speed, mine, mini}) do v.Visible = true end
-    mini2.Visible = false; Frame.BackgroundTransparency = 0; closebutton.Position = UDim2.new(0, 0, -1, 27)
+	for _,v in pairs({up,down,onof,plus,speed,mine,mini}) do v.Visible = true end
+	mini2.Visible = false; Frame.BackgroundTransparency = 0; closebutton.Position = UDim2.new(0, 0, -1, 27)
 end)
