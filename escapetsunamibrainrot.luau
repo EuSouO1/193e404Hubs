@@ -9,26 +9,37 @@ local antiTsunami = false
 local originalPos = nil
 local itensPegos = {}
 
---// Referências Dinâmicas (Atualizam ao morrer)
+--// Referências Dinâmicas
 local char = plr.Character or plr.CharacterAdded:Wait()
 local root = char:WaitForChild("HumanoidRootPart")
 
 plr.CharacterAdded:Connect(function(newChar)
     char = newChar
     root = char:WaitForChild("HumanoidRootPart")
-    
-    -- Se o farm estava ligado, ele retoma o loop automaticamente após renascer
-    if autoFarm then
-        task.wait(1) -- Espera o spawn estabilizar
-        task.spawn(function()
-            -- O loop de startFarm já vai detectar o novo 'root'
-        end)
-    end
 end)
 
---// GUI (Mesmo Estilo)
+--// Função de Teleporte Suave (Bypass Anti-TP)
+local function smoothTeleport(targetCFrame)
+    if not root then return end
+    local distance = (targetCFrame.Position - root.Position).Magnitude
+    local speed = 5 -- Quantos studs por salto (5 como pedido)
+    
+    -- Calcula quantos passos serão necessários
+    local steps = math.floor(distance / speed)
+    
+    for i = 1, steps do
+        if not autoFarm or not root then break end
+        -- Move o player 5 studs na direção do alvo
+        root.CFrame = root.CFrame:Lerp(targetCFrame, i/steps)
+        RunService.Heartbeat:Wait() -- Espera um frame do jogo (muito rápido)
+    end
+    -- Garante que chegou exatamente no local
+    if autoFarm and root then root.CFrame = targetCFrame end
+end
+
+--// GUI (Estilo original mantido)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "BrainrotFixV3"
+gui.Name = "BrainrotBypassHub"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
@@ -41,7 +52,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Brainrot Hub (Auto-Respawn)"
+title.Text = "Brainrot Bypass Hub"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -81,28 +92,27 @@ local function makeToggle(text, initialState, callback)
     return btn
 end
 
---// Lógica Anti-Tsunami (Usa 'root' atualizado)
+--// Lógica Anti-Tsunami
 RunService.Heartbeat:Connect(function()
     if antiTsunami and root and root.Parent then
         for _, obj in pairs(workspace:GetChildren()) do
             if (obj.Name:lower():find("tsunami") or obj.Name:lower():find("wave")) and obj:IsA("BasePart") then
                 local dist = (root.Position.Y - obj.Position.Y)
                 if dist < 25 and (root.Position - obj.Position).Magnitude < 250 then
-                    root.CFrame = root.CFrame + Vector3.new(0, 500, 0)
+                    root.CFrame = root.CFrame + Vector3.new(0, 50, 0) -- Pulo menor para evitar kick
                 end
             end
         end
     end
 end)
 
---// Lógica Auto-Farm (Usa 'root' atualizado)
+--// Lógica Auto-Farm
 local function startFarm()
     if root then originalPos = root.CFrame end
     
     while autoFarm do
         local alvoEncontrado = false
         
-        -- Garante que o personagem existe antes de tentar mover
         if root and root.Parent then
             for _, prompt in pairs(workspace:GetDescendants()) do
                 if not autoFarm then break end
@@ -112,36 +122,37 @@ local function startFarm()
                     if itemPart and (itemPart:IsA("BasePart") or itemPart:IsA("Model")) then
                         alvoEncontrado = true
                         
-                        -- Teleporte com offset para não cair do mapa
-                        local targetPos = itemPart:GetPivot().Position + Vector3.new(0, 7, 0)
-                        root.CFrame = CFrame.new(targetPos)
+                        -- Posição alvo (com offset de altura)
+                        local targetCF = CFrame.new(itemPart:GetPivot().Position + Vector3.new(0, 7, 0))
                         
-                        task.wait(0.3)
+                        -- TELEPORTE SUAVE DE 5 EM 5
+                        smoothTeleport(targetCF)
+                        
+                        task.wait(0.2)
                         fireproximityprompt(prompt)
                         
                         itensPegos[prompt] = true
-                        task.wait(0.2)
+                        task.wait(0.3)
                     end
                 end
             end
         end
         
-        -- Se não tiver mais nada, volta pra posição salva ou fica no spawn
         if not alvoEncontrado and autoFarm then
             if originalPos and root then
-                root.CFrame = originalPos
+                smoothTeleport(originalPos)
             end
-            task.wait(2) 
+            task.wait(2)
         end
         task.wait(0.1)
     end
 end
 
 --// Controles
-makeToggle("Auto Farm Brainrots", false, function(state)
+makeToggle("Auto Bypass Farm", false, function(state)
     autoFarm = state
     if state then
-        itensPegos = {} 
+        itensPegos = {}
         task.spawn(startFarm)
     end
 end)
