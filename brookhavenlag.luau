@@ -44,7 +44,7 @@ local lag1Enabled = false
 local lag2Enabled = false
 
 -- Palavras proibidas (Filtro de segurança)
-local blacklist = {"remove"}
+local blacklist = {"delete"}
 
 -- Função de criar botão toggle
 local function makeToggle(text, initialState, callback)
