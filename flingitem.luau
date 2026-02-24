@@ -15,7 +15,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Fling Item Hub"
+title.Text = "Fling Item Hub Ajusted"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -120,8 +120,8 @@ local function GlitchFling(TargetPlayer)
         if THum.Sit then
             -- INICIO DO DESCARTE
             isDiscarding = true
-            -- Teleporta para o Void (Y -485)
-            RootPart.CFrame = CFrame.new(RootPart.Position.X, -485, RootPart.Position.Z)
+            -- Teleporta para o Void (Y -400)
+            RootPart.CFrame = CFrame.new(RootPart.Position.X, -400, RootPart.Position.Z)
             
             task.wait(0.5)
             Hum:UnequipTools() -- Desequipa
@@ -129,7 +129,7 @@ local function GlitchFling(TargetPlayer)
             -- Mantém no void por 0.5s para garantir que o item caia e você não morra
             local discardStart = tick()
             repeat 
-                RootPart.CFrame = CFrame.new(RootPart.Position.X, -485, RootPart.Position.Z)
+                RootPart.CFrame = CFrame.new(RootPart.Position.X, -400, RootPart.Position.Z)
                 task.wait()
             until tick() - discardStart > 2.5
             
