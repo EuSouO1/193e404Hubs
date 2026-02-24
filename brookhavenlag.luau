@@ -2,7 +2,7 @@
 local plr = game:GetService("Players").LocalPlayer
 local RunService = game:GetService("RunService")
 
---// GUI (Mesmo estilo do Chat Config Hub)
+--// GUI (Mesmo estilo do seu hub original)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
 gui.Name = "BrookhavenLagHub"
 gui.ResetOnSpawn = false
@@ -43,7 +43,7 @@ end
 local lag1Enabled = false
 local lag2Enabled = false
 
--- Função de criar botão toggle (idêntica ao original)
+-- Função de criar botão toggle
 local function makeToggle(text, initialState, callback)
     local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(1,-8,0,45)
@@ -67,7 +67,7 @@ end
 
 ---// Lógica de Lag
 
--- Lag 1: Spam de "Phone"
+-- Lag 1: Spam de "Phone" (Brookhaven Method)
 makeToggle("Lag 1 (Phone Spam)", false, function(state)
     lag1Enabled = state
 end)
@@ -75,35 +75,49 @@ end)
 task.spawn(function()
     while task.wait(0.001) do
         if lag1Enabled then
-            -- Brookhaven Event para pegar item (Phone)
-            local args = {
-                [1] = "PickingTool",
-                [2] = "Phone"
-            }
-            game:GetService("ReplicatedStorage").RE:FindFirstChild("1Updat1eAvata1r"):FireServer(unpack(args))
-            
-            -- Equipa automaticamente se aparecer na Backpack
-            local tool = plr.Backpack:FindFirstChild("Phone")
-            if tool and plr.Character then
-                plr.Character.Humanoid:EquipTool(tool)
-            end
+            pcall(function()
+                -- Tenta pegar o celular via Remote do Brookhaven
+                local remote = game:GetService("ReplicatedStorage"):FindFirstChild("RE") and game:GetService("ReplicatedStorage").RE:FindFirstChild("1Updat1eAvata1r")
+                if remote then
+                    remote:FireServer("PickingTool", "Phone")
+                end
+                
+                -- Equipa se estiver na mochila
+                local tool = plr.Backpack:FindFirstChild("Phone")
+                if tool and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+                    plr.Character.Humanoid:EquipTool(tool)
+                end
+            end)
         end
     end
 end)
 
--- Lag 2: Spam de Uso de Ferramenta
-makeToggle("Lag 2 (Tool Spam)", false, function(state)
+-- Lag 2: Tool Auto-Equip + Remote Spam
+makeToggle("Lag 2 (Remote Spam)", false, function(state)
     lag2Enabled = state
 end)
 
 task.spawn(function()
     while task.wait(0.001) do
         if lag2Enabled then
-            -- Tenta usar a primeira tool que encontrar (na mão ou na mochila)
-            local tool = plr.Character:FindFirstChildOfClass("Tool") or plr.Backpack:FindFirstChildOfClass("Tool")
-            if tool then
-                tool:Activate()
-            end
+            pcall(function()
+                -- 1. Pega a primeira Tool disponível
+                local tool = plr.Backpack:FindFirstChildOfClass("Tool") or plr.Character:FindFirstChildOfClass("Tool")
+                
+                if tool then
+                    -- 2. Equipa automaticamente se estiver na Backpack
+                    if tool.Parent == plr.Backpack and plr.Character:FindFirstChild("Humanoid") then
+                        plr.Character.Humanoid:EquipTool(tool)
+                    end
+                    
+                    -- 3. Procura e dispara todos os RemoteEvents dentro da Tool
+                    for _, obj in ipairs(tool:GetDescendants()) do
+                        if obj:IsA("RemoteEvent") then
+                            obj:FireServer() -- Dispara o evento
+                        end
+                    end
+                end
+            end)
         end
     end
 end)
