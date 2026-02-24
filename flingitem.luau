@@ -15,7 +15,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Fling Item Hub"
+title.Text = "Fling Item Hub v2"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -85,6 +85,17 @@ refreshPlayers()
 game.Players.PlayerAdded:Connect(refreshPlayers)
 game.Players.PlayerRemoving:Connect(refreshPlayers)
 
+--// FUNÇÃO EQUIPAR ITEM 1
+local function EquipFirstTool()
+    local backpack = plr:FindFirstChild("Backpack")
+    if backpack then
+        local tool = backpack:FindFirstChildOfClass("Tool")
+        if tool then
+            plr.Character.Humanoid:EquipTool(tool)
+        end
+    end
+end
+
 --// LÓGICA DE TELEPORT/GLITCH
 local function GlitchFling(TargetPlayer)
     local Character = plr.Character
@@ -97,33 +108,34 @@ local function GlitchFling(TargetPlayer)
 
     if not RootPart or not TRoot or not THum then return end
 
-    -- Salva posição antes de começar (se não estiver fligando ainda)
+    -- Salva posição e equipa item 1
     if not SavedPos then SavedPos = RootPart.CFrame end
+    EquipFirstTool()
 
     local startTime = tick()
     
     while (running or flingAllActive) and TargetPlayer.Parent do
-        -- Se o alvo sentar: Teleporta para o void, solta item e volta
+        -- Se o alvo sentar: Teleporta para X = -485, solta item e volta
         if THum.Sit then
-            RootPart.CFrame = CFrame.new(0, -495, 0)
+            RootPart.CFrame = CFrame.new(-485, -495, 0) -- Eixo X alterado conforme pedido
             task.wait(0.1)
             if Hum then Hum:UnequipTools() end
             task.wait(0.1)
-            if not flingAllActive then break end -- No All, ele continua pro próximo
+            break 
         end
 
-        -- Lógica de oscilação (1 a 5 studs)
+        -- Lógica de oscilação + Virar para o Alvo (LookAt)
         local distance = math.random(1, 5)
-        RootPart.CFrame = TRoot.CFrame * CFrame.new(0, 0, -distance)
+        local targetPos = TRoot.Position
+        -- CFrame.lookAt faz o player olhar para o alvo enquanto mantém a distância
+        RootPart.CFrame = CFrame.lookAt(TRoot.Position + (TRoot.CFrame.LookVector * -distance), targetPos)
         
-        task.wait(0.001) -- 1 milisegundo
+        task.wait(0.001)
 
-        -- Tempo de segurança por alvo no modo 'All' ou timeout individual
-        if tick() - startTime > 2.5 then break end 
+        if tick() - startTime > 3.5 then break end 
         if not (running or flingAllActive) then break end
     end
 
-    -- Retorno para a posição salva (Apenas no individual ou ao desligar o All)
     if not flingAllActive and SavedPos then
         RootPart.CFrame = SavedPos
         SavedPos = nil
@@ -142,22 +154,20 @@ allToggle.MouseButton1Click:Connect(function()
         toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
         
         task.spawn(function()
-            -- Salva posição uma vez antes de iniciar o loop global
-            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local mainSavedPos = plr.Character.HumanoidRootPart.CFrame
+            local char = plr.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                local mainSavedPos = root.CFrame
                 while flingAllActive do
                     for _, p in pairs(game.Players:GetPlayers()) do
                         if not flingAllActive then break end
-                        if p ~= plr and p.Character then
+                        if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                             GlitchFling(p)
                         end
                     end
                     task.wait()
                 end
-                -- Volta para o lugar original quando o All for desativado
-                if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                    plr.Character.HumanoidRootPart.CFrame = mainSavedPos
-                end
+                if root then root.CFrame = mainSavedPos end
             end
         end)
     end
