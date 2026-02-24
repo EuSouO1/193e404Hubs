@@ -17,7 +17,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Brookhaven Lag Hub 3"
+title.Text = "Brookhaven Lag Hub 4"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
