@@ -1,4 +1,4 @@
---// Fling Item Hub Final - VOID FIX EDITION
+--// Fling Item Hub Final - KILL CONFIRMATION EDITION
 local plr = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
 gui.Name = "FlingItemHubFinal"
@@ -15,7 +15,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Fling Item Hub Final"
+title.Text = "Fling Item Hub KillCheck"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -110,37 +110,47 @@ local function GlitchAction(target)
     local tHum = tChar and tChar:FindFirstChildOfClass("Humanoid")
 
     if root and hum and hum.Health > 0 and tRoot and tHum then
-        -- Salva posição se não existir
-        if not SavedPos then SavedPos = root.CFrame end
-        
-        -- Sair de assentos
         hum.Sit = false
         hum:ChangeState(Enum.HumanoidStateType.Jumping)
 
+        if not SavedPos then SavedPos = root.CFrame end
+
         if tHum.Sit then
-            -- SEQUÊNCIA DE DESCARTE REFORÇADA
             isDiscarding = true
-            
-            -- Teleporte forçado para o void (Usando CFrame fixo para evitar erros de posição relativa)
-            local voidCF = CFrame.new(0, -485, 0) 
-            
-            for i = 1, 30 do -- Repete o teleporte para vencer o Anti-Cheat
-                root.CFrame = voidCF
-                root.Velocity = Vector3.new(0, -100, 0) -- Força pra baixo
-                if i == 5 then hum:UnequipTools() end -- Desequipa no início
+            local dTime = tick()
+            repeat
+                if root then root.CFrame = CFrame.new(root.Position.X, -400, root.Position.Z) end
+                if hum and tick() - dTime > 0.5 then hum:UnequipTools() end
                 task.wait()
-            end
+            until tick() - dTime > 2
+            
+            -- AGUARDAR MORTE (CHECK-UP)
+            local killConfirmed = false
+            local checkTime = tick()
+            repeat
+                -- Continua teleportando para o void enquanto espera a morte
+                if root then root.CFrame = CFrame.new(root.Position.X, -400, root.Position.Z) end
+                if not target.Parent or (tHum and tHum.Health <= 0) then
+                    killConfirmed = true
+                    break
+                end
+                task.wait(0.1)
+            until tick() - checkTime > 1.0 -- Espera no máximo 1 segundo
             
             isDiscarding = false
             
-            -- Retorna após descarte
-            if not flingAllActive and SavedPos then 
-                root.CFrame = SavedPos 
-                SavedPos = nil 
+            if killConfirmed then
+                -- Só volta ou muda de alvo se ele REALMENTE morreu
+                if not flingAllActive and SavedPos then 
+                    root.CFrame = SavedPos 
+                    SavedPos = nil 
+                end
+                return "break"
+            else
+                -- Se não morreu, o loop principal vai rodar o GlitchAction de novo no mesmo alvo
+                return "continue"
             end
-            return "break"
         else
-            -- MOVIMENTO GLITCH
             local dist = math.random(1, 5)
             root.CFrame = CFrame.lookAt(tRoot.Position + (tRoot.CFrame.LookVector * -dist), tRoot.Position)
             EquipFirstTool()
@@ -160,18 +170,19 @@ task.spawn(function()
 
             if target and target.Parent then
                 local result = GlitchAction(target)
-                if result == "break" then task.wait(0.1) end
+                if result == "break" then task.wait(0.5) end
             end
         elseif flingAllActive then
             for _, p in pairs(game.Players:GetPlayers()) do
                 if not flingAllActive or running then break end
-                if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                if p ~= plr and p.Character then
                     local startT = tick()
                     repeat 
                         local res = GlitchAction(p)
                         task.wait(0.001)
                         if res == "break" then break end
-                    until tick() - startT > 2.5 or not flingAllActive
+                        -- Se o resultado for continue, ele não dá break e tenta novamente o mesmo player
+                    until tick() - startT > 5.0 or not flingAllActive -- Aumentado tempo de foco no player
                 end
             end
         end
