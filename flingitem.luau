@@ -1,10 +1,10 @@
---// Fling Item Hub Final - Persistent Edition
+--// Fling Item Hub Final - IMMORTAL VERSION
 local plr = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
 gui.Name = "FlingItemHubFinal"
 gui.ResetOnSpawn = false
 
---// GUI (Mesmo layout solicitado)
+--// GUI (Layout Mantido)
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0,300,0,300)
 frame.Position = UDim2.new(0.5,-150,0.5,-150)
@@ -15,7 +15,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Fling Item Hub Ajusted"
+title.Text = "Fling Item Hub Final"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -61,7 +61,7 @@ close.Text = "X"
 close.BackgroundColor3 = Color3.fromRGB(170,0,0)
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
---// ESTADOS E VARIÁVEIS
+--// ESTADOS
 local running = false
 local flingAllActive = false
 local isDiscarding = false
@@ -87,104 +87,92 @@ refreshPlayers()
 game.Players.PlayerAdded:Connect(refreshPlayers)
 game.Players.PlayerRemoving:Connect(refreshPlayers)
 
---// FUNÇÃO EQUIPAR
+--// FUNÇÃO EQUIPAR COM SEGURANÇA
 local function EquipFirstTool()
-    if isDiscarding then return end -- Bloqueia equipar se estiver descartando
+    if isDiscarding then return end
     local char = plr.Character
-    if char and char:FindFirstChild("Humanoid") then
-        local backpack = plr:FindFirstChild("Backpack")
-        local tool = backpack and backpack:FindFirstChildOfClass("Tool")
-        if tool then
-            char.Humanoid:EquipTool(tool)
-        end
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum and hum.Health > 0 then
+        local bp = plr:FindFirstChild("Backpack")
+        local tool = bp and bp:FindFirstChildOfClass("Tool")
+        if tool then hum:EquipTool(tool) end
     end
 end
 
---// FUNÇÃO CORE FLING
-local function GlitchFling(TargetPlayer)
-    local Character = plr.Character
-    local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-    local Hum = Character and Character:FindFirstChildOfClass("Humanoid")
+--// LÓGICA DE MOVIMENTO (GLITCH)
+local function GlitchAction(target)
+    local char = plr.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
     
-    local TCharacter = TargetPlayer.Character
-    local TRoot = TCharacter and TCharacter:FindFirstChild("HumanoidRootPart")
-    local THum = TCharacter and TCharacter:FindFirstChildOfClass("Humanoid")
+    local tChar = target.Character
+    local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+    local tHum = tChar and tChar:FindFirstChildOfClass("Humanoid")
 
-    if not RootPart or not TRoot or not THum or isDiscarding then return end
+    -- Se tudo estiver ok, executa um frame de movimento
+    if root and hum and hum.Health > 0 and tRoot and tHum then
+        if not SavedPos then SavedPos = root.CFrame end
 
-    if not SavedPos then SavedPos = RootPart.CFrame end
-    
-    local startTime = tick()
-    
-    while (running or flingAllActive) and TargetPlayer.Parent and Hum.Health > 0 do
-        if THum.Sit then
-            -- INICIO DO DESCARTE
+        if tHum.Sit then
+            -- SEQUÊNCIA DE DESCARTE
             isDiscarding = true
-            -- Teleporta para o Void (Y -400)
-            RootPart.CFrame = CFrame.new(RootPart.Position.X, -400, RootPart.Position.Z)
-            
-            task.wait(0.5)
-            Hum:UnequipTools() -- Desequipa
-            
-            -- Mantém no void por 0.5s para garantir que o item caia e você não morra
-            local discardStart = tick()
-            repeat 
-                RootPart.CFrame = CFrame.new(RootPart.Position.X, -400, RootPart.Position.Z)
+            local dTime = tick()
+            repeat
+                if root then root.CFrame = CFrame.new(root.Position.X, -485, root.Position.Z) end
+                if hum and tick() - dTime > 0.1 then hum:UnequipTools() end
                 task.wait()
-            until tick() - discardStart > 2.5
-            
+            until tick() - dTime > 0.6
             isDiscarding = false
-            break 
+            
+            -- Retorna após descarte
+            if not flingAllActive and SavedPos then root.CFrame = SavedPos SavedPos = nil end
+            return "break" -- Alvo finalizado
+        else
+            -- MOVIMENTO GLITCH
+            local dist = math.random(1, 5)
+            root.CFrame = CFrame.lookAt(tRoot.Position + (tRoot.CFrame.LookVector * -dist), tRoot.Position)
+            EquipFirstTool()
         end
-
-        -- Movimentação Glitch LookAt
-        local distance = math.random(1, 5)
-        RootPart.CFrame = CFrame.lookAt(TRoot.Position + (TRoot.CFrame.LookVector * -distance), TRoot.Position)
-        
-        EquipFirstTool()
-        task.wait(0.001)
-
-        if tick() - startTime > 3.5 or not (running or flingAllActive) then break end
-    end
-
-    -- Retorno após descarte ou fim do fling
-    if not flingAllActive and SavedPos and not isDiscarding then
-        RootPart.CFrame = SavedPos
-        SavedPos = nil
     end
 end
 
---// AUTO RESTART SE MORRER
-plr.CharacterAdded:Connect(function(newChar)
-    if running or flingAllActive then
-        task.wait(1) -- Espera carregar
-        SavedPos = nil -- Limpa pos antiga para evitar bugs
+--// LOOP PRINCIPAL (O SEGREDO DA IMORTALIDADE)
+task.spawn(function()
+    while true do
+        if running then
+            local targetName = box.Text:lower()
+            local target = nil
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p.Name:lower():find(targetName) then target = p break end
+            end
+
+            if target and target.Parent then
+                local result = GlitchAction(target)
+                if result == "break" then task.wait(0.5) end
+            end
+        elseif flingAllActive then
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if not flingAllActive or running then break end
+                if p ~= plr and p.Character then
+                    local startT = tick()
+                    repeat 
+                        local res = GlitchAction(p)
+                        task.wait(0.001)
+                        if res == "break" then break end
+                    until tick() - startT > 2.5 or not flingAllActive
+                end
+            end
+        end
+        task.wait(0.001)
     end
 end)
 
---// LOGICA DOS BOTÕES
+--// BOTÕES
 allToggle.MouseButton1Click:Connect(function()
     flingAllActive = not flingAllActive
     allToggle.Text = flingAllActive and "Fling All ON" or "Fling All OFF"
     allToggle.BackgroundColor3 = flingAllActive and Color3.fromRGB(0,170,0) or Color3.fromRGB(0, 85, 127)
-    
-    if flingAllActive then
-        running = false
-        toggle.Text = "Fling OFF"
-        toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
-        
-        task.spawn(function()
-            while flingAllActive do
-                for _, p in pairs(game.Players:GetPlayers()) do
-                    if not flingAllActive then break end
-                    if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        GlitchFling(p)
-                    end
-                end
-                task.wait(0.1)
-            end
-        end)
-    end
+    if flingAllActive then running = false toggle.Text = "Fling OFF" toggle.BackgroundColor3 = Color3.fromRGB(170,0,0) end
 end)
 
 toggle.MouseButton1Click:Connect(function()
@@ -193,26 +181,8 @@ toggle.MouseButton1Click:Connect(function()
         flingAllActive = false
         allToggle.Text = "Fling All OFF"
         allToggle.BackgroundColor3 = Color3.fromRGB(0, 85, 127)
-
-        local targetName = box.Text:lower()
         toggle.Text = "Flinging..."
         toggle.BackgroundColor3 = Color3.fromRGB(0,170,0)
-
-        task.spawn(function()
-            while running do
-                local target = nil
-                for _, p in pairs(game.Players:GetPlayers()) do
-                    if p.Name:lower():find(targetName) then target = p break end
-                end
-
-                if target and target.Character then
-                    GlitchFling(target)
-                end
-                task.wait(0.1)
-            end
-            toggle.Text = "Fling OFF"
-            toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
-        end)
     else
         toggle.Text = "Fling OFF"
         toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
