@@ -118,10 +118,10 @@ local function GlitchAction(target)
             isDiscarding = true
             local dTime = tick()
             repeat
-                if root then root.CFrame = CFrame.new(root.Position.X, -485, root.Position.Z) end
-                if hum and tick() - dTime > 0.1 then hum:UnequipTools() end
+                if root then root.CFrame = CFrame.new(root.Position.X, -400, root.Position.Z) end
+                if hum and tick() - dTime > 0.5 then hum:UnequipTools() end
                 task.wait()
-            until tick() - dTime > 0.6
+            until tick() - dTime > 2
             isDiscarding = false
             
             -- Retorna após descarte
