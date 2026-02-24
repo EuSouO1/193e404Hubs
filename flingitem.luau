@@ -1,10 +1,10 @@
---// Fling Item Hub Final - IMMORTAL VERSION
+--// Fling Item Hub Final - VOID FIX EDITION
 local plr = game.Players.LocalPlayer
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
 gui.Name = "FlingItemHubFinal"
 gui.ResetOnSpawn = false
 
---// GUI (Layout Mantido)
+--// GUI
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0,300,0,300)
 frame.Position = UDim2.new(0.5,-150,0.5,-150)
@@ -87,7 +87,7 @@ refreshPlayers()
 game.Players.PlayerAdded:Connect(refreshPlayers)
 game.Players.PlayerRemoving:Connect(refreshPlayers)
 
---// FUNÇÃO EQUIPAR COM SEGURANÇA
+--// FUNÇÃO EQUIPAR
 local function EquipFirstTool()
     if isDiscarding then return end
     local char = plr.Character
@@ -109,24 +109,36 @@ local function GlitchAction(target)
     local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
     local tHum = tChar and tChar:FindFirstChildOfClass("Humanoid")
 
-    -- Se tudo estiver ok, executa um frame de movimento
     if root and hum and hum.Health > 0 and tRoot and tHum then
+        -- Salva posição se não existir
         if not SavedPos then SavedPos = root.CFrame end
+        
+        -- Sair de assentos
+        hum.Sit = false
+        hum:ChangeState(Enum.HumanoidStateType.Jumping)
 
         if tHum.Sit then
-            -- SEQUÊNCIA DE DESCARTE
+            -- SEQUÊNCIA DE DESCARTE REFORÇADA
             isDiscarding = true
-            local dTime = tick()
-            repeat
-                if root then root.CFrame = CFrame.new(root.Position.X, -400, root.Position.Z) end
-                if hum and tick() - dTime > 0.5 then hum:UnequipTools() end
+            
+            -- Teleporte forçado para o void (Usando CFrame fixo para evitar erros de posição relativa)
+            local voidCF = CFrame.new(0, -485, 0) 
+            
+            for i = 1, 30 do -- Repete o teleporte para vencer o Anti-Cheat
+                root.CFrame = voidCF
+                root.Velocity = Vector3.new(0, -100, 0) -- Força pra baixo
+                if i == 5 then hum:UnequipTools() end -- Desequipa no início
                 task.wait()
-            until tick() - dTime > 2
+            end
+            
             isDiscarding = false
             
             -- Retorna após descarte
-            if not flingAllActive and SavedPos then root.CFrame = SavedPos SavedPos = nil end
-            return "break" -- Alvo finalizado
+            if not flingAllActive and SavedPos then 
+                root.CFrame = SavedPos 
+                SavedPos = nil 
+            end
+            return "break"
         else
             -- MOVIMENTO GLITCH
             local dist = math.random(1, 5)
@@ -136,7 +148,7 @@ local function GlitchAction(target)
     end
 end
 
---// LOOP PRINCIPAL (O SEGREDO DA IMORTALIDADE)
+--// LOOP PRINCIPAL
 task.spawn(function()
     while true do
         if running then
@@ -148,12 +160,12 @@ task.spawn(function()
 
             if target and target.Parent then
                 local result = GlitchAction(target)
-                if result == "break" then task.wait(0.5) end
+                if result == "break" then task.wait(0.1) end
             end
         elseif flingAllActive then
             for _, p in pairs(game.Players:GetPlayers()) do
                 if not flingAllActive or running then break end
-                if p ~= plr and p.Character then
+                if p ~= plr and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                     local startT = tick()
                     repeat 
                         local res = GlitchAction(p)
