@@ -123,7 +123,7 @@ local function GlitchFling(TargetPlayer)
             -- Teleporta para o Void (Y -485)
             RootPart.CFrame = CFrame.new(RootPart.Position.X, -485, RootPart.Position.Z)
             
-            task.wait(0.1)
+            task.wait(0.5)
             Hum:UnequipTools() -- Desequipa
             
             -- Mantém no void por 0.5s para garantir que o item caia e você não morra
@@ -131,7 +131,7 @@ local function GlitchFling(TargetPlayer)
             repeat 
                 RootPart.CFrame = CFrame.new(RootPart.Position.X, -485, RootPart.Position.Z)
                 task.wait()
-            until tick() - discardStart > 0.5
+            until tick() - discardStart > 2.5
             
             isDiscarding = false
             break 
