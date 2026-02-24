@@ -2,7 +2,7 @@
 local plr = game:GetService("Players").LocalPlayer
 local RunService = game:GetService("RunService")
 
---// GUI (Mesmo estilo do seu hub original)
+--// GUI (Estilo original mantido)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
 gui.Name = "BrookhavenLagHub"
 gui.ResetOnSpawn = false
@@ -43,6 +43,9 @@ end
 local lag1Enabled = false
 local lag2Enabled = false
 
+-- Palavras proibidas (Filtro de segurança)
+local blacklist = {"delete", "remove", "exclui", "clear", "destroy", "drop", "apagar"}
+
 -- Função de criar botão toggle
 local function makeToggle(text, initialState, callback)
     local btn = Instance.new("TextButton", scroll)
@@ -67,7 +70,7 @@ end
 
 ---// Lógica de Lag
 
--- Lag 1: Spam de "Phone" (Brookhaven Method)
+-- Lag 1: Spam de "Phone"
 makeToggle("Lag 1 (Phone Spam)", false, function(state)
     lag1Enabled = state
 end)
@@ -76,13 +79,11 @@ task.spawn(function()
     while task.wait(0.001) do
         if lag1Enabled then
             pcall(function()
-                -- Tenta pegar o celular via Remote do Brookhaven
                 local remote = game:GetService("ReplicatedStorage"):FindFirstChild("RE") and game:GetService("ReplicatedStorage").RE:FindFirstChild("1Updat1eAvata1r")
                 if remote then
                     remote:FireServer("PickingTool", "Phone")
                 end
                 
-                -- Equipa se estiver na mochila
                 local tool = plr.Backpack:FindFirstChild("Phone")
                 if tool and plr.Character and plr.Character:FindFirstChild("Humanoid") then
                     plr.Character.Humanoid:EquipTool(tool)
@@ -92,8 +93,8 @@ task.spawn(function()
     end
 end)
 
--- Lag 2: Tool Auto-Equip + Remote Spam
-makeToggle("Lag 2 (Remote Spam)", false, function(state)
+-- Lag 2: Auto-Equip + Safe Remote Spam
+makeToggle("Lag 2 (Safe Remote Spam)", false, function(state)
     lag2Enabled = state
 end)
 
@@ -101,19 +102,33 @@ task.spawn(function()
     while task.wait(0.001) do
         if lag2Enabled then
             pcall(function()
-                -- 1. Pega a primeira Tool disponível
+                -- Pega a primeira Tool (da mochila ou da mão)
                 local tool = plr.Backpack:FindFirstChildOfClass("Tool") or plr.Character:FindFirstChildOfClass("Tool")
                 
                 if tool then
-                    -- 2. Equipa automaticamente se estiver na Backpack
+                    -- Equipa se estiver na mochila
                     if tool.Parent == plr.Backpack and plr.Character:FindFirstChild("Humanoid") then
                         plr.Character.Humanoid:EquipTool(tool)
                     end
                     
-                    -- 3. Procura e dispara todos os RemoteEvents dentro da Tool
+                    -- Varre os Remotes com filtro de segurança
                     for _, obj in ipairs(tool:GetDescendants()) do
                         if obj:IsA("RemoteEvent") then
-                            obj:FireServer() -- Dispara o evento
+                            local nameLower = obj.Name:lower()
+                            local isSafe = true
+                            
+                            -- Checa se o nome do Remote está na lista proibida
+                            for _, word in ipairs(blacklist) do
+                                if nameLower:find(word) then
+                                    isSafe = false
+                                    break
+                                end
+                            end
+                            
+                            -- Só dispara se não for um remote de exclusão
+                            if isSafe then
+                                obj:FireServer()
+                            end
                         end
                     end
                 end
@@ -122,7 +137,7 @@ task.spawn(function()
     end
 end)
 
--- Botão para fechar o Hub
+-- Botão fechar
 local close = Instance.new("TextButton", frame)
 close.Size = UDim2.new(0,25,0,25)
 close.Position = UDim2.new(1,-28,0,4)
