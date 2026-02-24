@@ -2,7 +2,7 @@
 local plr = game.Players.LocalPlayer
 local Lighting = game:GetService("Lighting")
 
---// GUI Principal
+--// GUI Principal (Exatamente como a sua original)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
 gui.Name = "SkyboxChangerGui"
 gui.ResetOnSpawn = false
@@ -22,17 +22,22 @@ title.TextColor3 = Color3.new(1, 1, 1)
 title.TextSize = 20
 title.Font = Enum.Font.SourceSansBold
 
--- TextBox para o ID da Imagem
+-- TextBox para o ID da Imagem (COM FILTRO DE NÚMEROS)
 local idBox = Instance.new("TextBox", frame)
 idBox.Size = UDim2.new(0.8, 0, 0, 40)
 idBox.Position = UDim2.new(0.1, 0, 0.25, 0)
-idBox.PlaceholderText = "ID da Imagem (Asset ID)"
+idBox.PlaceholderText = "ID da Imagem (Apenas Números)"
 idBox.Text = ""
 idBox.TextScaled = true
 idBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 idBox.TextColor3 = Color3.new(1, 1, 1)
 
--- Botão "My Account" (Pega foto de perfil)
+-- Bloqueia qualquer coisa que não seja número enquanto você digita
+idBox:GetPropertyChangedSignal("Text"):Connect(function()
+    idBox.Text = idBox.Text:gsub("%D+", "")
+end)
+
+-- Botão "My Account"
 local myAccBtn = Instance.new("TextButton", frame)
 myAccBtn.Size = UDim2.new(0.8, 0, 0, 35)
 myAccBtn.Position = UDim2.new(0.1, 0, 0.48, 0)
@@ -41,7 +46,7 @@ myAccBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 myAccBtn.TextColor3 = Color3.new(1, 1, 1)
 myAccBtn.TextSize = 18
 
--- Botão "Set Skybox" (Aplica a mudança)
+-- Botão "Set Skybox"
 local setBtn = Instance.new("TextButton", frame)
 setBtn.Size = UDim2.new(0.8, 0, 0, 45)
 setBtn.Position = UDim2.new(0.1, 0, 0.72, 0)
@@ -64,46 +69,57 @@ close.MouseButton1Click:Connect(function()
     gui:Destroy()
 end)
 
---// Lógica das Funções
-
--- Função para pegar ID da conta
-myAccBtn.MouseButton1Click:Connect(function()
-    -- Formato de URL de imagem de perfil do Roblox
-    local userId = plr.UserId
-    local thumbType = Enum.ThumbnailType.HeadShot
-    local thumbSize = Enum.ThumbnailSize.Size420x420
-    local content, isReady = game.Players:GetCharacterAppearanceAsync(userId) -- Metodo simples de pegar imagem
+--// Lógica de Varredura de RemoteEvents (Busca por brechas no Servidor)
+local function scanForRemotes(assetID)
+    local fullID = "rbxassetid://" .. assetID
+    local keywords = {"Sky", "Lighting", "Atmosphere", "Weather", "Ceu", "Visual"}
     
-    -- Maneira mais direta de setar o ID da imagem de perfil:
-    idBox.Text = "rbxthumb://type=AvatarHeadShot&id="..userId.."&w=420&h=420"
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("RemoteEvent") then
+            for _, key in pairs(keywords) do
+                if v.Name:lower():find(key:lower()) then
+                    pcall(function()
+                        v:FireServer(fullID) -- Tenta enviar o ID puro
+                        v:FireServer("Skybox", fullID) -- Tenta formato de comando
+                    end)
+                end
+            end
+        end
+    end
+end
+
+--// Funções dos Botões
+
+myAccBtn.MouseButton1Click:Connect(function()
+    local userId = plr.UserId
+    idBox.Text = tostring(userId) -- Coloca apenas o ID para o filtro não apagar
+    -- Nota: rbxthumb não funciona direto em SkyboxBk, por isso mantivemos o ID numérico
 end)
 
--- Função para aplicar Skybox
 setBtn.MouseButton1Click:Connect(function()
     local imgID = idBox.Text
     if imgID == "" then return end
     
-    -- Se for apenas números, formata para o padrão do Roblox
-    if tonumber(imgID) then
-        imgID = "rbxassetid://" .. imgID
-    end
+    local formattedID = "rbxassetid://" .. imgID
 
-    -- Procura por skybox existente ou cria uma nova
+    -- 1. Aplicação LOCAL (Sempre funciona para você)
     local sky = Lighting:FindFirstChildOfClass("Sky")
     if not sky then
         sky = Instance.new("Sky")
         sky.Parent = Lighting
     end
 
-    -- Aplica a imagem em todas as faces do céu
-    sky.SkyboxBk = imgID
-    sky.SkyboxDn = imgID
-    sky.SkyboxFt = imgID
-    sky.SkyboxLf = imgID
-    sky.SkyboxRt = imgID
-    sky.SkyboxUp = imgID
+    sky.SkyboxBk = formattedID
+    sky.SkyboxDn = formattedID
+    sky.SkyboxFt = formattedID
+    sky.SkyboxLf = formattedID
+    sky.SkyboxRt = formattedID
+    sky.SkyboxUp = formattedID
     
-    setBtn.Text = "APLICADO!"
+    -- 2. Tentativa de aplicação no SERVIDOR (Varredura)
+    scanForRemotes(imgID)
+    
+    setBtn.Text = "APLICADO + SCAN!"
     task.wait(1)
     setBtn.Text = "SET SKYBOX"
 end)
