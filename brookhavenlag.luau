@@ -17,7 +17,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "Brookhaven Lag Hub V2"
+title.Text = "Brookhaven Lag Hub 3"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -44,7 +44,7 @@ local lag1Enabled = false
 local lag2Enabled = false
 
 -- Palavras proibidas (Filtro de segurança)
-local blacklist = {"tool", "item", "iten", "gear"}
+local blacklist = {"remove"}
 
 -- Função de criar botão toggle
 local function makeToggle(text, initialState, callback)
