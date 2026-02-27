@@ -74,7 +74,7 @@ makeToggle("Anti-AFK Jump", false, function(state)
         antiAfkThread = task.spawn(function()
             while antiAfkEnabled do
                 -- Espera 19 minutos e 55 segundos
-                task.wait(1195) 
+                task.wait(600) 
                 
                 -- Verifica novamente se ainda está ativado antes de pular
                 if antiAfkEnabled and plr.Character then
