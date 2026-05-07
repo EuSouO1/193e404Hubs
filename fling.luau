@@ -2,7 +2,7 @@
 local plr = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "FlingGui_V3_WL_Fix"
+gui.Name = "FlingGui_V4_Ultra"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
@@ -15,7 +15,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 30)
 title.BackgroundTransparency = 1
-title.Text = "Fling Player Pro + Whitelist"
+title.Text = "Fling Player Pro + Ultra Precision"
 title.TextColor3 = Color3.new(1, 1, 1)
 title.TextScaled = true
 
@@ -27,7 +27,6 @@ box.TextScaled = true
 box.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 box.TextColor3 = Color3.new(1, 1, 1)
 
--- LISTA DE ALVOS (ESQUERDA)
 local listFrame = Instance.new("ScrollingFrame", frame)
 listFrame.Size = UDim2.new(0.44, 0, 0, 100)
 listFrame.Position = UDim2.new(0.05, 0, 0.25, 0)
@@ -36,7 +35,6 @@ listFrame.BorderSizePixel = 0
 listFrame.ScrollBarThickness = 6
 listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
--- LISTA DE WHITELIST (DIREITA)
 local wlFrame = Instance.new("ScrollingFrame", frame)
 wlFrame.Size = UDim2.new(0.44, 0, 0, 100)
 wlFrame.Position = UDim2.new(0.51, 0, 0.25, 0)
@@ -48,7 +46,6 @@ wlFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 Instance.new("UIListLayout", listFrame).Padding = UDim.new(0, 4)
 Instance.new("UIListLayout", wlFrame).Padding = UDim.new(0, 4)
 
--- BOTÕES
 local toggle = Instance.new("TextButton", frame)
 toggle.Size = UDim2.new(0.9, 0, 0, 35)
 toggle.Position = UDim2.new(0.05, 0, 0.62, 0)
@@ -72,21 +69,17 @@ close.Text = "X"
 close.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
 close.MouseButton1Click:Connect(function() gui:Destroy() end)
 
--- ESTADOS E VARIAVEIS
 local running = false
 local flingAllActive = false
 local whitelist = {}
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
--- REFRESH DAS LISTAS (OS MESMOS PLAYERS NAS DUAS)
 local function refreshLists()
     for _, v in ipairs(listFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
     for _, v in ipairs(wlFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
-    
     for _, p in ipairs(game.Players:GetPlayers()) do
         if p ~= plr then
-            -- Botão na lista de Alvos
             local btnTarget = Instance.new("TextButton")
             btnTarget.Size = UDim2.new(1, -6, 0, 24)
             btnTarget.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
@@ -96,7 +89,6 @@ local function refreshLists()
             btnTarget.Parent = listFrame
             btnTarget.MouseButton1Click:Connect(function() box.Text = p.Name end)
 
-            -- Botão na lista de Whitelist
             local btnWL = Instance.new("TextButton")
             btnWL.Size = UDim2.new(1, -6, 0, 24)
             btnWL.BackgroundColor3 = whitelist[p.Name] and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(60, 60, 60)
@@ -106,7 +98,7 @@ local function refreshLists()
             btnWL.Parent = wlFrame
             btnWL.MouseButton1Click:Connect(function()
                 whitelist[p.Name] = not whitelist[p.Name]
-                refreshLists() -- Atualiza as cores
+                refreshLists()
             end)
         end
     end
@@ -116,7 +108,7 @@ refreshLists()
 game.Players.PlayerAdded:Connect(refreshLists)
 game.Players.PlayerRemoving:Connect(refreshLists)
 
--- FUNÇÃO CORE (MÉTODO SKID ORIGINAL)
+-- FUNÇÃO CORE TURBINADA
 local function SkidFling(TargetPlayer)
     if not TargetPlayer or whitelist[TargetPlayer.Name] then return end
 
@@ -138,14 +130,15 @@ local function SkidFling(TargetPlayer)
     
     local BV = Instance.new("BodyVelocity")
     BV.Parent = RootPart
-    BV.Velocity = Vector3.new(0, 0, 0)
-    BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    BV.Velocity = Vector3.new(9e8, 9e8, 9e8) -- Aumentado para resposta instantânea
+    BV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
 
     Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
 
+    -- Função de Posição com "Grude" (Previsão de movimento melhorada)
     local function FPos(BasePart, Pos, Ang)
         RootPart.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
-        RootPart.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+        RootPart.Velocity = Vector3.new(9e7, 9e8, 9e7)
         RootPart.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
     end
 
@@ -154,14 +147,17 @@ local function SkidFling(TargetPlayer)
     repeat
         if RootPart and THumanoid and TRootPart and not whitelist[TargetPlayer.Name] then
             Angle = Angle + 100
-            FPos(TRootPart, CFrame.new(0, 1.5, 0) + THumanoid.MoveDirection * TRootPart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle),0 ,0))
-            task.wait()
-            FPos(TRootPart, CFrame.new(0, -1.5, 0) + THumanoid.MoveDirection * TRootPart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
-            task.wait()
+            -- O segredo do grude: Multiplicador de MoveDirection aumentado para colar no hitbox
+            local Prediction = THumanoid.MoveDirection * (TRootPart.Velocity.Magnitude / 1.1)
+            
+            FPos(TRootPart, CFrame.new(0, 1.2, 0) + Prediction, CFrame.Angles(math.rad(Angle), 0, 0))
+            RunService.Heartbeat:Wait() -- Uso de Heartbeat para mais precisão que task.wait()
+            FPos(TRootPart, CFrame.new(0, -1.2, 0) + Prediction, CFrame.Angles(math.rad(Angle), 0, 0))
+            RunService.Heartbeat:Wait()
         else
             break
         end
-    until Time + 2 < tick() or not (running or flingAllActive)
+    until Time + 2.5 < tick() or not (running or flingAllActive)
 
     BV:Destroy()
     Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
@@ -191,7 +187,7 @@ allToggle.MouseButton1Click:Connect(function()
                         SkidFling(p)
                     end
                 end
-                task.wait(0.5)
+                task.wait(0.2) -- Menos delay entre alvos
             end
         end)
     end
@@ -211,13 +207,13 @@ toggle.MouseButton1Click:Connect(function()
         end
         
         if target and not whitelist[target.Name] then
-            toggle.Text = "Flinging..."
+            toggle.Text = "Grudado no Alvo..."
             toggle.BackgroundColor3 = Color3.fromRGB(0,170,0)
             task.spawn(function()
                 while running do
-                    if not target or whitelist[target.Name] then break end
+                    if not target or whitelist[target.Name] or not target.Character then break end
                     SkidFling(target)
-                    task.wait(0.1)
+                    task.wait(0.01)
                 end
                 toggle.Text = "Fling OFF"
                 toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
@@ -225,7 +221,7 @@ toggle.MouseButton1Click:Connect(function()
             end)
         else
             running = false
-            toggle.Text = "Protegido/Off"
+            toggle.Text = "Erro/Safe"
             task.wait(1)
             toggle.Text = "Fling OFF"
             toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
