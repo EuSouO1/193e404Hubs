@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 
 --// GUI
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "AntiFling_Selective_V3"
+gui.Name = "AntiFling_Persistent_V3"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
@@ -17,7 +17,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,35)
 title.BackgroundTransparency = 1
-title.Text = "Anti-Fling Selective"
+title.Text = "Anti-Fling Persistente"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -33,12 +33,11 @@ local layout = Instance.new("UIListLayout", scroll)
 layout.Padding = UDim.new(0,6)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 
---// Variáveis de Controle
+--// Variáveis de Controle (Persistentes)
 local AntiFlingEnabled = false
 local GodAntiFling = false
-local buttons = {} -- Para resetar o visual dos botões
 
---// Função de Toggle
+--// Função de Toggle (Estilo Original)
 local function makeToggle(text, callback)
     local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(1,-8,0,45)
@@ -48,60 +47,42 @@ local function makeToggle(text, callback)
     btn.TextScaled = true
     btn.Text = text.." OFF"
 
-    local function updateVisual(s)
-        state = s
-        btn.Text = text.." "..(state and "ON" or "OFF")
-        btn.BackgroundColor3 = state and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
-    end
-
     btn.MouseButton1Click:Connect(function()
         state = not state
-        updateVisual(state)
+        btn.Text = text.." "..(state and "ON" or "OFF")
+        btn.BackgroundColor3 = state and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
         callback(state)
     end)
     
-    buttons[text] = updateVisual
     scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
     return btn
 end
 
---// Função para resetar tudo ao morrer/respawnar
-local function resetSettings()
-    AntiFlingEnabled = false
-    GodAntiFling = false
-    -- Reseta o visual de todos os botões registrados
-    for name, updateFunc in pairs(buttons) do
-        updateFunc(false)
-    end
-end
-
-plr.CharacterAdded:Connect(resetSettings)
-
---// Lógica Principal (Focada no HumanoidRootPart)
+--// Lógica Principal de Anti-Fling (Foco no RootPart)
 RunService.Stepped:Connect(function()
-    if not AntiFlingEnabled then return end
-    
-    local char = plr.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    
-    if root then
-        -- Tira a colisão apenas do RootPart para evitar o impacto principal
-        root.CanCollide = false
+    if AntiFlingEnabled then
+        local char = plr.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
         
-        -- Se a velocidade subir demais, anula
-        if root.Velocity.Magnitude > 35 then
-            root.Velocity = Vector3.new(0,0,0)
-            root.RotVelocity = Vector3.new(0,0,0)
+        if root then
+            -- Mantém o RootPart sem colisão para outros Humanoids
+            root.CanCollide = false
+            
+            -- Bloqueia velocidades absurdas (Fling detect)
+            if root.Velocity.Magnitude > 35 or root.RotVelocity.Magnitude > 35 then
+                root.Velocity = Vector3.new(0,0,0)
+                root.RotVelocity = Vector3.new(0,0,0)
+            end
         end
-        
-        -- Lógica contra outros Players (Root to Root)
+
+        -- Aplica nos outros jogadores (Root to Root)
         for _, other in pairs(game:GetService("Players"):GetPlayers()) do
             if other ~= plr and other.Character then
                 local otherRoot = other.Character:FindFirstChild("HumanoidRootPart")
                 if otherRoot then
                     otherRoot.CanCollide = false
                     
-                    -- Se o modo God estiver on, anula a força do atacante
+                    -- Se o modo agressivo estiver ON, anula o torque deles
                     if GodAntiFling then
                         otherRoot.Velocity = Vector3.new(0,0,0)
                         otherRoot.RotVelocity = Vector3.new(0,0,0)
