@@ -3,7 +3,7 @@ local plr = game:GetService("Players").LocalPlayer
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
 
---// GUI (Estilo Blob Hub)
+--// GUI (Blob Hub)
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
 gui.Name = "BlobHub"
 gui.ResetOnSpawn = false
@@ -76,67 +76,72 @@ makeToggle("Anti AFK", function(state)
     antiAfkEnabled = state
 end)
 
--- Auto Farm (Movimentação Aleatória)
+-- Auto Farm (Movimentação por Caminhada)
 local autoFarmEnabled = false
 
 local function isPlayerNearby(pos)
     for _, otherPlr in pairs(game:GetService("Players"):GetPlayers()) do
         if otherPlr ~= plr and otherPlr.Character and otherPlr.Character:FindFirstChild("HumanoidRootPart") then
             local dist = (otherPlr.Character.HumanoidRootPart.Position - pos).Magnitude
-            if dist < 20 then return true end
+            if dist < 15 then return true end
         end
     end
     return false
 end
 
 local function hasFloor(pos)
-    local ray = Ray.new(pos, Vector3.new(0, -20, 0))
-    local hit, _ = workspace:FindPartOnRay(ray, plr.Character)
-    return hit ~= nil and hit.CanCollide == true
+    -- Lógica de detecção de chão com Raycast
+    local rayOrigin = pos + Vector3.new(0, 5, 0)
+    local rayDirection = Vector3.new(0, -15, 0)
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {plr.Character}
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+
+    local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+    return result and result.Instance and result.Instance.CanCollide == true
 end
 
 task.spawn(function()
-    while task.wait(1.5) do
-        if autoFarmEnabled and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+    while true do
+        task.wait(1.5)
+        if autoFarmEnabled and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            local hum = plr.Character.Humanoid
             local hrp = plr.Character.HumanoidRootPart
+            
             local directions = {
-                Vector3.new(1,0,0), Vector3.new(-1,0,0), 
-                Vector3.new(0,0,1), Vector3.new(0,0,-1),
-                Vector3.new(1,0,1), Vector3.new(-1,0,-1)
+                Vector3.new(20, 0, 0), Vector3.new(-20, 0, 0), 
+                Vector3.new(0, 0, 20), Vector3.new(0, 0, -20),
+                Vector3.new(15, 0, 15), Vector3.new(-15, 0, -15)
             }
             
-            -- Embaralha direções
+            -- Embaralha a ordem das direções para ser aleatório
             for i = #directions, 2, -1 do
                 local j = math.random(i)
                 directions[i], directions[j] = directions[j], directions[i]
             end
 
-            local chosenDir = nil
-            for _, dir in ipairs(directions) do
-                local targetPos = hrp.Position + (dir * 10)
-                if not isPlayerNearby(targetPos) and hasFloor(targetPos) then
-                    chosenDir = dir
+            local targetPoint = nil
+            
+            for _, offset in ipairs(directions) do
+                local checkPos = hrp.Position + offset
+                if not isPlayerNearby(checkPos) and hasFloor(checkPos) then
+                    targetPoint = checkPos
                     break
                 end
             end
-
-            -- Se não achou chão na frente, tenta achar qualquer direção com chão
-            if not chosenDir then
-                for _, dir in ipairs(directions) do
-                    if hasFloor(hrp.Position + (dir * 10)) then
-                        chosenDir = dir
+            
+            -- Se não achou ponto ideal, tenta apenas o que tem chão
+            if not targetPoint then
+                for _, offset in ipairs(directions) do
+                    if hasFloor(hrp.Position + offset) then
+                        targetPoint = hrp.Position + offset
                         break
                     end
                 end
             end
 
-            if chosenDir then
-                local bv = Instance.new("BodyVelocity")
-                bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-                bv.Velocity = chosenDir * 500
-                bv.Parent = hrp
-                task.wait(0.2) -- Impulso rápido
-                bv:Destroy()
+            if targetPoint then
+                hum:MoveTo(targetPoint)
             end
         end
     end
@@ -144,6 +149,9 @@ end)
 
 makeToggle("Auto Farm", function(state)
     autoFarmEnabled = state
+    if not state and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+        plr.Character.Humanoid:MoveTo(plr.Character.HumanoidRootPart.Position) -- Para o player ao desligar
+    end
 end)
 
 -- Botão de Fechar
