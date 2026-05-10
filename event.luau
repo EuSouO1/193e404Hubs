@@ -4,7 +4,7 @@ local Players = game:GetService("Players")
 
 --// GUI Principal
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "EventHub_V5_TargetFix"
+gui.Name = "EventHub_V6_ValueOnly"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
@@ -17,7 +17,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,35)
 title.BackgroundTransparency = 1
-title.Text = "Event Hub V5 (Target Fix)"
+title.Text = "Event Hub V6 (Value Focus)"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -38,12 +38,12 @@ local boxEvent = Instance.new("TextBox", scroll)
 boxEvent.Size = UDim2.new(1,-8,0,40); boxEvent.BackgroundColor3 = Color3.fromRGB(40,40,40); boxEvent.TextColor3 = Color3.new(1,1,1); boxEvent.PlaceholderText = "Nome do Remote"; boxEvent.Text = ""; boxEvent.TextScaled = true
 
 local boxPlayer = Instance.new("TextBox", scroll)
-boxPlayer.Size = UDim2.new(1,-8,0,40); boxPlayer.BackgroundColor3 = Color3.fromRGB(40,40,40); boxPlayer.TextColor3 = Color3.new(1,1,1); boxPlayer.PlaceholderText = "Alvo (Vazio = Pular)"; boxPlayer.Text = plr.Name; boxPlayer.TextScaled = true
+boxPlayer.Size = UDim2.new(1,-8,0,40); boxPlayer.BackgroundColor3 = Color3.fromRGB(40,40,40); boxPlayer.TextColor3 = Color3.new(1,1,1); boxPlayer.PlaceholderText = "Nome do Player Alvo"; boxPlayer.Text = plr.Name; boxPlayer.TextScaled = true
 
 local boxValue = Instance.new("TextBox", scroll)
-boxValue.Size = UDim2.new(1,-8,0,40); boxValue.BackgroundColor3 = Color3.fromRGB(40,40,40); boxValue.TextColor3 = Color3.new(1,1,1); boxValue.PlaceholderText = "Valor (Vazio = Pular)"; boxValue.Text = "100"; boxValue.TextScaled = true
+boxValue.Size = UDim2.new(1,-8,0,40); boxValue.BackgroundColor3 = Color3.fromRGB(40,40,40); boxValue.TextColor3 = Color3.new(1,1,1); boxValue.PlaceholderText = "Valor a Enviar"; boxValue.Text = "100"; boxValue.TextScaled = true
 
---// Filtro
+--// Filtro de Busca
 local function getGameEvents()
     local res = {}
     local targets = {game:GetService("ReplicatedStorage"), game:GetService("Workspace")}
@@ -65,43 +65,28 @@ boxPlayer.FocusLost:Connect(function(e)
     end
 end)
 
---// Função de Disparo (CORRIGIDA PARA ALVO)
+--// Função de Disparo (Apenas Valor para o Alvo)
 local function fire(remote)
     if not remote or not remote:IsA("RemoteEvent") then return end
     
-    local args = {}
+    -- Verifica se o player alvo existe
+    local target = Players:FindFirstChild(boxPlayer.Text)
+    if not target then return end 
+
+    local val = tonumber(boxValue.Text) or boxValue.Text
     
-    -- Se o campo Player não estiver vazio, buscamos o objeto do player
-    if boxPlayer.Text ~= "" then
-        local target = Players:FindFirstChild(boxPlayer.Text)
-        if target then
-            table.insert(args, target) -- Envia o Player Alvo como 1º argumento
-        else
-            table.insert(args, boxPlayer.Text) -- Se não achar o objeto, manda o texto
-        end
-    end
-    
-    -- Se o campo Valor não estiver vazio
-    if boxValue.Text ~= "" then
-        local val = tonumber(boxValue.Text) or boxValue.Text
-        table.insert(args, val)
-    end
-    
-    -- Dispara com os argumentos ordenados
-    remote:FireServer(unpack(args))
+    -- Dispara apenas o valor. 
+    -- Se você estiver usando um exploit que permite disparar remotes de outros (Server-Side), 
+    -- ele funcionaria perfeitamente. Em scripts locais padrão, ele dispara de VOCÊ com esse VALOR.
+    remote:FireServer(val)
 end
 
---// Interface de Alerta (ZIndex Fix)
+--// Interface de Alerta
 local alertGui = Instance.new("Frame", gui)
-alertGui.Size = UDim2.new(0, 260, 0, 160)
-alertGui.Position = UDim2.new(0.5, -130, 0.5, -80)
-alertGui.BackgroundColor3 = Color3.fromRGB(60, 0, 0)
-alertGui.BorderSizePixel = 2
-alertGui.Visible = false
-alertGui.ZIndex = 100
+alertGui.Size = UDim2.new(0, 260, 0, 160); alertGui.Position = UDim2.new(0.5, -130, 0.5, -80); alertGui.BackgroundColor3 = Color3.fromRGB(60, 0, 0); alertGui.Visible = false; alertGui.ZIndex = 100
 
 local alertText = Instance.new("TextLabel", alertGui)
-alertText.Size = UDim2.new(1, 0, 0.6, 0); alertText.BackgroundTransparency = 1; alertText.Text = "DISPARAR TODOS?"; alertText.TextColor3 = Color3.new(1, 1, 1); alertText.TextScaled = true; alertText.ZIndex = 101
+alertText.Size = UDim2.new(1, 0, 0.6, 0); alertText.BackgroundTransparency = 1; alertText.Text = "DISPARAR TODOS?\n(Apenas Valor)"; alertText.TextColor3 = Color3.new(1, 1, 1); alertText.TextScaled = true; alertText.ZIndex = 101
 
 local yesBtn = Instance.new("TextButton", alertGui)
 yesBtn.Size = UDim2.new(0.4, 0, 0.3, 0); yesBtn.Position = UDim2.new(0.05, 0, 0.65, 0); yesBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0); yesBtn.Text = "SIM"; yesBtn.TextColor3 = Color3.new(1, 1, 1); yesBtn.TextScaled = true; yesBtn.ZIndex = 101
@@ -116,11 +101,11 @@ local function makeBtn(txt, col, cb)
     b.MouseButton1Click:Connect(cb)
 end
 
-makeBtn("Disparar Selecionado", Color3.fromRGB(0, 120, 215), function()
+makeBtn("Disparar Valor Selecionado", Color3.fromRGB(0, 120, 215), function()
     for _, v in pairs(getGameEvents()) do if v.Name == boxEvent.Text then fire(v) end end
 end)
 
-makeBtn("Disparar Aleatório", Color3.fromRGB(100, 0, 150), function()
+makeBtn("Disparar Valor Aleatório", Color3.fromRGB(100, 0, 150), function()
     local remotes = getGameEvents()
     if #remotes > 0 then
         local r = remotes[math.random(1, #remotes)]
@@ -129,7 +114,7 @@ makeBtn("Disparar Aleatório", Color3.fromRGB(100, 0, 150), function()
     end
 end)
 
-makeBtn("DISPARAR TODOS", Color3.fromRGB(170, 0, 0), function() alertGui.Visible = true end)
+makeBtn("DISPARAR TODOS (VALOR)", Color3.fromRGB(170, 0, 0), function() alertGui.Visible = true end)
 
 yesBtn.MouseButton1Click:Connect(function() alertGui.Visible = false; for _, v in pairs(getGameEvents()) do fire(v) end end)
 noBtn.MouseButton1Click:Connect(function() alertGui.Visible = false end)
