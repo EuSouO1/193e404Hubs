@@ -4,7 +4,7 @@ local Players = game:GetService("Players")
 
 --// GUI Principal
 local gui = Instance.new("ScreenGui", plr.PlayerGui)
-gui.Name = "EventHub_V4_Final"
+gui.Name = "EventHub_V5_TargetFix"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
@@ -17,7 +17,7 @@ frame.Draggable = true
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,35)
 title.BackgroundTransparency = 1
-title.Text = "Event Hub V4"
+title.Text = "Event Hub V5 (Target Fix)"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 
@@ -38,12 +38,12 @@ local boxEvent = Instance.new("TextBox", scroll)
 boxEvent.Size = UDim2.new(1,-8,0,40); boxEvent.BackgroundColor3 = Color3.fromRGB(40,40,40); boxEvent.TextColor3 = Color3.new(1,1,1); boxEvent.PlaceholderText = "Nome do Remote"; boxEvent.Text = ""; boxEvent.TextScaled = true
 
 local boxPlayer = Instance.new("TextBox", scroll)
-boxPlayer.Size = UDim2.new(1,-8,0,40); boxPlayer.BackgroundColor3 = Color3.fromRGB(40,40,40); boxPlayer.TextColor3 = Color3.new(1,1,1); boxPlayer.PlaceholderText = "Player (Vazio = Nenhum)"; boxPlayer.Text = plr.Name; boxPlayer.TextScaled = true
+boxPlayer.Size = UDim2.new(1,-8,0,40); boxPlayer.BackgroundColor3 = Color3.fromRGB(40,40,40); boxPlayer.TextColor3 = Color3.new(1,1,1); boxPlayer.PlaceholderText = "Alvo (Vazio = Pular)"; boxPlayer.Text = plr.Name; boxPlayer.TextScaled = true
 
 local boxValue = Instance.new("TextBox", scroll)
-boxValue.Size = UDim2.new(1,-8,0,40); boxValue.BackgroundColor3 = Color3.fromRGB(40,40,40); boxValue.TextColor3 = Color3.new(1,1,1); boxValue.PlaceholderText = "Valor (Vazio = Nenhum)"; boxValue.Text = "100"; boxValue.TextScaled = true
+boxValue.Size = UDim2.new(1,-8,0,40); boxValue.BackgroundColor3 = Color3.fromRGB(40,40,40); boxValue.TextColor3 = Color3.new(1,1,1); boxValue.PlaceholderText = "Valor (Vazio = Pular)"; boxValue.Text = "100"; boxValue.TextScaled = true
 
---// Lógica de Busca
+--// Filtro
 local function getGameEvents()
     local res = {}
     local targets = {game:GetService("ReplicatedStorage"), game:GetService("Workspace")}
@@ -65,63 +65,55 @@ boxPlayer.FocusLost:Connect(function(e)
     end
 end)
 
---// Função de Disparo Inteligente
+--// Função de Disparo (CORRIGIDA PARA ALVO)
 local function fire(remote)
     if not remote or not remote:IsA("RemoteEvent") then return end
     
     local args = {}
     
-    -- Checa Player
+    -- Se o campo Player não estiver vazio, buscamos o objeto do player
     if boxPlayer.Text ~= "" then
         local target = Players:FindFirstChild(boxPlayer.Text)
-        table.insert(args, target or boxPlayer.Text)
+        if target then
+            table.insert(args, target) -- Envia o Player Alvo como 1º argumento
+        else
+            table.insert(args, boxPlayer.Text) -- Se não achar o objeto, manda o texto
+        end
     end
     
-    -- Checa Valor
+    -- Se o campo Valor não estiver vazio
     if boxValue.Text ~= "" then
         local val = tonumber(boxValue.Text) or boxValue.Text
         table.insert(args, val)
     end
     
-    -- Dispara com a lista de argumentos (unpack desempacota a tabela)
+    -- Dispara com os argumentos ordenados
     remote:FireServer(unpack(args))
 end
 
---// Interface de Alerta (Corrigida)
+--// Interface de Alerta (ZIndex Fix)
 local alertGui = Instance.new("Frame", gui)
 alertGui.Size = UDim2.new(0, 260, 0, 160)
 alertGui.Position = UDim2.new(0.5, -130, 0.5, -80)
 alertGui.BackgroundColor3 = Color3.fromRGB(60, 0, 0)
 alertGui.BorderSizePixel = 2
 alertGui.Visible = false
-alertGui.ZIndex = 50 -- Valor alto para garantir prioridade
+alertGui.ZIndex = 100
 
 local alertText = Instance.new("TextLabel", alertGui)
-alertText.Size = UDim2.new(1, 0, 0.6, 0)
-alertText.BackgroundTransparency = 1
-alertText.Text = "DISPARAR TODOS?\nIsso pode causar lag intenso."
-alertText.TextColor3 = Color3.new(1, 1, 1)
-alertText.TextScaled = true
-alertText.ZIndex = 51
+alertText.Size = UDim2.new(1, 0, 0.6, 0); alertText.BackgroundTransparency = 1; alertText.Text = "DISPARAR TODOS?"; alertText.TextColor3 = Color3.new(1, 1, 1); alertText.TextScaled = true; alertText.ZIndex = 101
 
 local yesBtn = Instance.new("TextButton", alertGui)
-yesBtn.Size = UDim2.new(0.4, 0, 0.3, 0)
-yesBtn.Position = UDim2.new(0.05, 0, 0.65, 0)
-yesBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-yesBtn.Text = "SIM"; yesBtn.TextColor3 = Color3.new(1, 1, 1); yesBtn.TextScaled = true; yesBtn.ZIndex = 51
+yesBtn.Size = UDim2.new(0.4, 0, 0.3, 0); yesBtn.Position = UDim2.new(0.05, 0, 0.65, 0); yesBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0); yesBtn.Text = "SIM"; yesBtn.TextColor3 = Color3.new(1, 1, 1); yesBtn.TextScaled = true; yesBtn.ZIndex = 101
 
 local noBtn = Instance.new("TextButton", alertGui)
-noBtn.Size = UDim2.new(0.4, 0, 0.3, 0)
-noBtn.Position = UDim2.new(0.55, 0, 0.65, 0)
-noBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-noBtn.Text = "NÃO"; noBtn.TextColor3 = Color3.new(1, 1, 1); noBtn.TextScaled = true; noBtn.ZIndex = 51
+noBtn.Size = UDim2.new(0.4, 0, 0.3, 0); noBtn.Position = UDim2.new(0.55, 0, 0.65, 0); noBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70); noBtn.Text = "NÃO"; noBtn.TextColor3 = Color3.new(1, 1, 1); noBtn.TextScaled = true; noBtn.ZIndex = 101
 
---// Botões do Menu
+--// Botões
 local function makeBtn(txt, col, cb)
     local b = Instance.new("TextButton", scroll)
     b.Size = UDim2.new(1,-8,0,45); b.BackgroundColor3 = col; b.TextColor3 = Color3.new(1,1,1); b.TextScaled = true; b.Text = txt
     b.MouseButton1Click:Connect(cb)
-    scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
 end
 
 makeBtn("Disparar Selecionado", Color3.fromRGB(0, 120, 215), function()
@@ -139,10 +131,7 @@ end)
 
 makeBtn("DISPARAR TODOS", Color3.fromRGB(170, 0, 0), function() alertGui.Visible = true end)
 
-yesBtn.MouseButton1Click:Connect(function()
-    alertGui.Visible = false
-    for _, v in pairs(getGameEvents()) do fire(v) end
-end)
+yesBtn.MouseButton1Click:Connect(function() alertGui.Visible = false; for _, v in pairs(getGameEvents()) do fire(v) end end)
 noBtn.MouseButton1Click:Connect(function() alertGui.Visible = false end)
 
 local close = Instance.new("TextButton", frame)
