@@ -212,12 +212,7 @@ local function resetPlayerPhysics()
     end
     
     if ScreenGui:FindFirstChild("CalcFrame") then ScreenGui.CalcFrame:Destroy() end
-    if char and char:FindFirstChild("OriginalSize") then
-        char.OriginalSize:Destroy()
-        for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") then pcall(function() v.Size = v.Size / 2 end) end
-        end
-    end
+    
     for _, p in pairs(workspace:GetDescendants()) do
         if p:IsA("Highlight") and p.Name == "BestaESP" then p:Destroy() end
     end
@@ -229,7 +224,6 @@ local function enableInfiniteJump(speed, jPower)
     local hum = char:FindFirstChildOfClass("Humanoid")
     local jumpConn = UserInputService.JumpRequest:Connect(function()
         if char and hum and char:FindFirstChild("HumanoidRootPart") then
-            -- Note: O loop de atributos principal já cuida de atualizar a velocidade/pulo do fantasmatico/insectoide, mantendo estável.
             char.HumanoidRootPart.Velocity = Vector3.new(char.HumanoidRootPart.Velocity.X, jPower * 1.5, char.HumanoidRootPart.Velocity.Z)
         end
     end)
@@ -251,16 +245,12 @@ local function applyAlienPowers(alienName)
     
     if alienName == "Chama" then
         targetSpeed = 20
-        targetJump = 75
-        workspace.Gravity = originalGravity / 3 -- Ficando leve (Diminuído por 3)
+        targetJump = 25  -- Abaixado conforme pedido
+        workspace.Gravity = originalGravity / 3
         
     elseif alienName == "Quatro Braços" then
         targetSpeed = 32
         targetJump = 100
-        local tag = Instance.new("BoolValue", char) tag.Name = "OriginalSize"
-        for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") then pcall(function() v.Size = v.Size * 2 end) end
-        end
         
     elseif alienName == "XLR8" then
         isCustomSpeedLoop = true
@@ -277,7 +267,6 @@ local function applyAlienPowers(alienName)
                     hum.WalkSpeed = 50
                 end
             end
-            -- Garante que se algo mudar o JumpPower do XLR8 ele volte pro correto
             if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
         end)
         table.insert(activeLoops, xlr8Loop)
@@ -306,8 +295,8 @@ local function applyAlienPowers(alienName)
 
     elseif alienName == "Ultra T" then
         targetSpeed = 20
-        targetJump = 60
-        workspace.Gravity = originalGravity / 6 -- Ficando bem leve (Diminuído por 6)
+        targetJump = 5  -- Abaixado conforme pedido
+        workspace.Gravity = originalGravity / 6
         
     elseif alienName == "Diamante" then
         targetSpeed = 25
@@ -315,22 +304,19 @@ local function applyAlienPowers(alienName)
         
     elseif alienName == "Fantasmatico" then
         targetSpeed = 26
-        targetJump = 60
-        workspace.Gravity = originalGravity / 2 -- Gravidade dividida por 2
+        targetJump = 10 -- Ajustado para voo equilibrado
+        workspace.Gravity = originalGravity / 2
         enableInfiniteJump(targetSpeed, 10)
         
     elseif alienName == "Insectoide" then
         targetSpeed = 20
-        targetJump = 75
-        workspace.Gravity = originalGravity / 2.5 -- Gravidade dividida por 2.5
+        targetJump = 10 -- Ajustado para voo equilibrado
+        workspace.Gravity = originalGravity / 2.5
         enableInfiniteJump(targetSpeed, 20)
         
     elseif alienName == "Massa Cinzenta" then
         targetSpeed = 12
         targetJump = 55
-        for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") then pcall(function() v.Size = v.Size / 4 end) end
-        end
         local CalcFrame = Instance.new("Frame", ScreenGui)
         CalcFrame.Size = UDim2.new(0, 150, 0, 150)
         CalcFrame.Position = UDim2.new(0.1, 0, 0.4, 0)
@@ -350,25 +336,23 @@ local function applyAlienPowers(alienName)
         -- === NOVO SISTEMA DE VISÃO COM COLOR CORRECTION ===
         local CC = Instance.new("ColorCorrectionEffect")
         CC.Name = "BestaColorCorrection"
-        CC.Brightness = -0.7   -- Brilho padrão alterado para -0.7 (como pedido)
+        CC.Brightness = -0.7   
         CC.Contrast = 0.4      
         CC.Saturation = -0.8   
         CC.TintColor = Color3.fromRGB(30, 20, 10) 
         CC.Parent = Lighting
         
-        -- Piscar de leve a exposição usando seus novos valores especificados (-0.4)
         local visionLoop = task.spawn(function()
             while true do
                 task.wait(math.random(4, 8))
-                CC.Brightness = -0.4 -- Fica levemente mais claro/visível no susto do piscar
+                CC.Brightness = -0.4 
                 task.wait(0.2)
-                CC.Brightness = -0.7 -- Retorna para o breu normal configurado
+                CC.Brightness = -0.7 
             end
         end)
         
         table.insert(activeLoops, {Disconnect = function() task.cancel(visionLoop); if CC then CC:Destroy() end end})
         
-        -- ESP Loop mantém os contornos vermelhos brilhando
         local espLoop = RunService.Heartbeat:Connect(function()
             if not char:FindFirstChild("HumanoidRootPart") then return end
             for _, p in pairs(workspace:GetDescendants()) do
@@ -421,7 +405,6 @@ local function applyAlienPowers(alienName)
     end
     
     -- === LOOP PROTETOR / ATUALIZADOR DE ATRIBUTOS DO ALIEN ===
-    -- Fica rodando no fundo. Se a velocidade ou pulo mudar de repente por causa do jogo, ele força de volta pro valor certo do alien.
     if not isCustomSpeedLoop then
         local attributeProtector = RunService.Heartbeat:Connect(function()
             if hum and hum.Parent then
@@ -448,7 +431,6 @@ local function transform(alienName)
     SelectionPanel.Visible = false
     OmnitrixBtn.Visible = true
     
-    -- Painel fica Cinza/Branco quando transformado
     MainPanel.BackgroundColor3 = CORES_PAINEL.Transformado
     
     pcall(function() playSound(IDS.Sons.Transformar) end)
@@ -466,13 +448,11 @@ local function transform(alienName)
     resetPlayerPhysics()
     
     omnitrixCooldown = true
-    -- Painel fica Vermelho quando descarregado
     MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
     
     task.wait(480)
     
     omnitrixCooldown = false
-    -- Painel volta a ficar Verde quando carregado
     MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
     pcall(function() playSound(IDS.Sons.Recarregar) end)
 end
