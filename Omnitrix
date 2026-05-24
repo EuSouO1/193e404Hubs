@@ -1,4 +1,4 @@
--- [[ OMNITRIX - PURE POWERS & STATUS SYSTEM ]] --
+-- [[ OMNITRIX - PURE POWERS & STATUS SYSTEM (GUI FIXED) ]] --
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -55,28 +55,38 @@ end
 
 playSound(IDS.Sons.Carregado)
 
+-- === DESTRUIÇÃO DE INTERFACE ANTIGA ===
+if lplayer:WaitForChild("PlayerGui"):FindFirstChild("OmnitrixSystem") then
+    lplayer.PlayerGui.OmnitrixSystem:Destroy()
+end
+
 -- === INTERFACE GRÁFICA (GUI DO OMNITRIX) ===
-local ScreenGui = Instance.new("ScreenGui", lplayer:WaitForChild("PlayerGui"))
+local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "OmnitrixSystem"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
 
 local OmnitrixBtn = Instance.new("ImageButton", ScreenGui)
 OmnitrixBtn.Size = UDim2.new(0, 110, 0, 110)
 OmnitrixBtn.Position = UDim2.new(0.85, 0, 0.75, 0)
 OmnitrixBtn.Image = IDS.Omnitrix
 OmnitrixBtn.BackgroundTransparency = 1
+OmnitrixBtn.ZIndex = 5
 
 local SelectionPanel = Instance.new("Frame", ScreenGui)
 SelectionPanel.Size = UDim2.new(0, 200, 0, 200)
 SelectionPanel.Position = UDim2.new(0.82, 0, 0.45, 0)
 SelectionPanel.BackgroundTransparency = 1
 SelectionPanel.Visible = false
+SelectionPanel.ZIndex = 4
 
 local SilhouetteImg = Instance.new("ImageButton", SelectionPanel)
 SilhouetteImg.Size = UDim2.new(0, 140, 0, 140)
 SilhouetteImg.Position = UDim2.new(0.15, 0, 0.15, 0)
 SilhouetteImg.BackgroundTransparency = 1
 SilhouetteImg.ImageColor3 = Color3.new(0, 0, 0)
+SilhouetteImg.ZIndex = 5
 
 local NextBtn = Instance.new("TextButton", SelectionPanel)
 NextBtn.Size = UDim2.new(0, 30, 0, 40)
@@ -86,6 +96,7 @@ NextBtn.TextSize = 25
 NextBtn.TextColor3 = Color3.new(1,1,1)
 NextBtn.BackgroundTransparency = 0.5
 NextBtn.BackgroundColor3 = Color3.new(0,0,0)
+NextBtn.ZIndex = 6
 
 local PrevBtn = Instance.new("TextButton", SelectionPanel)
 PrevBtn.Size = UDim2.new(0, 30, 0, 40)
@@ -95,6 +106,7 @@ PrevBtn.TextSize = 25
 PrevBtn.TextColor3 = Color3.new(1,1,1)
 PrevBtn.BackgroundTransparency = 0.5
 PrevBtn.BackgroundColor3 = Color3.new(0,0,0)
+PrevBtn.ZIndex = 6
 
 -- === SISTEMA DE CHAT (GRITO) ===
 local function shoutInChat(text)
@@ -196,6 +208,7 @@ local function applyAlienPowers(alienName)
         BallToggle.Position = UDim2.new(0.85, 0, 0.35, 0)
         BallToggle.Text = "Modo Bola: OFF"
         BallToggle.BackgroundColor3 = Color3.fromRGB(85, 170, 0)
+        BallToggle.ZIndex = 6
         local modeOn = false
         BallToggle.MouseButton1Click:Connect(function()
             modeOn = not modeOn
@@ -240,10 +253,11 @@ local function applyAlienPowers(alienName)
         CalcFrame.Size = UDim2.new(0, 150, 0, 150)
         CalcFrame.Position = UDim2.new(0.1, 0, 0.4, 0)
         CalcFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+        CalcFrame.ZIndex = 6
         local CalcTxt = Instance.new("TextLabel", CalcFrame)
-        CalcTxt.Size = UDim2.new(1, 0, 0.3, 0); CalcTxt.Text = "Massa Cinzenta Inteligência"; CalcTxt.TextColor3 = Color3.new(1,1,1); CalcTxt.TextScaled = true
+        CalcTxt.Size = UDim2.new(1, 0, 0.3, 0); CalcTxt.Text = "Massa Cinzenta Inteligência"; CalcTxt.TextColor3 = Color3.new(1,1,1); CalcTxt.TextScaled = true; CalcTxt.ZIndex = 7
         local CalcBtn = Instance.new("TextButton", CalcFrame)
-        CalcBtn.Size = UDim2.new(0.8, 0, 0.5, 0); CalcBtn.Position = UDim2.new(0.1, 0, 0.4, 0); CalcBtn.Text = "Calcular"
+        CalcBtn.Size = UDim2.new(0.8, 0, 0.5, 0); CalcBtn.Position = UDim2.new(0.1, 0, 0.4, 0); CalcBtn.Text = "Calcular"; CalcBtn.ZIndex = 7
         CalcBtn.MouseButton1Click:Connect(function() CalcTxt.Text = "Resultado: " .. tostring(math.random(1000, 99999)) end)
         table.insert(activeLoops, {Disconnect = function() CalcFrame:Destroy() end})
         
@@ -251,7 +265,7 @@ local function applyAlienPowers(alienName)
         hum.WalkSpeed = 40
         hum.JumpPower = 65
         local BestaVision = Instance.new("Frame", ScreenGui)
-        BestaVision.Size = UDim2.new(1, 0, 1, 0); BestaVision.BackgroundColor3 = Color3.new(0,0,0)
+        BestaVision.Size = UDim2.new(1, 0, 1, 0); BestaVision.BackgroundColor3 = Color3.new(0,0,0); BestaVision.ZIndex = 1
         local visionLoop = task.spawn(function()
             while true do
                 task.wait(math.random(5, 10))
@@ -394,6 +408,15 @@ SilhouetteImg.MouseButton1Click:Connect(function()
     transform(chosenAlien)
 end)
 
+-- === CORREÇÃO DE RESPAWN ===
+lplayer.CharacterAdded:Connect(function(newChar)
+    task.wait(1)
+    if ScreenGui and ScreenGui.Parent then
+        ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
+    end
+    resetPlayerPhysics()
+end)
+
 -- === AUTO-DESTRUIÇÃO ===
 lplayer.Chatted:Connect(function(msg)
     if string.lower(msg) == "ativar modo de auto-destruição" then
@@ -406,7 +429,7 @@ lplayer.Chatted:Connect(function(msg)
         
         local TimerLbl = Instance.new("TextLabel", ScreenGui)
         TimerLbl.Size = UDim2.new(0, 200, 0, 50); TimerLbl.Position = UDim2.new(0.4, 0, 0.1, 0)
-        TimerLbl.TextColor3 = Color3.new(1,0,0); TimerLbl.TextSize = 40
+        TimerLbl.TextColor3 = Color3.new(1,0,0); TimerLbl.TextSize = 40; TimerLbl.ZIndex = 6
         
         for i = 20, 1, -1 do
             TimerLbl.Text = "AUTO-DESTRUIÇÃO: " .. i
