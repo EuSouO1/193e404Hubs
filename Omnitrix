@@ -1,4 +1,4 @@
--- [[ OMNITRIX - POWERS SYSTEM WITH DRAGGABLE CENTRAL PANEL (SYNTAX FIXED) ]] --
+-- [[ OMNITRIX - EMOJI EDITION (ANTI-IMAGE BLOCK) ]] --
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -7,31 +7,32 @@ local RunService = game:GetService("RunService")
 
 local lplayer = Players.LocalPlayer
 
--- === CONFIGURAÇÃO DE IDS ===
-local IDS = {
-    Omnitrix = "rbxassetid://110226612419601",
-    Sons = {
-        Carregado = "rbxassetid://6788288758",
-        Ligando = "rbxassetid://6648679857",
-        Trocar = "rbxassetid://3429876367",
-        Transformar = "rbxassetid://74355094547165",
-        Recarregar = "rbxassetid://6788288758",
-        Descarregando = "rbxassetid://74043517398902"
-    },
-    Silhuetas = {
-        [1] = {Nome = "Chama", ID = "rbxassetid://6052185947"},
-        [2] = {Nome = "Quatro Braços", ID = "rbxassetid://7445053180"},
-        [3] = {Nome = "XLR8", ID = "rbxassetid://13265535309"},
-        [4] = {Nome = "Bala de Canhão", ID = "rbxassetid://12984933950"},
-        [5] = {Nome = "Ultra T", ID = "rbxassetid://12995631685"},
-        [6] = {Nome = "Diamante", ID = "rbxassetid://7444321735"},
-        [7] = {Nome = "Fantasmatico", ID = "rbxassetid://12987202438"},
-        [8] = {Nome = "Insectoide", ID = "rbxassetid://12995484781"},
-        [9] = {Nome = "Massa Cinzenta", ID = "rbxassetid://13088356171"},
-        [10] = {Nome = "Besta", ID = "rbxassetid://13256823140"},
-        [11] = {Nome = "Aquatico", ID = "rbxassetid://15108826659"}
-    }
+-- === CONFIGURAÇÃO DE IDS DE SONS (MANTIDOS) ===
+local SONS = {
+    Carregado = "rbxassetid://6788288758",
+    Ligando = "rbxassetid://6648679857",
+    Trocar = "rbxassetid://3429876367",
+    Transformar = "rbxassetid://74355094547165",
+    Recarregar = "rbxassetid://6788288758",
+    Descarregando = "rbxassetid://74043517398902"
 }
+
+-- === CONFIGURAÇÃO DA LISTA DE ALIENS (AGORA COM EMOJIS) ===
+local ALIENS = {
+    [1] = {Nome = "Chama", Emoji = "🔥"},
+    [2] = {Nome = "Quatro Braços", Emoji = "💪"},
+    [3] = {Nome = "XLR8", Emoji = "🏃‍♂️💨"},
+    [4] = {Nome = "Bala de Canhão", Emoji = "⚫"},
+    [5] = {Nome = "Ultra T", Emoji = "🧬✨"},
+    [6] = {Nome = "Diamante", Emoji = "💎"},
+    [7] = {Nome = "Fantasmatico", Emoji = "👻"},
+    [8] = {Nome = "Insectoide", Emoji = "🪰"},
+    [9] = {Nome = "Massa Cinzenta", Emoji = "🧠🤏"},
+    [10] = {Nome = "Besta", Emoji = "🟠🐕"},
+    [11] = {Nome = "Aquatico", Emoji = "🦈"}
+}
+
+local EMOJI_OMNITRIX = "⌚💚"
 
 -- === VARIÁVEIS DE CONTROLE ===
 local currentAlienIndex = 1
@@ -53,16 +54,16 @@ local function playSound(soundId)
     s:Destroy()
 end
 
-playSound(IDS.Sons.Carregado)
+playSound(SONS.Carregado)
 
 -- === DESTRUIÇÃO DE INTERFACE ANTIGA ===
-if lplayer:WaitForChild("PlayerGui"):FindFirstChild("OmnitrixSystem") then
-    lplayer.PlayerGui.OmnitrixSystem:Destroy()
+if lplayer:WaitForChild("PlayerGui"):FindFirstChild("OmnitrixEmojiSystem") then
+    lplayer.PlayerGui.OmnitrixEmojiSystem:Destroy()
 end
 
--- === INTERFACE GRÁFICA (GUI CENTRALIZADA) ===
+-- === INTERFACE GRÁFICA (GUI CENTRALIZADA COM EMOJIS) ===
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "OmnitrixSystem"
+ScreenGui.Name = "OmnitrixEmojiSystem"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
@@ -79,13 +80,23 @@ MainPanel.ZIndex = 3
 local UICorner = Instance.new("UICorner", MainPanel)
 UICorner.CornerRadius = UDim.new(0, 12)
 
--- Botão do Relógio
-local OmnitrixBtn = Instance.new("ImageButton", MainPanel)
-OmnitrixBtn.Size = UDim2.new(0, 110, 0, 110)
-OmnitrixBtn.Position = UDim2.new(0.5, -55, 0.5, -55)
-OmnitrixBtn.Image = IDS.Omnitrix
-OmnitrixBtn.BackgroundTransparency = 1
-OmnitrixBtn.ZIndex = 5
+-- Label do Relógio (Emoji do Omnitrix)
+local OmnitrixEmojiLabel = Instance.new("TextLabel", MainPanel)
+OmnitrixEmojiLabel.Size = UDim2.new(0, 120, 0, 120)
+OmnitrixEmojiLabel.Position = UDim2.new(0.5, -60, 0.5, -60)
+OmnitrixEmojiLabel.Text = EMOJI_OMNITRIX
+OmnitrixEmojiLabel.TextSize = 80 -- Emoji grande no centro
+OmnitrixEmojiLabel.TextColor3 = Color3.new(1, 1, 1)
+OmnitrixEmojiLabel.BackgroundTransparency = 1
+OmnitrixEmojiLabel.ZIndex = 5
+
+-- Botão Invisível por cima para detectar o clique
+local OmnitrixBtn = Instance.new("TextButton", MainPanel)
+OmnitrixBtn.Size = UDim2.new(0, 120, 0, 120)
+OmnitrixBtn.Position = UDim2.new(0.5, -60, 0.5, -60)
+OmnitrixBtn.Text = ""
+OmnitrixBtn.BackgroundTransparency = 1 -- Botão invisível só pra clicar
+OmnitrixBtn.ZIndex = 6
 
 -- Painel de Seleção
 local SelectionPanel = Instance.new("Frame", MainPanel)
@@ -95,13 +106,23 @@ SelectionPanel.BackgroundTransparency = 1
 SelectionPanel.Visible = false
 SelectionPanel.ZIndex = 4
 
--- Silhueta do Alien
-local SilhouetteImg = Instance.new("ImageButton", SelectionPanel)
-SilhouetteImg.Size = UDim2.new(0, 100, 0, 100)
-SilhouetteImg.Position = UDim2.new(0.5, -50, 0.5, -50)
-SilhouetteImg.BackgroundTransparency = 1
-SilhouetteImg.ImageColor3 = Color3.new(0, 0, 0)
-SilhouetteImg.ZIndex = 5
+-- Label do Alien (Emoji do Alien Selecionado)
+local AlienEmojiLabel = Instance.new("TextLabel", SelectionPanel)
+AlienEmojiLabel.Size = UDim2.new(0, 110, 0, 110)
+AlienEmojiLabel.Position = UDim2.new(0.5, -55, 0.5, -55)
+AlienEmojiLabel.Text = ALIENS[currentAlienIndex].Emoji
+AlienEmojiLabel.TextSize = 70 -- Emoji do alien grande
+AlienEmojiLabel.TextColor3 = Color3.new(1, 1, 1)
+AlienEmojiLabel.BackgroundTransparency = 1
+AlienEmojiLabel.ZIndex = 5
+
+-- Botão Invisível por cima para confirmar a transformação
+local TransformBtn = Instance.new("TextButton", SelectionPanel)
+TransformBtn.Size = UDim2.new(0, 110, 0, 110)
+TransformBtn.Position = UDim2.new(0.5, -55, 0.5, -55)
+TransformBtn.Text = ""
+TransformBtn.BackgroundTransparency = 1
+TransformBtn.ZIndex = 6
 
 -- Botão Avançar (>)
 local NextBtn = Instance.new("TextButton", SelectionPanel)
@@ -265,17 +286,20 @@ local function applyAlienPowers(alienName)
         local BallToggle = Instance.new("TextButton", ScreenGui)
         BallToggle.Size = UDim2.new(0, 120, 0, 40)
         BallToggle.Position = UDim2.new(0.85, 0, 0.35, 0)
-        BallToggle.Text = "Modo Bola: OFF"
+        BallToggle.Text = "Bola: OFF"
         BallToggle.BackgroundColor3 = Color3.fromRGB(85, 170, 0)
-        BallToggle.ZIndex = 6
+        BallToggle.TextColor3 = Color3.new(1, 1, 1)
+        BallToggle.TextSize = 18
         local modeOn = false
         BallToggle.MouseButton1Click:Connect(function()
             modeOn = not modeOn
             if modeOn then
-                BallToggle.Text = "Modo Bola: ON"
+                BallToggle.Text = "Bola: ON"
+                BallToggle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
                 hum.WalkSpeed = 60; hum.JumpPower = 0
             else
-                BallToggle.Text = "Modo Bola: OFF"
+                BallToggle.Text = "Bola: OFF"
+                BallToggle.BackgroundColor3 = Color3.fromRGB(85, 170, 0)
                 hum.WalkSpeed = 10; hum.JumpPower = 60
             end
         end)
@@ -312,12 +336,8 @@ local function applyAlienPowers(alienName)
         CalcFrame.Size = UDim2.new(0, 150, 0, 150)
         CalcFrame.Position = UDim2.new(0.1, 0, 0.4, 0)
         CalcFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-        CalcFrame.ZIndex = 6
         local CalcTxt = Instance.new("TextLabel", CalcFrame)
-        CalcTxt.Size = UDim2.new(1, 0, 0.3, 0); CalcTxt.Text = "Massa Cinzenta Inteligência"; CalcTxt.TextColor3 = Color3.new(1,1,1); CalcTxt.TextScaled = true; CalcTxt.ZIndex = 7
-        local CalcBtn = Instance.new("TextButton", CalcFrame)
-        CalcBtn.Size = UDim2.new(0.8, 0, 0.5, 0); CalcBtn.Position = UDim2.new(0.1, 0, 0.4, 0); CalcBtn.Text = "Calcular"; CalcBtn.ZIndex = 7
-        CalcBtn.MouseButton1Click:Connect(function() CalcTxt.Text = "Resultado: " .. tostring(math.random(1000, 99999)) end)
+        CalcTxt.Size = UDim2.new(1, 0, 0.3, 0); CalcTxt.Text = "Q🧠 " .. math.random(100, 1000); CalcTxt.TextColor3 = Color3.new(1,1,1); CalcTxt.TextScaled = true
         table.insert(activeLoops, {Disconnect = function() CalcFrame:Destroy() end})
         
     elseif alienName == "Besta" then
@@ -362,153 +382,14 @@ local function applyAlienPowers(alienName)
             local naAgua = false
             local parts = workspace:GetPartsInPart(char.HumanoidRootPart)
             for _, part in pairs(parts) do
-                if part.Color.B > 0.6 and part.Color.G < 0.5 and part.Color.R < 0.5 then
-                    naAgua = true
-                    break
-                end
+                if part.Color.B > 0.6 and part.Color.G < 0.5 and part.Color.R < 0.5 then naAgua = true; break end
             end
             if naAgua then
                 hum.WalkSpeed = 75; hum.JumpPower = 55; timerForaDaAgua = 0
             else
                 timerForaDaAgua = timerForaDaAgua + task.wait()
-                if timerForaDaAgua >= 120 then
-                    hum.WalkSpeed = 0; hum.JumpPower = 0
-                else
-                    hum.WalkSpeed = math.max(0, 15 - (timerForaDaAgua * 0.12))
-                end
+                if timerForaDaAgua >= 120 then hum.WalkSpeed = 0; hum.JumpPower = 0
+                else hum.WalkSpeed = math.max(0, 15 - (timerForaDaAgua * 0.12)) end
             end
         end)
-        table.insert(activeLoops, aquaticoLoop)
-    end
-end
-
--- === LÓGICA DE TRANSFORMAÇÃO ===
-local function transform(alienName)
-    if omnitrixCooldown then return end
-    isTransformed = true
-    currentAlienActive = alienName
-    SelectionPanel.Visible = false
-    OmnitrixBtn.Visible = true
-    
-    playSound(IDS.Sons.Transformar)
-    shoutInChat(alienName)
-    applyAlienPowers(alienName)
-    
-    local timeActive = math.random(120, 360)
-    task.wait(timeActive - 5)
-    
-    playSound(IDS.Sons.Descarregando)
-    task.wait(5)
-    
-    isTransformed = false
-    currentAlienActive = ""
-    resetPlayerPhysics()
-    
-    omnitrixCooldown = true
-    OmnitrixBtn.ImageColor3 = Color3.new(1, 0, 0)
-    task.wait(480)
-    
-    omnitrixCooldown = false
-    OmnitrixBtn.ImageColor3 = Color3.new(1, 1, 1)
-    playSound(IDS.Sons.Recarregar)
-end
-
--- === MENU DE SELEÇÃO / SPAM DETECT ===
-local function updateSilhouette()
-    SilhouetteImg.Image = IDS.Silhuetas[currentAlienIndex].ID
-end
-
-OmnitrixBtn.MouseButton1Click:Connect(function()
-    if omnitrixCooldown or isTransformed then return end
-    
-    local now = os.clock()
-    if now - lastClickTime < 0.4 then
-        clickCount = clickCount + 1
-    else
-        clickCount = 1
-    end
-    lastClickTime = now
-    
-    if clickCount >= 4 then
-        local randomAlien = IDS.Silhuetas[math.random(1, #IDS.Silhuetas)].Nome
-        transform(randomAlien)
-        clickCount = 0
-        return
-    end
-    
-    isOmnitrixOn = not isOmnitrixOn
-    if isOmnitrixOn then
-        playSound(IDS.Sons.Ligando)
-        SelectionPanel.Visible = true
-        OmnitrixBtn.Visible = false
-        updateSilhouette()
-    else
-        SelectionPanel.Visible = false
-        OmnitrixBtn.Visible = true
-    end
-end)
-
-NextBtn.MouseButton1Click:Connect(function()
-    if not isOmnitrixOn then return end
-    playSound(IDS.Sons.Trocar)
-    currentAlienIndex = currentAlienIndex + 1
-    if currentAlienIndex > #IDS.Silhuetas then currentAlienIndex = 1 end
-    updateSilhouette()
-end)
-
-PrevBtn.MouseButton1Click:Connect(function()
-    if not isOmnitrixOn then return end
-    playSound(IDS.Sons.Trocar)
-    currentAlienIndex = currentAlienIndex - 1
-    if currentAlienIndex < 1 then currentAlienIndex = #IDS.Silhuetas end
-    updateSilhouette()
-end)
-
-SilhouetteImg.MouseButton1Click:Connect(function()
-    if not isOmnitrixOn or isTransformed then return end
-    local chosenAlien = IDS.Silhuetas[currentAlienIndex].Nome
-    transform(chosenAlien)
-end)
-
--- === CORREÇÃO DE RESPAWN ===
-lplayer.CharacterAdded:Connect(function(newChar)
-    task.wait(1)
-    if ScreenGui and ScreenGui.Parent then
-        ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
-    end
-    resetPlayerPhysics()
-end)
-
--- === AUTO-DESTRUIÇÃO ===
-lplayer.Chatted:Connect(function(msg)
-    if string.lower(msg) == "ativar modo de auto-destruição" then
-        if omnitrixCooldown then return end
-        
-        isOmnitrixOn = false
-        SelectionPanel.Visible = false
-        OmnitrixBtn.Visible = true
-        omnitrixCooldown = true
-        OmnitrixBtn.ImageColor3 = Color3.new(1, 0, 0)
-        
-        local TimerLbl = Instance.new("TextLabel", ScreenGui)
-        TimerLbl.Size = UDim2.new(0, 300, 0, 50); TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
-        TimerLbl.TextColor3 = Color3.new(1,0,0); TimerLbl.TextSize = 40; TimerLbl.ZIndex = 6
-        TimerLbl.BackgroundTransparency = 1
-        
-        for i = 20, 1, -1 do
-            TimerLbl.Text = "AUTO-DESTRUIÇÃO: " .. i
-            playSound(IDS.Sons.Descarregando)
-            task.wait(1)
-        end
-        
-        TimerLbl:Destroy()
-        resetPlayerPhysics()
-        ScreenGui:Destroy()
-        
-        local hrp = lplayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.Velocity = Vector3.new(math.random(-500, 500), 8000, math.random(-500, 500))
-            hrp.RotVelocity = Vector3.new(500, 500, 500)
-        end
-    end
-end)
+        table.insert(activeLoops,
