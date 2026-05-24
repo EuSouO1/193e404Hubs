@@ -1,4 +1,4 @@
--- [[ OMNITRIX COMPLETO - BROOKHAVEN TEXT CLICK VERSION ]] --
+-- [[ OMNITRIX COMPLETO - BROOKHAVEN SYSTEM (UI CLICK VERSION) ]] --
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -7,6 +7,23 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local lplayer = Players.LocalPlayer
+
+-- === CONFIGURAÇÃO DOS BOTÕES DE SKIN DO BROOKHAVEN ===
+-- Substitua os nomes abaixo pelos nomes REAIS dos TextButtons do Brookhaven que você usa para equipar cada slot!
+local BOTOES_SLOTS = {
+    ["Ben"] = "Slot1",            -- Nome do botão que ativa a skin do Ben
+    ["Chama"] = "Slot2",          -- Nome do botão que ativa o Chama
+    ["Quatro Braços"] = "Slot3",   -- Nome do botão que ativa o Quatro Braços
+    ["XLR8"] = "Slot4",           -- Nome do botão que ativa o XLR8
+    ["Bala de Canhão"] = "Slot5",  -- Nome do botão que ativa o Bala de Canhão
+    ["Ultra T"] = "Slot6",         -- Nome do botão que ativa o Ultra T
+    ["Diamante"] = "Slot7",        -- Nome do botão que ativa o Diamante
+    ["Fantasmatico"] = "Slot8",   -- Nome do botão que ativa o Fantasmático
+    ["Insectoide"] = "Slot9",      -- Nome do botão que ativa o Insectoide
+    ["Massa Cinzenta"] = "Slot10", -- Nome do botão que ativa o Massa Cinzenta
+    ["Besta"] = "Slot11",         -- Nome do botão que ativa o Besta
+    ["Aquatico"] = "Slot12"        -- Nome do botão que ativa o Aquático
+}
 
 -- === CONFIGURAÇÃO DE IDS ===
 local IDS = {
@@ -110,24 +127,26 @@ local function shoutInChat(text)
     end
 end
 
--- === ENCONTRAR E CLICAR NO BOTÃO PELO TEXTO ===
-local function clickButtonByText(targetText)
-    -- Procura em toda a PlayerGui do jogador
-    for _, gui in pairs(lplayer.PlayerGui:GetDescendants()) do
-        -- Ignora a própria GUI do Omnitrix para não dar conflito
-        if gui:IsA("TextButton") or gui:IsA("TextBox") then
-            -- Verifica se o texto do botão é igual ao nome do alien (ignorando maiúsculas/minúsculas)
-            if string.lower(gui.Text) == string.lower(targetText) then
-                -- Força o clique simulando os eventos do botão
+-- === SIMULAR CLIQUE NO TEXTBUTTON DO BROOKHAVEN ===
+local function clickAvatarButton(alienName)
+    local buttonName = BOTOES_SLOTS[alienName]
+    if not buttonName then return end
+    
+    -- Vasculha a PlayerGui inteira procurando o botão de skin com o nome configurado
+    for _, gui in pairs(lplayer.PlayerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Name ~= "OmnitrixSystem" then
+            local btn = gui:FindFirstChild(buttonName, true) -- Procura em profundidade
+            if btn and (btn:IsA("TextButton") or btn:IsA("ImageButton")) then
+                -- Simula o clique usando as funções internas do Roblox de forma segura
                 local events = {"MouseButton1Click", "MouseButton1Down", "Activated"}
                 for _, eventName in pairs(events) do
-                    if gui[eventName] then
-                        for _, connection in pairs(getconnections(gui[eventName])) do
+                    if btn[eventName] then
+                        for _, connection in pairs(getconnections(btn[eventName])) do
                             connection:Fire()
                         end
                     end
                 end
-                break -- Já achou o botão, pode parar de procurar
+                break
             end
         end
     end
@@ -343,8 +362,8 @@ local function transform(alienName)
     playSound(IDS.Sons.Transformar)
     shoutInChat(alienName)
     
-    -- Clica automaticamente no botão que tem o texto com o nome do Alien!
-    clickButtonByText(alienName)
+    -- Executa o clique simulado no botão do Brookhaven!
+    clickAvatarButton(alienName)
     applyAlienPowers(alienName)
     
     local timeActive = math.random(120, 360)
@@ -357,8 +376,8 @@ local function transform(alienName)
     currentAlienActive = ""
     resetPlayerPhysics()
     
-    -- Clica automaticamente no botão com o texto "Ben" para resetar a skin
-    clickButtonByText("Ben")
+    -- Clica no botão de voltar pra skin do Ben
+    clickAvatarButton("Ben")
     
     omnitrixCooldown = true
     OmnitrixBtn.ImageColor3 = Color3.new(1, 0, 0)
