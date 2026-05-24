@@ -343,7 +343,7 @@ local function applyAlienPowers(alienName)
         -- === NOVO SISTEMA DE VISÃO COM COLOR CORRECTION ===
         local CC = Instance.new("ColorCorrectionEffect")
         CC.Name = "BestaColorCorrection"
-        CC.Brightness = -0.2   -- Deixa o mundo mais sombrio
+        CC.Brightness = -0.7   -- Deixa o mundo mais sombrio
         CC.Contrast = 0.4      -- Da um destaque nos contornos
         CC.Saturation = -0.8   -- Deixa quase tudo preto e branco pro Highlight se destacar
         CC.TintColor = Color3.fromRGB(30, 20, 10) -- Tom bem escuro e fosco
@@ -355,7 +355,7 @@ local function applyAlienPowers(alienName)
                 task.wait(math.random(4, 8))
                 CC.Brightness = -0.4
                 task.wait(0.2)
-                CC.Brightness = -0.2
+                CC.Brightness = -0.7
             end
         end)
         
