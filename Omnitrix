@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
 
 local lplayer = Players.LocalPlayer
 
@@ -37,7 +38,7 @@ local IDS = {
 local CORES_PAINEL = {
     Carregado = Color3.fromRGB(0, 180, 0),     -- Verde
     Transformado = Color3.fromRGB(200, 200, 200), -- Cinza Claro / Branco
-    Descarregado = Color3.fromRGB(180, 0, 0)    -- Vermelho
+    Descarregaged = Color3.fromRGB(180, 0, 0)    -- Vermelho
 }
 
 -- === VARIÁVEIS DE CONTROLE ===
@@ -78,7 +79,7 @@ ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
 local MainPanel = Instance.new("Frame", ScreenGui)
 MainPanel.Size = UDim2.new(0, 240, 0, 160)
 MainPanel.Position = UDim2.new(0.5, -120, 0.5, -80)
-MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado -- Começa verde carregado
+MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
 MainPanel.BackgroundTransparency = 0.4
 MainPanel.BorderSizePixel = 0
 MainPanel.ZIndex = 3
@@ -86,7 +87,7 @@ MainPanel.ZIndex = 3
 local UICorner = Instance.new("UICorner", MainPanel)
 UICorner.CornerRadius = UDim.new(0, 12)
 
--- Botão do Relógio (Agora em formato de Texto/Emoji)
+-- Botão do Relógio (Texto/Emoji)
 local OmnitrixBtn = Instance.new("TextButton", MainPanel)
 OmnitrixBtn.Size = UDim2.new(0, 110, 0, 110)
 OmnitrixBtn.Position = UDim2.new(0.5, -55, 0.5, -55)
@@ -104,7 +105,7 @@ SelectionPanel.BackgroundTransparency = 1
 SelectionPanel.Visible = false
 SelectionPanel.ZIndex = 4
 
--- Silhueta do Alien (Agora em formato de Texto/Emoji)
+-- Silhueta do Alien (Texto/Emoji)
 local SilhouetteImg = Instance.new("TextButton", SelectionPanel)
 SilhouetteImg.Size = UDim2.new(0, 100, 0, 100)
 SilhouetteImg.Position = UDim2.new(0.5, -50, 0.5, -50)
@@ -205,7 +206,11 @@ local function resetPlayerPhysics()
         hum.UseJumpPower = true
     end
     
-    if ScreenGui:FindFirstChild("BestaVision") then ScreenGui.BestaVision:Destroy() end
+    -- Destrói o ColorCorrection do Besta se ele existir
+    if Lighting:FindFirstChild("BestaColorCorrection") then 
+        Lighting.BestaColorCorrection:Destroy() 
+    end
+    
     if ScreenGui:FindFirstChild("CalcFrame") then ScreenGui.CalcFrame:Destroy() end
     if char and char:FindFirstChild("OriginalSize") then
         char.OriginalSize:Destroy()
@@ -334,17 +339,29 @@ local function applyAlienPowers(alienName)
     elseif alienName == "Besta" then
         hum.WalkSpeed = 40
         hum.JumpPower = 65
-        local BestaVision = Instance.new("Frame", ScreenGui)
-        BestaVision.Size = UDim2.new(1, 0, 1, 0); BestaVision.BackgroundColor3 = Color3.new(0,0,0); BestaVision.ZIndex = 1
+        
+        -- === NOVO SISTEMA DE VISÃO COM COLOR CORRECTION ===
+        local CC = Instance.new("ColorCorrectionEffect")
+        CC.Name = "BestaColorCorrection"
+        CC.Brightness = -0.2   -- Deixa o mundo mais sombrio
+        CC.Contrast = 0.4      -- Da um destaque nos contornos
+        CC.Saturation = -0.8   -- Deixa quase tudo preto e branco pro Highlight se destacar
+        CC.TintColor = Color3.fromRGB(30, 20, 10) -- Tom bem escuro e fosco
+        CC.Parent = Lighting
+        
+        -- Piscar de leve a exposição para simular os instintos/batimentos do Besta
         local visionLoop = task.spawn(function()
             while true do
-                task.wait(math.random(5, 10))
-                BestaVision.BackgroundTransparency = 0.8
-                task.wait(0.3)
-                BestaVision.BackgroundTransparency = 0
+                task.wait(math.random(4, 8))
+                CC.Brightness = -0.4
+                task.wait(0.2)
+                CC.Brightness = -0.2
             end
         end)
-        table.insert(activeLoops, {Disconnect = function() task.cancel(visionLoop); BestaVision:Destroy() end})
+        
+        table.insert(activeLoops, {Disconnect = function() task.cancel(visionLoop); if CC then CC:Destroy() end end})
+        
+        -- ESP Loop mantém os contornos vermelhos brilhando
         local espLoop = RunService.Heartbeat:Connect(function()
             if not char:FindFirstChild("HumanoidRootPart") then return end
             for _, p in pairs(workspace:GetDescendants()) do
@@ -354,7 +371,10 @@ local function applyAlienPowers(alienName)
                     if dist <= 100 then
                         if not p.Parent:FindFirstChild("BestaESP") then
                             local hl = Instance.new("Highlight", p.Parent)
-                            hl.Name = "BestaESP"; hl.FillColor = Color3.new(1, 0, 0); hl.OutlineColor = Color3.new(1, 0, 0)
+                            hl.Name = "BestaESP"
+                            hl.FillColor = Color3.new(1, 0, 0)
+                            hl.OutlineColor = Color3.new(1, 0, 0)
+                            hl.FillTransparency = 0.2 -- Torna o preenchimento bem visível no escuro
                         end
                     else
                         if p.Parent:FindFirstChild("BestaESP") then p.Parent.BestaESP:Destroy() end
@@ -401,7 +421,7 @@ local function transform(alienName)
     SelectionPanel.Visible = false
     OmnitrixBtn.Visible = true
     
-    -- Fica Cinza/Branco quando transformado
+    -- Painel fica Cinza/Branco quando transformado
     MainPanel.BackgroundColor3 = CORES_PAINEL.Transformado
     
     pcall(function() playSound(IDS.Sons.Transformar) end)
@@ -419,13 +439,13 @@ local function transform(alienName)
     resetPlayerPhysics()
     
     omnitrixCooldown = true
-    -- Fica Vermelho quando descarregado
-    MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregado
+    -- Painel fica Vermelho quando descarregado
+    MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
     
     task.wait(480)
     
     omnitrixCooldown = false
-    -- Volta a ficar Verde quando carregado
+    -- Painel volta a ficar Verde quando carregado
     MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
     pcall(function() playSound(IDS.Sons.Recarregar) end)
 end
@@ -505,7 +525,7 @@ lplayer.Chatted:Connect(function(msg)
         SelectionPanel.Visible = false
         OmnitrixBtn.Visible = true
         omnitrixCooldown = true
-        MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregado
+        MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
         
         local TimerLbl = Instance.new("TextLabel", ScreenGui)
         TimerLbl.Size = UDim2.new(0, 300, 0, 50); TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
