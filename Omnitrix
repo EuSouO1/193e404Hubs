@@ -1,4 +1,4 @@
--- [[ OMNITRIX - POWERS SYSTEM WITH DRAGGABLE CENTRAL PANEL ]] --
+-- [[ OMNITRIX - POWERS SYSTEM WITH DRAGGABLE CENTRAL PANEL (SYNTAX FIXED) ]] --
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -67,28 +67,27 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
 
--- Main Drag Panel (O quadrado preto transparente)
+-- Main Drag Panel (Painel preto transparente de fundo)
 local MainPanel = Instance.new("Frame", ScreenGui)
 MainPanel.Size = UDim2.new(0, 240, 0, 160)
-MainPanel.Position = UDim2.new(0.5, -120, 0.5, -80) -- Exatamente no centro da tela
+MainPanel.Position = UDim2.new(0.5, -120, 0.5, -80)
 MainPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainPanel.BackgroundTransparency = 0.4 -- Quase transparente
+MainPanel.BackgroundTransparency = 0.4
 MainPanel.BorderSizePixel = 0
 MainPanel.ZIndex = 3
 
--- Arredondar os cantos do painel para ficar bonito
 local UICorner = Instance.new("UICorner", MainPanel)
 UICorner.CornerRadius = UDim.new(0, 12)
 
--- Botão Principal do Relógio (Omnitrix)
+-- Botão do Relógio
 local OmnitrixBtn = Instance.new("ImageButton", MainPanel)
 OmnitrixBtn.Size = UDim2.new(0, 110, 0, 110)
-OmnitrixBtn.Position = UDim2.new(0.5, -55, 0.5, -55) -- Centralizado dentro do MainPanel
+OmnitrixBtn.Position = UDim2.new(0.5, -55, 0.5, -55)
 OmnitrixBtn.Image = IDS.Omnitrix
 OmnitrixBtn.BackgroundTransparency = 1
 OmnitrixBtn.ZIndex = 5
 
--- Painel de Seleção das Silhuetas (Fica em cima do relógio quando liga)
+-- Painel de Seleção
 local SelectionPanel = Instance.new("Frame", MainPanel)
 SelectionPanel.Size = UDim2.new(1, 0, 1, 0)
 SelectionPanel.Position = UDim2.new(0, 0, 0, 0)
@@ -96,7 +95,7 @@ SelectionPanel.BackgroundTransparency = 1
 SelectionPanel.Visible = false
 SelectionPanel.ZIndex = 4
 
--- Imagem da Silhueta
+-- Silhueta do Alien
 local SilhouetteImg = Instance.new("ImageButton", SelectionPanel)
 SilhouetteImg.Size = UDim2.new(0, 100, 0, 100)
 SilhouetteImg.Position = UDim2.new(0.5, -50, 0.5, -50)
@@ -389,7 +388,7 @@ local function transform(alienName)
     isTransformed = true
     currentAlienActive = alienName
     SelectionPanel.Visible = false
-    OmnitrixBtn.Visible = true -- Garante que o relógio reaparece descarregado
+    OmnitrixBtn.Visible = true
     
     playSound(IDS.Sons.Transformar)
     shoutInChat(alienName)
@@ -441,7 +440,7 @@ OmnitrixBtn.MouseButton1Click:Connect(function()
     if isOmnitrixOn then
         playSound(IDS.Sons.Ligando)
         SelectionPanel.Visible = true
-        OmnitrixBtn.Visible = false -- Esconde o relógio pra silhueta aparecer
+        OmnitrixBtn.Visible = false
         updateSilhouette()
     else
         SelectionPanel.Visible = false
