@@ -1,29 +1,11 @@
--- [[ OMNITRIX COMPLETO - BROOKHAVEN SYSTEM (UI CLICK VERSION) ]] --
+-- [[ OMNITRIX - PURE POWERS & STATUS SYSTEM ]] --
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local lplayer = Players.LocalPlayer
-
--- === CONFIGURAÇÃO DOS BOTÕES DE SKIN DO BROOKHAVEN ===
--- Substitua os nomes abaixo pelos nomes REAIS dos TextButtons do Brookhaven que você usa para equipar cada slot!
-local BOTOES_SLOTS = {
-    ["Ben"] = "Slot1",            -- Nome do botão que ativa a skin do Ben
-    ["Chama"] = "Slot2",          -- Nome do botão que ativa o Chama
-    ["Quatro Braços"] = "Slot3",   -- Nome do botão que ativa o Quatro Braços
-    ["XLR8"] = "Slot4",           -- Nome do botão que ativa o XLR8
-    ["Bala de Canhão"] = "Slot5",  -- Nome do botão que ativa o Bala de Canhão
-    ["Ultra T"] = "Slot6",         -- Nome do botão que ativa o Ultra T
-    ["Diamante"] = "Slot7",        -- Nome do botão que ativa o Diamante
-    ["Fantasmatico"] = "Slot8",   -- Nome do botão que ativa o Fantasmático
-    ["Insectoide"] = "Slot9",      -- Nome do botão que ativa o Insectoide
-    ["Massa Cinzenta"] = "Slot10", -- Nome do botão que ativa o Massa Cinzenta
-    ["Besta"] = "Slot11",         -- Nome do botão que ativa o Besta
-    ["Aquatico"] = "Slot12"        -- Nome do botão que ativa o Aquático
-}
 
 -- === CONFIGURAÇÃO DE IDS ===
 local IDS = {
@@ -121,38 +103,13 @@ local function shoutInChat(text)
         game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync(msg)
     else
         pcall(function()
-            ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+            game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
                 :FindFirstChild("SayMessageRequest"):FireServer(msg, "All")
         end)
     end
 end
 
--- === SIMULAR CLIQUE NO TEXTBUTTON DO BROOKHAVEN ===
-local function clickAvatarButton(alienName)
-    local buttonName = BOTOES_SLOTS[alienName]
-    if not buttonName then return end
-    
-    -- Vasculha a PlayerGui inteira procurando o botão de skin com o nome configurado
-    for _, gui in pairs(lplayer.PlayerGui:GetChildren()) do
-        if gui:IsA("ScreenGui") and gui.Name ~= "OmnitrixSystem" then
-            local btn = gui:FindFirstChild(buttonName, true) -- Procura em profundidade
-            if btn and (btn:IsA("TextButton") or btn:IsA("ImageButton")) then
-                -- Simula o clique usando as funções internas do Roblox de forma segura
-                local events = {"MouseButton1Click", "MouseButton1Down", "Activated"}
-                for _, eventName in pairs(events) do
-                    if btn[eventName] then
-                        for _, connection in pairs(getconnections(btn[eventName])) do
-                            connection:Fire()
-                        end
-                    end
-                end
-                break
-            end
-        end
-    end
-end
-
--- === LIMPEZA DE STATUS ANTERIORES ===
+-- === RESTAURAR FÍSICA AO NORMAL ===
 local function resetPlayerPhysics()
     for _, loop in pairs(activeLoops) do pcall(function() loop:Disconnect() end) end
     activeLoops = {}
@@ -193,7 +150,7 @@ local function enableInfiniteJump(speed, jPower)
     table.insert(activeLoops, jumpConn)
 end
 
--- === MECÂNICAS DOS ALIENS ===
+-- === APLICAR PODERES DOS ALIENS ===
 local function applyAlienPowers(alienName)
     resetPlayerPhysics()
     local char = lplayer.Character
@@ -235,7 +192,7 @@ local function applyAlienPowers(alienName)
         hum.WalkSpeed = 10
         hum.JumpPower = 60
         local BallToggle = Instance.new("TextButton", ScreenGui)
-        BallToggle.Size = UDim2.new(0, 100, 0, 40)
+        BallToggle.Size = UDim2.new(0, 120, 0, 40)
         BallToggle.Position = UDim2.new(0.85, 0, 0.35, 0)
         BallToggle.Text = "Modo Bola: OFF"
         BallToggle.BackgroundColor3 = Color3.fromRGB(85, 170, 0)
@@ -361,9 +318,6 @@ local function transform(alienName)
     
     playSound(IDS.Sons.Transformar)
     shoutInChat(alienName)
-    
-    -- Executa o clique simulado no botão do Brookhaven!
-    clickAvatarButton(alienName)
     applyAlienPowers(alienName)
     
     local timeActive = math.random(120, 360)
@@ -376,9 +330,6 @@ local function transform(alienName)
     currentAlienActive = ""
     resetPlayerPhysics()
     
-    -- Clica no botão de voltar pra skin do Ben
-    clickAvatarButton("Ben")
-    
     omnitrixCooldown = true
     OmnitrixBtn.ImageColor3 = Color3.new(1, 0, 0)
     task.wait(480)
@@ -388,7 +339,7 @@ local function transform(alienName)
     playSound(IDS.Sons.Recarregar)
 end
 
--- === CLIQUE NO RELÓGIO / SPAM DETECT ===
+-- === MENU DE SELEÇÃO / SPAM DETECT ===
 local function updateSilhouette()
     SilhouetteImg.Image = IDS.Silhuetas[currentAlienIndex].ID
 end
