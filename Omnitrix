@@ -1,4 +1,4 @@
--- [[ OMNITRIX - PURE POWERS & STATUS SYSTEM (GUI FIXED) ]] --
+-- [[ OMNITRIX - POWERS SYSTEM WITH DRAGGABLE CENTRAL PANEL ]] --
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -60,53 +60,113 @@ if lplayer:WaitForChild("PlayerGui"):FindFirstChild("OmnitrixSystem") then
     lplayer.PlayerGui.OmnitrixSystem:Destroy()
 end
 
--- === INTERFACE GRÁFICA (GUI DO OMNITRIX) ===
+-- === INTERFACE GRÁFICA (GUI CENTRALIZADA) ===
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "OmnitrixSystem"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
 
-local OmnitrixBtn = Instance.new("ImageButton", ScreenGui)
+-- Main Drag Panel (O quadrado preto transparente)
+local MainPanel = Instance.new("Frame", ScreenGui)
+MainPanel.Size = UDim2.new(0, 240, 0, 160)
+MainPanel.Position = UDim2.new(0.5, -120, 0.5, -80) -- Exatamente no centro da tela
+MainPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainPanel.BackgroundTransparency = 0.4 -- Quase transparente
+MainPanel.BorderSizePixel = 0
+MainPanel.ZIndex = 3
+
+-- Arredondar os cantos do painel para ficar bonito
+local UICorner = Instance.new("UICorner", MainPanel)
+UICorner.CornerRadius = UDim.new(0, 12)
+
+-- Botão Principal do Relógio (Omnitrix)
+local OmnitrixBtn = Instance.new("ImageButton", MainPanel)
 OmnitrixBtn.Size = UDim2.new(0, 110, 0, 110)
-OmnitrixBtn.Position = UDim2.new(0.85, 0, 0.75, 0)
+OmnitrixBtn.Position = UDim2.new(0.5, -55, 0.5, -55) -- Centralizado dentro do MainPanel
 OmnitrixBtn.Image = IDS.Omnitrix
 OmnitrixBtn.BackgroundTransparency = 1
 OmnitrixBtn.ZIndex = 5
 
-local SelectionPanel = Instance.new("Frame", ScreenGui)
-SelectionPanel.Size = UDim2.new(0, 200, 0, 200)
-SelectionPanel.Position = UDim2.new(0.82, 0, 0.45, 0)
+-- Painel de Seleção das Silhuetas (Fica em cima do relógio quando liga)
+local SelectionPanel = Instance.new("Frame", MainPanel)
+SelectionPanel.Size = UDim2.new(1, 0, 1, 0)
+SelectionPanel.Position = UDim2.new(0, 0, 0, 0)
 SelectionPanel.BackgroundTransparency = 1
 SelectionPanel.Visible = false
 SelectionPanel.ZIndex = 4
 
+-- Imagem da Silhueta
 local SilhouetteImg = Instance.new("ImageButton", SelectionPanel)
-SilhouetteImg.Size = UDim2.new(0, 140, 0, 140)
-SilhouetteImg.Position = UDim2.new(0.15, 0, 0.15, 0)
+SilhouetteImg.Size = UDim2.new(0, 100, 0, 100)
+SilhouetteImg.Position = UDim2.new(0.5, -50, 0.5, -50)
 SilhouetteImg.BackgroundTransparency = 1
 SilhouetteImg.ImageColor3 = Color3.new(0, 0, 0)
 SilhouetteImg.ZIndex = 5
 
+-- Botão Avançar (>)
 local NextBtn = Instance.new("TextButton", SelectionPanel)
-NextBtn.Size = UDim2.new(0, 30, 0, 40)
-NextBtn.Position = UDim2.new(0.85, 0, 0.4, 0)
+NextBtn.Size = UDim2.new(0, 35, 0, 45)
+NextBtn.Position = UDim2.new(0.8, 0, 0.35, 0)
 NextBtn.Text = ">"
-NextBtn.TextSize = 25
-NextBtn.TextColor3 = Color3.new(1,1,1)
-NextBtn.BackgroundTransparency = 0.5
-NextBtn.BackgroundColor3 = Color3.new(0,0,0)
+NextBtn.TextSize = 28
+NextBtn.TextColor3 = Color3.new(1, 1, 1)
+NextBtn.BackgroundTransparency = 0.6
+NextBtn.BackgroundColor3 = Color3.new(0, 0, 0)
 NextBtn.ZIndex = 6
 
+local CornerNext = Instance.new("UICorner", NextBtn)
+CornerNext.CornerRadius = UDim.new(0, 6)
+
+-- Botão Voltar (<)
 local PrevBtn = Instance.new("TextButton", SelectionPanel)
-PrevBtn.Size = UDim2.new(0, 30, 0, 40)
-PrevBtn.Position = UDim2.new(0, 0, 0.4, 0)
+PrevBtn.Size = UDim2.new(0, 35, 0, 45)
+PrevBtn.Position = UDim2.new(0.05, 0, 0.35, 0)
 PrevBtn.Text = "<"
-PrevBtn.TextSize = 25
-PrevBtn.TextColor3 = Color3.new(1,1,1)
-PrevBtn.BackgroundTransparency = 0.5
-PrevBtn.BackgroundColor3 = Color3.new(0,0,0)
+PrevBtn.TextSize = 28
+PrevBtn.TextColor3 = Color3.new(1, 1, 1)
+PrevBtn.BackgroundTransparency = 0.6
+PrevBtn.BackgroundColor3 = Color3.new(0, 0, 0)
 PrevBtn.ZIndex = 6
+
+local CornerPrev = Instance.new("UICorner", PrevBtn)
+CornerPrev.CornerRadius = UDim.new(0, 6)
+
+
+-- === SISTEMA DE ARRASTAR O PAINEL (DRAGGABLE) ===
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    MainPanel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MainPanel.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainPanel.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainPanel.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
 
 -- === SISTEMA DE CHAT (GRITO) ===
 local function shoutInChat(text)
@@ -329,6 +389,7 @@ local function transform(alienName)
     isTransformed = true
     currentAlienActive = alienName
     SelectionPanel.Visible = false
+    OmnitrixBtn.Visible = true -- Garante que o relógio reaparece descarregado
     
     playSound(IDS.Sons.Transformar)
     shoutInChat(alienName)
@@ -380,9 +441,11 @@ OmnitrixBtn.MouseButton1Click:Connect(function()
     if isOmnitrixOn then
         playSound(IDS.Sons.Ligando)
         SelectionPanel.Visible = true
+        OmnitrixBtn.Visible = false -- Esconde o relógio pra silhueta aparecer
         updateSilhouette()
     else
         SelectionPanel.Visible = false
+        OmnitrixBtn.Visible = true
     end
 end)
 
@@ -424,12 +487,14 @@ lplayer.Chatted:Connect(function(msg)
         
         isOmnitrixOn = false
         SelectionPanel.Visible = false
+        OmnitrixBtn.Visible = true
         omnitrixCooldown = true
         OmnitrixBtn.ImageColor3 = Color3.new(1, 0, 0)
         
         local TimerLbl = Instance.new("TextLabel", ScreenGui)
-        TimerLbl.Size = UDim2.new(0, 200, 0, 50); TimerLbl.Position = UDim2.new(0.4, 0, 0.1, 0)
+        TimerLbl.Size = UDim2.new(0, 300, 0, 50); TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
         TimerLbl.TextColor3 = Color3.new(1,0,0); TimerLbl.TextSize = 40; TimerLbl.ZIndex = 6
+        TimerLbl.BackgroundTransparency = 1
         
         for i = 20, 1, -1 do
             TimerLbl.Text = "AUTO-DESTRUIÇÃO: " .. i
