@@ -245,7 +245,7 @@ local function applyAlienPowers(alienName)
     
     if alienName == "Chama" then
         targetSpeed = 20
-        targetJump = 25  -- Abaixado conforme pedido
+        targetJump = 50  -- Abaixado conforme pedido
         workspace.Gravity = originalGravity / 3
         
     elseif alienName == "Quatro Braços" then
@@ -295,7 +295,7 @@ local function applyAlienPowers(alienName)
 
     elseif alienName == "Ultra T" then
         targetSpeed = 20
-        targetJump = 5  -- Abaixado conforme pedido
+        targetJump = 25  -- Abaixado conforme pedido
         workspace.Gravity = originalGravity / 6
         
     elseif alienName == "Diamante" then
