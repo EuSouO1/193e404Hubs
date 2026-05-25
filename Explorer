@@ -110,7 +110,7 @@ local function AbrirScriptViewer(scriptName, scriptSource)
         ViewerFrame:Destroy()
     end)
 
-    -- Area com Scroll para o Texto do código
+    -- Área com Scroll para o Texto do código
     local TextScroll = Instance.new("ScrollingFrame")
     TextScroll.Size = UDim2.new(1, -10, 1, -45)
     TextScroll.Position = UDim2.new(0, 5, 0, 40)
@@ -130,26 +130,36 @@ local function AbrirScriptViewer(scriptName, scriptSource)
     SourceLabel.TextWrapped = true
     SourceLabel.Parent = TextScroll
 
-    -- Ajusta o tamanho do Scroll de acordo com o tamanho do texto do código
     SourceLabel:GetPropertyChangedSignal("TextBounds"):Connect(function()
         SourceLabel.Size = UDim2.new(1, 0, 0, SourceLabel.TextBounds.Y + 20)
         TextScroll.CanvasSize = UDim2.new(0, 0, 0, SourceLabel.TextBounds.Y + 20)
     end)
 end
 
--- --- FUNÇÃO QUE CRIA AS LINHAS DA ÁRVORE (RECURSIVA) ---
-local globalOrder = 0
+-- --- SISTEMA DE ORDENAÇÃO RIGOROSA DA ÁRVORE ---
+local ArvoreVisivel = {}
 
-local function CriarItemExplorer(object, indentLevel, parentOrder)
-    globalOrder = globalOrder + 1
-    local currentOrder = parentOrder * 10000 + globalOrder
+local function ReorganizarLayoutOrders()
+    for index, linhaFrame in ipairs(ArvoreVisivel) do
+        linhaFrame.LayoutOrder = index
+    end
+end
 
+-- --- FUNÇÃO QUE CRIA AS LINHAS DA ÁRVORE ---
+local function CriarItemExplorer(object, indentLevel, posicaoInsercao)
     local Row = Instance.new("Frame")
     Row.Name = object.Name
     Row.Size = UDim2.new(1, 0, 0, 24)
     Row.BackgroundTransparency = 1
-    Row.LayoutOrder = currentOrder
     Row.Parent = Container
+    
+    -- Insere o frame na nossa lista de controle de exibição
+    if posicaoInsercao then
+        table.insert(ArvoreVisivel, posicaoInsercao, Row)
+    else
+        table.insert(ArvoreVisivel, Row)
+    end
+    ReorganizarLayoutOrders()
     
     -- Seta para abrir/fechar
     local ToggleBtn = Instance.new("TextButton")
@@ -175,7 +185,7 @@ local function CriarItemExplorer(object, indentLevel, parentOrder)
     NameLabel.TextSize = 14
     NameLabel.Parent = Row
 
-    -- Se for script, bota o botão de + pra ler o código
+    -- Se for script, adiciona o botão de + 
     if object:IsA("LuaSourceContainer") then
         local ScriptBtn = Instance.new("TextButton")
         ScriptBtn.Size = UDim2.new(0, 20, 0, 20)
@@ -188,14 +198,27 @@ local function CriarItemExplorer(object, indentLevel, parentOrder)
         ScriptBtn.Parent = Row
 
         ScriptBtn.MouseButton1Click:Connect(function()
-            -- Tenta ler o código (Geralmente precisa de decompiler ou executor bom pra ler .Source)
-            local src = "-- Não foi possível ler o código desse script (Proteção do Roblox ou do Executor)"
-            local pcallSuccess, pcallErr = pcall(function()
-                src = object.Source
+            local src = ""
+            
+            -- Tenta usar descompilador do executor (Geralmente decompile() pega tudo)
+            local decompilerSuccess, decompilerResult = pcall(function()
+                return decompile(object)
             end)
-            if not pcallSuccess or src == "" then
-                src = "-- [Erro ou Script Vazio]\n-- Nota: Alguns executores precisam do comando decompile(script) para ler scripts do jogo."
+
+            if decompilerSuccess and type(decompilerResult) == "string" and decompilerResult ~= "" then
+                src = decompilerResult
+            else
+                -- Segunda tentativa puxando a propriedade .Source direta
+                local sourceSuccess, sourceResult = pcall(function()
+                    return object.Source
+                end)
+                if sourceSuccess and sourceResult ~= "" then
+                    src = sourceResult
+                else
+                    src = "-- [Erro ao ler código]\n-- Esse script está protegido ou seu executor atual não possui a função 'decompile()' ativa."
+                end
             end
+            
             AbrirScriptViewer(object.Name, src)
         end)
     end
@@ -209,23 +232,29 @@ local function CriarItemExplorer(object, indentLevel, parentOrder)
         aberto = not aberto
         if aberto then
             ToggleBtn.Text = "v"
-            -- Cria os filhos e bota eles com a ordem logo abaixo do pai
-            for _, child in ipairs(object:GetChildren()) do
-                local childRow = CriarItemExplorer(child, indentLevel + 1, currentOrder)
+            -- Descobre onde o pai está atualmente na tabela para colocar os filhos colados embaixo dele
+            local meuIndex = table.find(ArvoreVisivel, Row)
+            
+            for i, child in ipairs(object:GetChildren()) do
+                -- Adiciona o filho logo na sequência correta
+                local childRow = CriarItemExplorer(child, indentLevel + 1, meuIndex + i)
                 table.insert(subRows, childRow)
             end
         else
             ToggleBtn.Text = ">"
-            -- Função limpa-tudo recursiva pra sumir com os filhos e netos da tela
-            local function limpar(rows)
-                for _, subRow in ipairs(rows) do
-                    if subRow then
-                        subRow:Destroy()
+            -- Remove os filhos de forma limpa
+            local function limparRecursivo(linhasParaRemover)
+                for _, subRow in ipairs(linhasParaRemover) do
+                    local idx = table.find(ArvoreVisivel, subRow)
+                    if idx then
+                        table.remove(ArvoreVisivel, idx)
                     end
+                    subRow:Destroy()
                 end
             end
-            limpar(subRows)
+            limparRecursivo(subRows)
             subRows = {}
+            ReorganizarLayoutOrders()
         end
     end)
 
@@ -243,8 +272,8 @@ local servicos = {
     game:GetService("SoundService")
 }
 
-for i, service in ipairs(servicos) do
+for _, service in ipairs(servicos) do
     if service then
-        CriarItemExplorer(service, 0, i)
+        CriarItemExplorer(service, 0, nil)
     end
 end
