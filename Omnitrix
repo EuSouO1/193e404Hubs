@@ -180,7 +180,7 @@ ConfigsTitle.BackgroundTransparency = 1
 ConfigsTitle.Font = Enum.Font.SourceSansBold
 ConfigsTitle.ZIndex = 9
 
--- Botão Toggle do Grito de Transformação (CORRIGIDO TAMANHO E ESCALA)
+-- Botão Toggle do Grito de Transformação
 local ShoutToggleBtn = Instance.new("TextButton", ConfigsMenu)
 ShoutToggleBtn.Size = UDim2.new(0, 200, 0, 45)
 ShoutToggleBtn.Position = UDim2.new(0.5, -100, 0.5, -10)
@@ -229,6 +229,7 @@ ConfigsBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+
 -- === SISTEMA DE ARRASTAR O PAINEL ===
 local dragging, dragInput, dragStart, startPos
 
@@ -263,6 +264,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
+
 -- === SISTEMA DE CHAT (GRITO) ===
 local function shoutInChat(text)
     if not gritoAtivo then return end
@@ -289,16 +291,14 @@ local function resetPlayerPhysics()
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local hum = char:FindFirstChildOfClass("Humanoid")
         
-        if hrp and hrp:FindFirstChild("InvisAntiVoid") then
-            hrp.InvisAntiVoid:Destroy()
-            hrp.CFrame = hrp.CFrame * CFrame.new(0, 22, 0)
-        end
-        
-        if hrp and hrp:FindFirstChild("FantasmaticoKeepUpright") then
-            hrp.FantasmaticoKeepUpright:Destroy()
-        end
-        if hrp and hrp:FindFirstChild("FantasmaticoAttachment") then
-            hrp.FantasmaticoAttachment:Destroy()
+        if hrp then
+            if hrp:FindFirstChild("InvisAntiVoid") then
+                hrp.InvisAntiVoid:Destroy()
+                hrp.CFrame = hrp.CFrame * CFrame.new(0, 22, 0)
+            end
+            if hrp:FindFirstChild("FantasmaticoGyro") then
+                hrp.FantasmaticoGyro:Destroy()
+            end
         end
         
         if hum then
@@ -482,27 +482,9 @@ local function applyAlienPowers(alienName)
     elseif alienName == "Fantasmatico" then
         isCustomSpeedLoop = true
         targetSpeed = 26
-        targetJump = 30
+        targetJump = 30 
         workspace.Gravity = originalGravity / 2
         enableInfiniteJump(targetSpeed, 10)
-        
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            -- Cria o alinhamento nativo para travar a rotação X e Z (sempre 100% em pé!)
-            local att = Instance.new("Attachment")
-            att.Name = "FantasmaticoAttachment"
-            att.Parent = hrp
-            
-            local align = Instance.new("AlignOrientation")
-            align.Name = "FantasmaticoKeepUpright"
-            align.Mode = Enum.OrientationMode.OneAttachment
-            align.Attachment0 = att
-            align.MaxTorque = math.huge
-            align.Responsiveness = 200
-            -- Trava X e Z em zero. Deixa apenas o Y livre para girar
-            align.CFrame = CFrame.new() 
-            align.Parent = hrp
-        end
         
         local noclipLoop = RunService.Stepped:Connect(function()
             if char then
@@ -520,13 +502,14 @@ local function applyAlienPowers(alienName)
         InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150)
         InvisToggle.TextColor3 = Color3.new(1, 1, 1)
         InvisToggle.TextSize = 16
-        InvisToggle.TextScaled = true
+        InvisToggle.TextScaled = true 
         InvisToggle.ZIndex = 6
         Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6)
         
         local isInvis = false
         local targetYHeight = 0
         local cameraOffsetLoop = nil
+        local hrp = char:FindFirstChild("HumanoidRootPart")
         
         InvisToggle.MouseButton1Click:Connect(function()
             if not char or not hum or not hrp then return end
@@ -535,31 +518,42 @@ local function applyAlienPowers(alienName)
                 if hum.FloorMaterial ~= Enum.Material.Air then
                     isInvis = true
                     InvisToggle.Text = "Modo Invisivel: ON"
-                    targetSpeed = 100
+                    targetSpeed = 100 
                     
                     targetYHeight = hrp.Position.Y - 20
                     hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0)
                     
+                    -- === INSTANCIA O BODYGYRO PARA FORÇAR FICAR DE PÉ ===
+                    local bg = Instance.new("BodyGyro")
+                    bg.Name = "FantasmaticoGyro"
+                    bg.MaxTorque = Vector3.new(math.huge, 0, math.huge) -- Trava os eixos X e Z bruscamente, deixando o Y livre
+                    bg.P = 50000 -- Força de resposta muito alta para não inclinar nada
+                    bg.CFrame = CFrame.new()
+                    bg.Parent = hrp
+                    
                     local bv = Instance.new("BodyVelocity")
                     bv.Name = "InvisAntiVoid"
-                    bv.MaxForce = Vector3.new(0, math.huge, 0)
+                    bv.MaxForce = Vector3.new(0, math.huge, 0) 
                     bv.Velocity = Vector3.new(0, 0, 0)
                     bv.Parent = hrp
                     
                     cameraOffsetLoop = RunService.RenderStepped:Connect(function()
                         if hrp and hum then
-                            -- Corrige CFrame no subsolo para manter retinho e na altura certa
-                            local _, currentYRotation, _ = hrp.CFrame:ToOrientation()
-                            hrp.CFrame = CFrame.new(hrp.Position.X, targetYHeight, hrp.Position.Z) * CFrame.fromOrientation(0, currentYRotation, 0)
-                            
+                            hrp.Position = Vector3.new(hrp.Position.X, targetYHeight, hrp.Position.Z)
                             hum.CameraOffset = Vector3.new(0, 20, 0)
+                            
+                            -- Atualiza a rotação do gyro para acompanhar a câmera horizontalmente (Y)
+                            if bg and workspace.CurrentCamera then
+                                local _, camY, _ = workspace.CurrentCamera.CFrame:ToOrientation()
+                                bg.CFrame = CFrame.fromOrientation(0, camY, 0)
+                            end
                         end
                     end)
                 end
             else
                 isInvis = false
                 InvisToggle.Text = "Modo Invisivel: OFF"
-                targetSpeed = 26
+                targetSpeed = 26 
                 
                 if cameraOffsetLoop then
                     cameraOffsetLoop:Disconnect()
@@ -569,21 +563,23 @@ local function applyAlienPowers(alienName)
                 if hrp:FindFirstChild("InvisAntiVoid") then
                     hrp.InvisAntiVoid:Destroy()
                 end
+                if hrp:FindFirstChild("FantasmaticoGyro") then
+                    hrp.FantasmaticoGyro:Destroy()
+                end
                 
                 hum.CameraOffset = Vector3.new(0, 0, 0)
-                
-                local _, currentYRotation, _ = hrp.CFrame:ToOrientation()
-                hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 20, hrp.Position.Z) * CFrame.fromOrientation(0, currentYRotation, 0)
+                hrp.CFrame = hrp.CFrame * CFrame.new(0, 20, 0)
             end
         end)
         
-        table.insert(activeLoops, {Disconnect = function()
+        table.insert(activeLoops, {Disconnect = function() 
             if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end
             if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end
-            if hrp and hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
-            if hrp and hrp:FindFirstChild("FantasmaticoKeepUpright") then hrp.FantasmaticoKeepUpright:Destroy() end
-            if hrp and hrp:FindFirstChild("FantasmaticoAttachment") then hrp.FantasmaticoAttachment:Destroy() end
-            InvisToggle:Destroy()
+            if hrp then
+                if hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
+                if hrp:FindFirstChild("FantasmaticoGyro") then hrp.FantasmaticoGyro:Destroy() end
+            end
+            InvisToggle:Destroy() 
         end})
         
         local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function()
@@ -904,7 +900,7 @@ local function transform(alienName)
     applyAlienPowers(alienName)
     
     task.spawn(function()
-        local timeActive = math.random(120, 360)
+        local timeActive = math.random(120, 360) 
         local tempoEsperaPrincipal = timeActive - 5
         local tempoPassado = 0
         
