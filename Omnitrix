@@ -881,7 +881,8 @@ end
 
 -- === LÓGICA DE TRANSFORMAÇÃO ===
 local function transform(alienName)
-    if omnitrixCooldown then return end
+    if omnitrixCooldown or isTransformed then return end
+    
     isTransformed = true
     currentAlienActive = alienName
     SelectionPanel.Visible = false
@@ -891,32 +892,64 @@ local function transform(alienName)
     
     pcall(function() playSound(IDS.Sons.Transformar) end)
     
+    -- Grito customizado da Besta vs Outros Aliens
     if alienName == "Besta" then
         shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH")
     else
         shoutInChat(alienName)
     end
     
+    -- Ativa as habilidades do Alien (XLR8, Besta, Aquático, etc)
     applyAlienPowers(alienName)
     
-    local timeActive = math.random(120, 360)
-    task.wait(timeActive - 5)
-    
-    pcall(function() playSound(IDS.Sons.Descarregando) end)
-    task.wait(5)
-    
-    isTransformed = false
-    currentAlienActive = ""
-    resetPlayerPhysics()
-    
-    omnitrixCooldown = true
-    MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
-    
-    task.wait(480)
-    
-    omnitrixCooldown = false
-    MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
-    pcall(function() playSound(IDS.Sons.Recarregar) end)
+    -- === SISTEMA DE DESCARREGAMENTO ASSÍNCRONO EM THREAD ===
+    task.spawn(function()
+        local timeActive = math.random(120, 360) -- Tempo transformado (entre 2 e 6 minutos)
+        
+        -- Espera o tempo total menos os 5 segundos do aviso de descarregamento
+        local tempoEsperaPrincipal = timeActive - 5
+        local tempoPassado = 0
+        
+        while tempoPassado < tempoEsperaPrincipal and isTransformed and currentAlienActive == alienName do
+            task.wait(1)
+            tempoPassado = tempoPassado + 1
+        end
+        
+        -- Se ainda estiver transformado com o mesmo alien, começa o show dos 5 segundos piscando
+        if isTransformed and currentAlienActive == alienName then
+            pcall(function() playSound(IDS.Sons.Descarregando) end)
+            
+            -- Pisca entre Verde (Carregado) e Vermelho (Descarregado) a cada 0.25 segundos por 5 segundos
+            -- 5 segundos / 0.25 segundos = 20 trocas de cor
+            for i = 1, 20 do
+                if not isTransformed or currentAlienActive ~= alienName then break end
+                if MainPanel.BackgroundColor3 == CORES_PAINEL.Transformado or MainPanel.BackgroundColor3 == CORES_PAINEL.Carregado then
+                    MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
+                else
+                    MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
+                end
+                task.wait(0.25)
+            end
+            
+            -- Finaliza o tempo e destransforma o player se ele ainda estiver no loop
+            if isTransformed and currentAlienActive == alienName then
+                isTransformed = false
+                currentAlienActive = ""
+                resetPlayerPhysics() -- Tira todos os poderes, loops, plataformas e velocidade aqui!
+                
+                omnitrixCooldown = true
+                MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
+                
+                -- Tempo de recarga do Omnitrix (480 segundos = 8 minutos)
+                task.wait(480)
+                
+                -- Recarrega o relógio de volta para o estado inicial
+                omnitrixCooldown = false
+                MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
+                pcall(function() playSound(IDS.Sons.Recarregar) end)
+            end
+        end
+    end)
 end
 
 -- === MENU DE SELEÇÃO ===
