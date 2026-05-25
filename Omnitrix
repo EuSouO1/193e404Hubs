@@ -34,7 +34,7 @@ local IDS = {
     }
 }
 
--- === CONFIGURAÇÃO DE CORES DO FRAME (ATUALIZADO!) ===
+-- === CONFIGURAÇÃO DE CORES DO FRAME ===
 local CORES_PAINEL = {
     Carregado = Color3.fromRGB(0, 180, 0),        -- Verde
     Transformado = Color3.fromRGB(200, 200, 200),    -- Cinza Claro / Branco
@@ -201,12 +201,20 @@ local function resetPlayerPhysics()
     
     workspace.Gravity = originalGravity
     local char = lplayer.Character
-    if char and char:FindFirstChildOfClass("Humanoid") then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        hum.WalkSpeed = 16
-        hum.JumpPower = 50
-        hum.UseJumpPower = true
+    if char then
+        if char:FindFirstChildOfClass("Humanoid") then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            hum.WalkSpeed = 16
+            hum.JumpPower = 50
+            hum.UseJumpPower = true
+        end
+        -- Resetar colisões caso saia do Fantasmático no meio do noclip
+        for _, part in pairs(char:GetChildren()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
+        end
     end
+    
+    workspace.CurrentCamera.CameraSubject = char and char:FindFirstChildOfClass("Humanoid") or nil
     
     if Lighting:FindFirstChild("BestaColorCorrection") then 
         Lighting.BestaColorCorrection:Destroy() 
@@ -219,7 +227,7 @@ local function resetPlayerPhysics()
     end
 end
 
--- === PULO INFINITO E VOO ULTRA RÁPIDO (5X MAIS RÁPIDO) ===
+-- === PULO INFINITO E VOO ULTRA RÁPIDO ===
 local function enableInfiniteJump(baseSpeed, jPower)
     local char = lplayer.Character
     local hum = char:FindFirstChildOfClass("Humanoid")
@@ -321,7 +329,7 @@ local function applyAlienPowers(alienName)
 
     elseif alienName == "Ultra T" then
         targetSpeed = 20
-        targetJump = 25  -- CORRIGIDO: Força do pulo alterada para exatamente 25!
+        targetJump = 25  
         workspace.Gravity = originalGravity / 6
         
     elseif alienName == "Diamante" then
@@ -335,13 +343,92 @@ local function applyAlienPowers(alienName)
         workspace.Gravity = originalGravity / 2
         enableInfiniteJump(targetSpeed, 10)
         
-    elseif alienName == "Insectoide" then
-        isCustomSpeedLoop = true
-        targetSpeed = 20
-        targetJump = 10 
-        workspace.Gravity = originalGravity / 2.5
-        enableInfiniteJump(targetSpeed, 20)
+        -- === NOCLIP ATIVO DO FANTASMÁTICO ===
+        local noclipLoop = RunService.Stepped:Connect(function()
+            if char then
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+        table.insert(activeLoops, noclipLoop)
         
+        -- === SISTEMA DE INVISIBILIDADE COM MANIPULAÇÃO DE ALTURA/CÂMERA ===
+        local InvisToggle = Instance.new("TextButton", ScreenGui)
+        InvisToggle.Size = UDim2.new(0, 140, 0, 40)
+        InvisToggle.Position = UDim2.new(0.85, -20, 0.35, 0)
+        InvisToggle.Text = "Modo Invisivel: OFF"
+        InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150)
+        InvisToggle.TextColor3 = Color3.new(1, 1, 1)
+        InvisToggle.TextSize = 16
+        InvisToggle.ZIndex = 6
+        Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6)
+        
+        local isInvis = false
+        local cameraOffsetLoop = nil
+        local cameraHeight = 0
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        
+        InvisToggle.MouseButton1Click:Connect(function()
+            if not char or not hum or not hrp then return end
+            
+            if not isInvis then
+                -- Só ativa se o player não estiver caindo ou voando (verificando se está em cima de algo)
+                if hum.FloorMaterial ~= Enum.Material.Air then
+                    isInvis = true
+                    InvisToggle.Text = "Modo Invisivel: ON"
+                    targetSpeed = 100 -- Sobe a velocidade para 100 enquanto invisível
+                    
+                    -- Trava a altura Y fixa da câmera com base na posição atual
+                    cameraHeight = hrp.Position.Y
+                    
+                    -- Desce o player instantaneamente em -20
+                    hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0)
+                    
+                    -- Cria um loop no RenderStepped para congelar a altura visual da câmera
+                    cameraOffsetLoop = RunService.RenderStepped:Connect(function()
+                        local camera = workspace.CurrentCamera
+                        camera.CameraSubject = nil -- Desconecta o foco padrão do humanoid
+                        
+                        -- Força o foco da câmera a ficar na altura original guardada, acompanhando a movimentação X e Z do player
+                        local currentCamPos = camera.CFrame.Position
+                        local targetCamLook = Vector3.new(hrp.Position.X, cameraHeight, hrp.Position.Z)
+                        camera.Focus = CFrame.new(targetCamLook)
+                    end)
+                end
+            else
+                -- Desliga o modo invisível
+                isInvis = false
+                InvisToggle.Text = "Modo Invisivel: OFF"
+                targetSpeed = 26 -- Retorna a velocidade base do fantasmático
+                
+                if cameraOffsetLoop then
+                    cameraOffsetLoop:Disconnect()
+                    cameraOffsetLoop = nil
+                end
+                
+                -- Devolve o corpo do player de volta para o nível da câmera
+                workspace.CurrentCamera.CameraSubject = hum
+                hrp.CFrame = CFrame.new(hrp.Position.X, cameraHeight, hrp.Position.Z)
+            end
+        end)
+        
+        -- Garante que o loop da câmera e o botão sumam quando o alien descarregar
+        table.insert(activeLoops, {Disconnect = function() 
+            if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end
+            InvisToggle:Destroy() 
+        end})
+        
+        -- Loop protetor de velocidade customizado do Fantasmático
+        local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function()
+            if hum and hum.Parent then
+                if hum.WalkSpeed ~= targetSpeed then hum.WalkSpeed = targetSpeed end
+                if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
+                if not hum.UseJumpPower then hum.UseJumpPower = true end
+            end
+        end)
+        table.insert(activeLoops, fantasmaticoSpeedConn)
+
     elseif alienName == "Massa Cinzenta" then
         targetSpeed = 12
         targetJump = 55
@@ -442,7 +529,6 @@ local function applyAlienPowers(alienName)
         CC.TintColor = Color3.fromRGB(30, 20, 10) 
         CC.Parent = Lighting
         
-        -- VARIÁVEL DE CONTROLE EXCLUSIVA PARA SEGURAR A VISÃO ATIVA
         local bestaVisionActive = true
         
         local visionLoop = task.spawn(function()
@@ -456,7 +542,6 @@ local function applyAlienPowers(alienName)
             end
         end)
         
-        -- CORREÇÃO AQUI: Quando o alien muda ou descarrega, a thread para instantaneamente!
         table.insert(activeLoops, {Disconnect = function() 
             bestaVisionActive = false 
             task.cancel(visionLoop) 
