@@ -54,6 +54,9 @@ local lastClickTime = 0
 local activeLoops = {}
 local originalGravity = workspace.Gravity
 
+-- Configurações salvas em memória
+local gritoAtivo = true
+
 -- === FUNÇÃO DE ÁUDIO ===
 local function playSound(soundId)
     local s = Instance.new("Sound", workspace)
@@ -88,6 +91,16 @@ MainPanel.ZIndex = 3
 
 local UICorner = Instance.new("UICorner", MainPanel)
 UICorner.CornerRadius = UDim.new(0, 12)
+
+-- Botão de Configurações (Pequeno no canto superior direito)
+local ConfigsBtn = Instance.new("TextButton", MainPanel)
+ConfigsBtn.Size = UDim2.new(0, 24, 0, 24)
+ConfigsBtn.Position = UDim2.new(1, -28, 0, 4)
+ConfigsBtn.Text = "⚙️"
+ConfigsBtn.TextSize = 14
+ConfigsBtn.BackgroundTransparency = 1
+ConfigsBtn.TextColor3 = Color3.new(1, 1, 1)
+ConfigsBtn.ZIndex = 10
 
 -- Botão do Relógio
 local OmnitrixBtn = Instance.new("TextButton", MainPanel)
@@ -145,6 +158,72 @@ PrevBtn.ZIndex = 6
 local CornerPrev = Instance.new("UICorner", PrevBtn)
 CornerPrev.CornerRadius = UDim.new(0, 6)
 
+-- === PAINEL INTERNO DE CONFIGURAÇÕES ===
+local ConfigsMenu = Instance.new("Frame", MainPanel)
+ConfigsMenu.Size = UDim2.new(1, 0, 1, 0)
+ConfigsMenu.Position = UDim2.new(0, 0, 0, 0)
+ConfigsMenu.BackgroundTransparency = 0.1
+ConfigsMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ConfigsMenu.Visible = false
+ConfigsMenu.ZIndex = 8
+
+local ConfigsCorner = Instance.new("UICorner", ConfigsMenu)
+ConfigsCorner.CornerRadius = UDim.new(0, 12)
+
+local ConfigsTitle = Instance.new("TextLabel", ConfigsMenu)
+ConfigsTitle.Size = UDim2.new(1, 0, 0, 30)
+ConfigsTitle.Position = UDim2.new(0, 0, 0, 10)
+ConfigsTitle.Text = "Configurações"
+ConfigsTitle.TextSize = 18
+ConfigsTitle.TextColor3 = Color3.new(1, 1, 1)
+ConfigsTitle.BackgroundTransparency = 1
+ConfigsTitle.Font = Enum.Font.SourceSansBold
+ConfigsTitle.ZIndex = 9
+
+-- Botão Toggle do Grito de Transformação
+local ShoutToggleBtn = Instance.new("TextButton", ConfigsMenu)
+ShoutToggleBtn.Size = UDim2.new(0, 180, 0, 40)
+ShoutToggleBtn.Position = UDim2.new(0.5, -90, 0.5, -10)
+ShoutToggleBtn.Text = "Grito no Chat: LIGADO"
+ShoutToggleBtn.TextSize = 16
+ShoutToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+ShoutToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 130, 0)
+ShoutToggleBtn.ZIndex = 9
+
+local ShoutCorner = Instance.new("UICorner", ShoutToggleBtn)
+ShoutCorner.CornerRadius = UDim.new(0, 6)
+
+ShoutToggleBtn.MouseButton1Click:Connect(function()
+    gritoAtivo = not gritoAtivo
+    if gritoAtivo then
+        ShoutToggleBtn.Text = "Grito no Chat: LIGADO"
+        ShoutToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 130, 0)
+    else
+        ShoutToggleBtn.Text = "Grito no Chat: DESLIGADO"
+        ShoutToggleBtn.BackgroundColor3 = Color3.fromRGB(130, 0, 0)
+    end
+end)
+
+-- Mecânica de abrir/fechar menu de configs
+ConfigsBtn.MouseButton1Click:Connect(function()
+    if omnitrixCooldown then return end
+    ConfigsMenu.Visible = not ConfigsMenu.Visible
+    if ConfigsMenu.Visible then
+        SelectionPanel.Visible = false
+        OmnitrixBtn.Visible = false
+        ConfigsBtn.Text = "❌"
+    else
+        ConfigsBtn.Text = "⚙️"
+        if isTransformed then
+            OmnitrixBtn.Visible = true
+        elseif isOmnitrixOn then
+            SelectionPanel.Visible = true
+        else
+            OmnitrixBtn.Visible = true
+        end
+    end
+end)
+
 
 -- === SISTEMA DE ARRASTAR O PAINEL ===
 local dragging, dragInput, dragStart, startPos
@@ -183,6 +262,8 @@ end)
 
 -- === SISTEMA DE CHAT (GRITO) ===
 local function shoutInChat(text)
+    if not gritoAtivo then return end -- Bloqueia o envio se o toggle estiver desligado
+    
     local msg = string.upper(text) .. "!"
     if game:GetService("TextChatService").TextChannels:FindFirstChild("RBXGeneral") then
         game:GetService("TextChatService").TextChannels.RBXGeneral:SendAsync(msg)
@@ -439,7 +520,6 @@ local function applyAlienPowers(alienName)
         
         local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function()
             if hum and hum.Parent then
-                -- Se o modo invisível estiver ON, a velocidade trava em 100, senão segue o fluxo normal do voo/solo
                 local currentMax = isInvis and 100 or (hum.FloorMaterial == Enum.Material.Air and (targetSpeed * 5) or targetSpeed)
                 if hum.WalkSpeed ~= currentMax then hum.WalkSpeed = currentMax end
                 if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
@@ -454,7 +534,6 @@ local function applyAlienPowers(alienName)
         targetJump = 30
         workspace.Gravity = originalGravity / 1.5
         
-        -- AJUSTE: Ativação do Voo/Pulo Infinito com velocidade multiplicada por 5 no ar
         enableInfiniteJump(targetSpeed, 30)
         
         local insectoideSpeedConn = RunService.Heartbeat:Connect(function()
@@ -705,7 +784,7 @@ local function updateSilhouette()
 end
 
 OmnitrixBtn.MouseButton1Click:Connect(function()
-    if omnitrixCooldown or isTransformed then return end
+    if omnitrixCooldown or isTransformed or ConfigsMenu.Visible then return end
     
     local now = os.clock()
     if now - lastClickTime < 0.4 then
@@ -735,7 +814,7 @@ OmnitrixBtn.MouseButton1Click:Connect(function()
 end)
 
 NextBtn.MouseButton1Click:Connect(function()
-    if not isOmnitrixOn then return end
+    if not isOmnitrixOn or ConfigsMenu.Visible then return end
     pcall(function() playSound(IDS.Sons.Trocar) end)
     currentAlienIndex = currentAlienIndex + 1
     if currentAlienIndex > #IDS.Silhuetas then currentAlienIndex = 1 end
@@ -743,7 +822,7 @@ NextBtn.MouseButton1Click:Connect(function()
 end)
 
 PrevBtn.MouseButton1Click:Connect(function()
-    if not isOmnitrixOn then return end
+    if not isOmnitrixOn or ConfigsMenu.Visible then return end
     pcall(function() playSound(IDS.Sons.Trocar) end)
     currentAlienIndex = currentAlienIndex - 1
     if currentAlienIndex < 1 then currentAlienIndex = #IDS.Silhuetas end
@@ -751,7 +830,7 @@ PrevBtn.MouseButton1Click:Connect(function()
 end)
 
 SilhouetteImg.MouseButton1Click:Connect(function()
-    if not isOmnitrixOn or isTransformed then return end
+    if not isOmnitrixOn or isTransformed or ConfigsMenu.Visible then return end
     local chosenAlien = IDS.Silhuetas[currentAlienIndex].Nome
     transform(chosenAlien)
 end)
@@ -805,7 +884,6 @@ lplayer.Chatted:Connect(function(msg)
             local linVel = Instance.new("LinearVelocity")
             linVel.Attachment0 = att
             linVel.MaxForce = math.huge 
-            -- AJUSTE: Força do fling elevada bruscamente para 250!
             linVel.VectorVelocity = randomDirection * 250
             linVel.Parent = hrp
             
