@@ -733,6 +733,9 @@ elseif alienName == "Aquatico" then
         local azulPuro = Color3.fromRGB(0, 0, 255)
         local cianoPuro = Color3.fromRGB(0, 255, 255)
         
+        -- Lista de palavras-chave para identificar água pelo nome da parte
+        local nomesAgua = {"water", "ocean", "sea", "agua", "rio", "lake"}
+        
         local aquaticoLoop = RunService.Heartbeat:Connect(function()
             if not char:FindFirstChild("HumanoidRootPart") then return end
             local naAgua = false
@@ -745,14 +748,26 @@ elseif alienName == "Aquatico" then
                     continue
                 end
                 
-                -- Pega o RGB da parte atual
-                local r, g, b = part.Color.R, part.Color.G, part.Color.B
+                -- 1ª VERIFICAÇÃO: Pelo nome da parte (Filtro de strings parecidas)
+                local nomeMinusculo = string.lower(part.Name)
+                local achouNome = false
+                for _, palavra in ipairs(nomesAgua) do
+                    if string.find(nomeMinusculo, palavra) then
+                        achouNome = true
+                        break
+                    end
+                end
                 
-                -- Calcula a distância matemática para o Azul e Ciano (Cálculo 3D de proximidade)
+                if achouNome then
+                    naAgua = true
+                    break
+                end
+                
+                -- 2ª VERIFICAÇÃO: Pela cor da parte (Caso o nome não seja detectado)
+                local r, g, b = part.Color.R, part.Color.G, part.Color.B
                 local distAzul = math.sqrt((r - azulPuro.R)^2 + (g - azulPuro.G)^2 + (b - azulPuro.B)^2)
                 local distCiano = math.sqrt((r - cianoPuro.R)^2 + (g - cianoPuro.G)^2 + (b - cianoPuro.B)^2)
                 
-                -- Se a cor for parecida com azul ou ciano, e o azul/verde dominarem o vermelho (garante que não é cinza/preto)
                 if (distAzul < 0.85 or distCiano < 0.85) and (b > r or g > r) then
                     naAgua = true
                     break
@@ -760,7 +775,7 @@ elseif alienName == "Aquatico" then
             end
             
             if naAgua then
-                -- Valores tunados que você mandou
+                -- Valores de velocidade e pulo na água
                 hum.WalkSpeed = 100
                 hum.JumpPower = 110
                 timerForaDaAgua = 0
