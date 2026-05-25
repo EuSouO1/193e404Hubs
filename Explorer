@@ -1,40 +1,36 @@
--- Garante que o script rode na CoreGui (padrão de executor) ou na PlayerGui caso dê erro
+-- Garante que o script rode na CoreGui (padrão de executor)
 local parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
--- Evita duplicar o script se você clonar de novo
 if parent:FindFirstChild("RobloxExplorerSim") then
     parent.RobloxExplorerSim:Destroy()
 end
 
--- --- CRIAÇÃO DA INTERFACE ---
+-- --- CRIAÇÃO DA INTERFACE PRINCIPAL ---
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "RobloxExplorerSim"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = parent
 
--- Frame Principal (O painel do canto)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 250, 0, 400)
-MainFrame.Position = UDim2.new(0, 10, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 280, 0, 450)
+MainFrame.Position = UDim2.new(0, 10, 0.5, -225)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- Deixa você arrastar o explorer pela tela
+MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
--- Título do Painel
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-Title.Text = "  Roblox Explorer (Sim)"
+Title.Text = "  Roblox Explorer + Script Viewer"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 16
 Title.Parent = MainFrame
 
--- Container com Scroll (Lista dos objetos)
 local Container = Instance.new("ScrollingFrame")
 Container.Size = UDim2.new(1, 0, 1, -30)
 Container.Position = UDim2.new(0, 0, 0, 30)
@@ -43,31 +39,122 @@ Container.CanvasSize = UDim2.new(0, 0, 0, 0)
 Container.ScrollBarThickness = 6
 Container.Parent = MainFrame
 
--- Layout automático para empilhar os itens
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Parent = Container
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Atualiza o tamanho do scroll conforme os itens aparecem
 UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     Container.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y)
 end)
 
--- --- LÓGICA DO EXPLORER ---
+-- --- JANELA DO VISUALIZADOR DE CÓDIGO (SCRIPT VIEWER) ---
+local function AbrirScriptViewer(scriptName, scriptSource)
+    if ScreenGui:FindFirstChild("ScriptViewer") then
+        ScreenGui.ScriptViewer:Destroy()
+    end
 
--- Função mágica que cria as linhas do Explorer (Recursiva)
-local function CriarItemExplorer(object, indentLevel)
-    -- Frame da linha atual
+    local ViewerFrame = Instance.new("Frame")
+    ViewerFrame.Name = "ScriptViewer"
+    ViewerFrame.Size = UDim2.new(0, 500, 0, 350)
+    ViewerFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+    ViewerFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    ViewerFrame.BorderSizePixel = 0
+    ViewerFrame.Active = true
+    ViewerFrame.Draggable = true
+    ViewerFrame.Parent = ScreenGui
+
+    local VTitle = Instance.new("TextLabel")
+    VTitle.Size = UDim2.new(1, -70, 0, 35)
+    VTitle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    VTitle.Text = "  Código: " .. scriptName
+    VTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    VTitle.TextXAlignment = Enum.TextXAlignment.Left
+    VTitle.Font = Enum.Font.SourceSansBold
+    VTitle.TextSize = 14
+    VTitle.Parent = ViewerFrame
+
+    -- Botão de Copiar
+    local CopyBtn = Instance.new("TextButton")
+    CopyBtn.Size = UDim2.new(0, 70, 0, 35)
+    CopyBtn.Position = UDim2.new(1, -105, 0, 0)
+    CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+    CopyBtn.Text = "Copiar"
+    CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CopyBtn.Font = Enum.Font.SourceSansBold
+    CopyBtn.TextSize = 14
+    CopyBtn.Parent = ViewerFrame
+
+    CopyBtn.MouseButton1Click:Connect(function()
+        if setclipboard then
+            setclipboard(scriptSource)
+            CopyBtn.Text = "Copiado!"
+            task.wait(1)
+            CopyBtn.Text = "Copiar"
+        else
+            CopyBtn.Text = "Sem Executor"
+        end
+    end)
+
+    -- Botão de Fechar (X)
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 35, 0, 35)
+    CloseBtn.Position = UDim2.new(1, -35, 0, 0)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.Font = Enum.Font.SourceSansBold
+    CloseBtn.TextSize = 14
+    CloseBtn.Parent = ViewerFrame
+
+    CloseBtn.MouseButton1Click:Connect(function()
+        ViewerFrame:Destroy()
+    end)
+
+    -- Area com Scroll para o Texto do código
+    local TextScroll = Instance.new("ScrollingFrame")
+    TextScroll.Size = UDim2.new(1, -10, 1, -45)
+    TextScroll.Position = UDim2.new(0, 5, 0, 40)
+    TextScroll.BackgroundTransparency = 1
+    TextScroll.ScrollBarThickness = 6
+    TextScroll.Parent = ViewerFrame
+
+    local SourceLabel = Instance.new("TextLabel")
+    SourceLabel.Size = UDim2.new(1, 0, 0, 0)
+    SourceLabel.BackgroundTransparency = 1
+    SourceLabel.Text = scriptSource
+    SourceLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    SourceLabel.TextXAlignment = Enum.TextXAlignment.Left
+    SourceLabel.TextYAlignment = Enum.TextYAlignment.Top
+    SourceLabel.Font = Enum.Font.Code
+    SourceLabel.TextSize = 13
+    SourceLabel.TextWrapped = true
+    SourceLabel.Parent = TextScroll
+
+    -- Ajusta o tamanho do Scroll de acordo com o tamanho do texto do código
+    SourceLabel:GetPropertyChangedSignal("TextBounds"):Connect(function()
+        SourceLabel.Size = UDim2.new(1, 0, 0, SourceLabel.TextBounds.Y + 20)
+        TextScroll.CanvasSize = UDim2.new(0, 0, 0, SourceLabel.TextBounds.Y + 20)
+    end)
+end
+
+-- --- FUNÇÃO QUE CRIA AS LINHAS DA ÁRVORE (RECURSIVA) ---
+local globalOrder = 0
+
+local function CriarItemExplorer(object, indentLevel, parentOrder)
+    globalOrder = globalOrder + 1
+    local currentOrder = parentOrder * 10000 + globalOrder
+
     local Row = Instance.new("Frame")
     Row.Name = object.Name
     Row.Size = UDim2.new(1, 0, 0, 24)
     Row.BackgroundTransparency = 1
+    Row.LayoutOrder = currentOrder
     Row.Parent = Container
     
-    -- Setinha para abrir/fechar
+    -- Seta para abrir/fechar
     local ToggleBtn = Instance.new("TextButton")
     ToggleBtn.Size = UDim2.new(0, 20, 1, 0)
-    ToggleBtn.Position = UDim2.new(0, indentLevel * 15, 0, 0)
+    ToggleBtn.Position = UDim2.new(0, indentLevel * 12, 0, 0)
     ToggleBtn.BackgroundTransparency = 1
     ToggleBtn.Text = #object:GetChildren() > 0 and ">" or " "
     ToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -77,40 +164,67 @@ local function CriarItemExplorer(object, indentLevel)
     
     -- Nome do Objeto
     local NameLabel = Instance.new("TextLabel")
-    NameLabel.Size = UDim2.new(1, -(25 + (indentLevel * 15)), 1, 0)
-    NameLabel.Position = UDim2.new(0, 25 + (indentLevel * 15), 0, 0)
+    local extraSpace = (object:IsA("LuaSourceContainer")) and 45 or 25
+    NameLabel.Size = UDim2.new(1, -(extraSpace + (indentLevel * 12)), 1, 0)
+    NameLabel.Position = UDim2.new(0, 25 + (indentLevel * 12), 0, 0)
     NameLabel.BackgroundTransparency = 1
-    NameLabel.Text = object.Name .. " (" .. object.ClassName .. ")"
+    NameLabel.Text = object.Name .. " [" .. object.ClassName .. "]"
     NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     NameLabel.TextXAlignment = Enum.TextXAlignment.Left
     NameLabel.Font = Enum.Font.SourceSans
     NameLabel.TextSize = 14
     NameLabel.Parent = Row
 
+    -- Se for script, bota o botão de + pra ler o código
+    if object:IsA("LuaSourceContainer") then
+        local ScriptBtn = Instance.new("TextButton")
+        ScriptBtn.Size = UDim2.new(0, 20, 0, 20)
+        ScriptBtn.Position = UDim2.new(1, -25, 0, 2)
+        ScriptBtn.BackgroundColor3 = Color3.fromRGB(50, 120, 50)
+        ScriptBtn.Text = "+"
+        ScriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ScriptBtn.Font = Enum.Font.SourceSansBold
+        ScriptBtn.TextSize = 14
+        ScriptBtn.Parent = Row
+
+        ScriptBtn.MouseButton1Click:Connect(function()
+            -- Tenta ler o código (Geralmente precisa de decompiler ou executor bom pra ler .Source)
+            local src = "-- Não foi possível ler o código desse script (Proteção do Roblox ou do Executor)"
+            local pcallSuccess, pcallErr = pcall(function()
+                src = object.Source
+            end)
+            if not pcallSuccess or src == "" then
+                src = "-- [Erro ou Script Vazio]\n-- Nota: Alguns executores precisam do comando decompile(script) para ler scripts do jogo."
+            end
+            AbrirScriptViewer(object.Name, src)
+        end)
+    end
+
     local subRows = {}
     local aberto = false
 
-    -- Clique na setinha pra abrir e fechar os filhos
     ToggleBtn.MouseButton1Click:Connect(function()
         if #object:GetChildren() == 0 then return end
         
         aberto = not aberto
         if aberto then
-            ToggleBtn.Text = "v" -- Setinha pra baixo
-            -- Cria os filhos na árvore
+            ToggleBtn.Text = "v"
+            -- Cria os filhos e bota eles com a ordem logo abaixo do pai
             for _, child in ipairs(object:GetChildren()) do
-                local childRow = CriarItemExplorer(child, indentLevel + 1)
+                local childRow = CriarItemExplorer(child, indentLevel + 1, currentOrder)
                 table.insert(subRows, childRow)
-                
-                -- Gambiarra organizada: move o filho pra ficar logo abaixo do pai na UI
-                childRow.LayoutOrder = Row.LayoutOrder + 1
             end
         else
-            ToggleBtn.Text = ">" -- Setinha pro lado de novo
-            -- Apaga os filhos da tela
-            for _, subRow in ipairs(subRows) do
-                if subRow then subRow:Destroy() end
+            ToggleBtn.Text = ">"
+            -- Função limpa-tudo recursiva pra sumir com os filhos e netos da tela
+            local function limpar(rows)
+                for _, subRow in ipairs(rows) do
+                    if subRow then
+                        subRow:Destroy()
+                    end
+                end
             end
+            limpar(subRows)
             subRows = {}
         end
     end)
@@ -124,16 +238,13 @@ local servicos = {
     game:GetService("Players"),
     game:GetService("Lighting"),
     game:GetService("ReplicatedStorage"),
-    game:GetService("ServerStorage"), -- Se for localscript de executor, aqui pode vir vazio
     game:GetService("StarterGui"),
     game:GetService("StarterPack"),
     game:GetService("SoundService")
 }
 
--- Renderiza os serviços no painel
 for i, service in ipairs(servicos) do
     if service then
-        local row = CriarItemExplorer(service, 0)
-        row.LayoutOrder = i * 1000 -- Garante espaçamento pros filhos entrarem no meio
+        CriarItemExplorer(service, 0, i)
     end
 end
