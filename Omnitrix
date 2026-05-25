@@ -180,18 +180,23 @@ ConfigsTitle.BackgroundTransparency = 1
 ConfigsTitle.Font = Enum.Font.SourceSansBold
 ConfigsTitle.ZIndex = 9
 
--- Botão Toggle do Grito de Transformação
+-- Botão Toggle do Grito de Transformação (CORRIGIDO TAMANHO E ESCALA)
 local ShoutToggleBtn = Instance.new("TextButton", ConfigsMenu)
-ShoutToggleBtn.Size = UDim2.new(0, 180, 0, 40)
-ShoutToggleBtn.Position = UDim2.new(0.5, -90, 0.5, -10)
+ShoutToggleBtn.Size = UDim2.new(0, 200, 0, 45) -- Aumentado levemente para caber melhor
+ShoutToggleBtn.Position = UDim2.new(0.5, -100, 0.5, -10)
 ShoutToggleBtn.Text = "Grito no Chat: LIGADO"
-ShoutToggleBtn.TextSize = 16
+ShoutToggleBtn.TextSize = 14
+ShoutToggleBtn.TextScaled = true -- Garante que o texto se adapte perfeitamente ao botão
 ShoutToggleBtn.TextColor3 = Color3.new(1, 1, 1)
 ShoutToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 130, 0)
 ShoutToggleBtn.ZIndex = 9
 
 local ShoutCorner = Instance.new("UICorner", ShoutToggleBtn)
 ShoutCorner.CornerRadius = UDim.new(0, 6)
+
+local UIPaddingShout = Instance.new("UIPadding", ShoutToggleBtn)
+UIPaddingShout.PaddingLeft = UDim.new(0, 8)
+UIPaddingShout.PaddingRight = UDim.new(0, 8)
 
 ShoutToggleBtn.MouseButton1Click:Connect(function()
     gritoAtivo = not gritoAtivo
@@ -262,7 +267,7 @@ end)
 
 -- === SISTEMA DE CHAT (GRITO) ===
 local function shoutInChat(text)
-    if not gritoAtivo then return end -- Bloqueia o envio se o toggle estiver desligado
+    if not gritoAtivo then return end -- Bloqueia se o toggle estiver em OFF
     
     local msg = string.upper(text) .. "!"
     if game:GetService("TextChatService").TextChannels:FindFirstChild("RBXGeneral") then
@@ -322,27 +327,23 @@ local function enableInfiniteJump(baseSpeed, jPower)
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
     
-    -- Multiplica a velocidade base do alien por 5 enquanto estiver voando no ar
     local flySpeed = baseSpeed * 5
     
     local jumpConn = UserInputService.JumpRequest:Connect(function()
         if char and hum and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.Velocity = Vector3.new(char.HumanoidRootPart.Velocity.X, jPower * 1.5, char.HumanoidRootPart.Velocity.Z)
-            -- Força a velocidade escalar de voo imediatamente ao subir
             hum.WalkSpeed = flySpeed
         end
     end)
     table.insert(activeLoops, jumpConn)
     
     local landCheck = RunService.Heartbeat:Connect(function()
-        -- Se pousar no chão, desativa a velocidade de voo e volta para a base
         if hum.FloorMaterial ~= Enum.Material.Air then
             if hum.WalkSpeed ~= baseSpeed then
                 hum.WalkSpeed = baseSpeed
             end
         else
-            -- Garante que se estiver no ar voando, mantenha a velocidade de 5x
-            if hum.WalkSpeed ~= flySpeed and hum.WalkSpeed ~= 100 then -- Evita sobrescrever os 100 do modo invisível
+            if hum.WalkSpeed ~= flySpeed and hum.WalkSpeed ~= 100 then 
                 hum.WalkSpeed = flySpeed
             end
         end
@@ -440,7 +441,6 @@ local function applyAlienPowers(alienName)
         workspace.Gravity = originalGravity / 2
         enableInfiniteJump(targetSpeed, 10)
         
-        -- === NOCLIP ATIVO DO FANTASMÁTICO ===
         local noclipLoop = RunService.Stepped:Connect(function()
             if char then
                 for _, part in pairs(char:GetChildren()) do
@@ -450,13 +450,13 @@ local function applyAlienPowers(alienName)
         end)
         table.insert(activeLoops, noclipLoop)
         
-        -- === SISTEMA DE INVISIBILIDADE ===
         local InvisToggle = Instance.new("TextButton", ScreenGui)
         InvisToggle.Size = UDim2.new(0, 140, 0, 40)
         InvisToggle.Position = UDim2.new(0.85, -20, 0.35, 0)
         InvisToggle.Text = "Modo Invisivel: OFF"
         InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150)
         InvisToggle.TextColor3 = Color3.new(1, 1, 1)
+        InvisToggle.TextSize = 16
         InvisToggle.TextScaled = true 
         InvisToggle.ZIndex = 6
         Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6)
@@ -529,7 +529,7 @@ local function applyAlienPowers(alienName)
 
     elseif alienName == "Insectoide" then
         isCustomSpeedLoop = true
-        targetSpeed = 18
+        targetSpeed = 35
         targetJump = 30
         workspace.Gravity = originalGravity / 1.5
         
@@ -633,9 +633,11 @@ local function applyAlienPowers(alienName)
         table.insert(activeLoops, {Disconnect = function() CalcFrame:Destroy() end})
         
     elseif alienName == "Besta" then
+        isCustomSpeedLoop = true
         targetSpeed = 40
         targetJump = 65
         
+        -- Instancia o CC de forma limpa
         local CC = Instance.new("ColorCorrectionEffect")
         CC.Name = "BestaColorCorrection"
         CC.Brightness = -0.7   
@@ -644,15 +646,41 @@ local function applyAlienPowers(alienName)
         CC.TintColor = Color3.fromRGB(30, 20, 10) 
         CC.Parent = Lighting
         
-        local bestaVisionActive = true
+        -- === LOOP DE PROTEÇÃO DO CC + ESP (CORRIGIDO PARA NÃO SUMIR MAIS) ===
+        local bestaLoop = RunService.Heartbeat:Connect(function()
+            if hum and hum.Parent then
+                if hum.WalkSpeed ~= targetSpeed then hum.WalkSpeed = targetSpeed end
+                if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
+                if not hum.UseJumpPower then hum.UseJumpPower = true end
+            end
+            
+            -- Garante de forma agressiva que o CC continue ativo no Lighting sem sumir
+            if CC and CC.Parent == Lighting then
+                if CC.Brightness ~= -0.7 and CC.Brightness ~= -0.4 then
+                    CC.Brightness = -0.7
+                end
+            elseif not Lighting:FindFirstChild("BestaColorCorrection") and isTransformed and currentAlienActive == "Besta" then
+                -- Se por algum motivo bugar e sumir, recria na hora
+                CC = Instance.new("ColorCorrectionEffect")
+                CC.Name = "BestaColorCorrection"
+                CC.Brightness = -0.7   
+                CC.Contrast = 0.4      
+                CC.Saturation = -0.8   
+                CC.TintColor = Color3.fromRGB(30, 20, 10) 
+                CC.Parent = Lighting
+            end
+        end)
+        table.insert(activeLoops, bestaLoop)
         
+        -- Piscar de leve a tela (Efeito radar térmico/selvagem da Besta)
+        local bestaVisionActive = true
         local visionLoop = task.spawn(function()
             while bestaVisionActive do
                 task.wait(math.random(4, 8))
-                if not bestaVisionActive then break end
+                if not bestaVisionActive or not CC then break end
                 CC.Brightness = -0.4 
                 task.wait(0.2)
-                if not bestaVisionActive then break end
+                if not bestaVisionActive or not CC then break end
                 CC.Brightness = -0.7 
             end
         end)
@@ -663,6 +691,7 @@ local function applyAlienPowers(alienName)
             if CC then CC:Destroy() end 
         end})
         
+        -- ESP dos alvos a até 100 studs
         local bestaESPLoopActive = true
         local bestaESPThread = task.spawn(function()
             while bestaESPLoopActive do
