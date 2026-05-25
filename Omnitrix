@@ -389,19 +389,20 @@ elseif alienName == "XLR8" then
         targetJump = 50
         hum.WalkSpeed = 50
         
-        -- Variável para guardar a super plataforma de água
-        local waterPlatform = nil
+        -- Instancia o BodyVelocity de controle para andar sobre a água de forma lisa
+        local waterFloat = Instance.new("BodyVelocity")
+        waterFloat.Name = "XLR8WaterRun"
+        waterFloat.MaxForce = Vector3.new(0, 0, 0) -- Começa desligado
+        waterFloat.Velocity = Vector3.new(0, 0, 0)
         
-        local function removerPlataforma()
-            if waterPlatform then
-                pcall(function() waterPlatform:Destroy() end)
-                waterPlatform = nil
-            end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            waterFloat.Parent = hrp
         end
         
         local xxlr8Loop = RunService.Heartbeat:Connect(function()
             if not char:FindFirstChild("HumanoidRootPart") then return end
-            local hrp = char.HumanoidRootPart
+            hrp = char.HumanoidRootPart
             
             -- Controle de aceleração progressiva
             if hum.MoveDirection.Magnitude > 0 then
@@ -416,40 +417,40 @@ elseif alienName == "XLR8" then
             end
             if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
             
-            -- === MECÂNICA DA SUPER PLATAFORMA (BROOKHAVEN) ===
+            -- === MECÂNICA DE ANDAR SOBRE A ÁGUA (BROOKHAVEN) ===
             if game.PlaceId == 4924922222 then
                 local alturaY = hrp.Position.Y
                 
-                -- Se estiver rápido (> 75), correndo e entrar na área da água (Y menor que 0.2)
-                if hum.WalkSpeed > 75 and hum.MoveDirection.Magnitude > 0 and alturaY < 0.2 then
+                -- Se estiver rápido (> 75) e pisar na água (Y menor que 0)
+                if hum.WalkSpeed > 75 and hum.MoveDirection.Magnitude > 0 and alturaY < 0 then
+                    -- Ativa a força para cravar o Y no 0 absoluto (superfície)
+                    waterFloat.MaxForce = Vector3.new(0, math.huge, 0)
                     
-                    -- Se a plataforma não existir, cria o bloco gigante
-                    if not waterPlatform then
-                        waterPlatform = Instance.new("Part")
-                        waterPlatform.Name = "XLR8WaterPlatform"
-                        -- Tamanho 100 no Y para criar a base que sobe do void
-                        waterPlatform.Size = Vector3.new(100, 100, 100)
-                        waterPlatform.Transparency = 1 -- Totalmente invisível
-                        waterPlatform.Anchored = true
-                        waterPlatform.CanCollide = true
-                        waterPlatform.Material = Enum.Material.SmoothPlastic
-                        waterPlatform.Parent = workspace
+                    -- Calcula uma força suave para estabilizar o boneco exatamente na superfície
+                    local forcaY = (0 - alturaY) * 10
+                    waterFloat.Velocity = Vector3.new(0, forcaY, 0)
+                    
+                    -- FORÇA A ANIMAÇÃO DE RUN: Muda o estado do humanoid para impedir a animação de fall
+                    if hum:GetState() ~= Enum.HumanoidStateType.Running then
+                        hum:ChangeState(Enum.HumanoidStateType.Running)
                     end
                     
-                    -- Posiciona o centro em Y = -50 (o topo do bloco fica exatamente em Y = 0)
-                    waterPlatform.Position = Vector3.new(hrp.Position.X, -50, hrp.Position.Z)
-                    
-                -- Se o player pular alto para fora da água, parar ou desacelerar, desativa
-                elseif alturaY > 0.5 or hum.WalkSpeed <= 75 or hum.MoveDirection.Magnitude == 0 then
-                    removerPlataforma()
+                -- Desliga a força se subir acima de 0.01, se parar de correr ou se desacelerar
+                elseif alturaY > 0.01 or hum.WalkSpeed <= 75 or hum.MoveDirection.Magnitude == 0 then
+                    if waterFloat.MaxForce.Y ~= 0 then
+                        waterFloat.MaxForce = Vector3.new(0, 0, 0)
+                        waterFloat.Velocity = Vector3.new(0, 0, 0)
+                    end
                 end
             end
         end)
         
-        -- Garante a limpeza completa quando mudar de alien ou resetar
+        -- Garante que o BodyVelocity seja limpo quando o XLR8 desconfigurar/mudar de alien
         table.insert(activeLoops, xxlr8Loop)
         table.insert(activeLoops, {Disconnect = function() 
-            removerPlataforma()
+            if hrp and hrp:FindFirstChild("XLR8WaterRun") then 
+                hrp.XLR8WaterRun:Destroy() 
+            end 
         end})
         
     elseif alienName == "Bala de Canhão" then
