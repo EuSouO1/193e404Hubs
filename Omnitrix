@@ -194,7 +194,7 @@ local function shoutInChat(text)
     end
 end
 
--- === RESTAURAR FÍSICA AO NORMAL (SEGURANÇA CONTRA VOID ADICIONADA) ===
+-- === RESTAURAR FÍSICA AO NORMAL ===
 local function resetPlayerPhysics()
     for _, loop in pairs(activeLoops) do pcall(function() loop:Disconnect() end) end
     activeLoops = {}
@@ -205,17 +205,16 @@ local function resetPlayerPhysics()
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local hum = char:FindFirstChildOfClass("Humanoid")
         
-        -- SEGURANÇA MÁXIMA: Se o player descarregar enquanto estiver invisível embaixo da terra, joga ele para cima imediatamente!
         if hrp and hrp:FindFirstChild("InvisAntiVoid") then
             hrp.InvisAntiVoid:Destroy()
-            hrp.CFrame = hrp.CFrame * CFrame.new(0, 22, 0) -- Joga um pouco mais alto para garantir que saia do chão
+            hrp.CFrame = hrp.CFrame * CFrame.new(0, 22, 0)
         end
         
         if hum then
             hum.WalkSpeed = 16
             hum.JumpPower = 50
             hum.UseJumpPower = true
-            hum.CameraOffset = Vector3.new(0, 0, 0) -- Reseta o deslocamento da câmera
+            hum.CameraOffset = Vector3.new(0, 0, 0)
         end
         
         for _, part in pairs(char:GetChildren()) do
@@ -236,26 +235,34 @@ local function resetPlayerPhysics()
     end
 end
 
--- === PULO INFINITO E VOO ULTRA RÁPIDO ===
+-- === PULO INFINITO E VOO ULTRA RÁPIDO (VELOCIDADE 5X ATUALIZADA) ===
 local function enableInfiniteJump(baseSpeed, jPower)
     local char = lplayer.Character
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
     
+    -- Multiplica a velocidade base do alien por 5 enquanto estiver voando no ar
     local flySpeed = baseSpeed * 5
     
     local jumpConn = UserInputService.JumpRequest:Connect(function()
         if char and hum and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.Velocity = Vector3.new(char.HumanoidRootPart.Velocity.X, jPower * 1.5, char.HumanoidRootPart.Velocity.Z)
+            -- Força a velocidade escalar de voo imediatamente ao subir
             hum.WalkSpeed = flySpeed
         end
     end)
     table.insert(activeLoops, jumpConn)
     
     local landCheck = RunService.Heartbeat:Connect(function()
+        -- Se pousar no chão, desativa a velocidade de voo e volta para a base
         if hum.FloorMaterial ~= Enum.Material.Air then
             if hum.WalkSpeed ~= baseSpeed then
                 hum.WalkSpeed = baseSpeed
+            end
+        else
+            -- Garante que se estiver no ar voando, mantenha a velocidade de 5x
+            if hum.WalkSpeed ~= flySpeed and hum.WalkSpeed ~= 100 then -- Evita sobrescrever os 100 do modo invisível
+                hum.WalkSpeed = flySpeed
             end
         end
     end)
@@ -423,7 +430,6 @@ local function applyAlienPowers(alienName)
             end
         end)
         
-        -- Limpeza em caso de troca manual de alien
         table.insert(activeLoops, {Disconnect = function() 
             if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end
             if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end
@@ -433,12 +439,33 @@ local function applyAlienPowers(alienName)
         
         local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function()
             if hum and hum.Parent then
-                if hum.WalkSpeed ~= targetSpeed then hum.WalkSpeed = targetSpeed end
+                -- Se o modo invisível estiver ON, a velocidade trava em 100, senão segue o fluxo normal do voo/solo
+                local currentMax = isInvis and 100 or (hum.FloorMaterial == Enum.Material.Air and (targetSpeed * 5) or targetSpeed)
+                if hum.WalkSpeed ~= currentMax then hum.WalkSpeed = currentMax end
                 if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
                 if not hum.UseJumpPower then hum.UseJumpPower = true end
             end
         end)
         table.insert(activeLoops, fantasmaticoSpeedConn)
+
+    elseif alienName == "Insectoide" then
+        isCustomSpeedLoop = true
+        targetSpeed = 35
+        targetJump = 30
+        workspace.Gravity = originalGravity / 1.5
+        
+        -- AJUSTE: Ativação do Voo/Pulo Infinito com velocidade multiplicada por 5 no ar
+        enableInfiniteJump(targetSpeed, 30)
+        
+        local insectoideSpeedConn = RunService.Heartbeat:Connect(function()
+            if hum and hum.Parent then
+                local currentMax = (hum.FloorMaterial == Enum.Material.Air) and (targetSpeed * 5) or targetSpeed
+                if hum.WalkSpeed ~= currentMax then hum.WalkSpeed = currentMax end
+                if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
+                if not hum.UseJumpPower then hum.UseJumpPower = true end
+            end
+        end)
+        table.insert(activeLoops, insectoideSpeedConn)
 
     elseif alienName == "Massa Cinzenta" then
         targetSpeed = 12
@@ -778,6 +805,7 @@ lplayer.Chatted:Connect(function(msg)
             local linVel = Instance.new("LinearVelocity")
             linVel.Attachment0 = att
             linVel.MaxForce = math.huge 
+            -- AJUSTE: Força do fling elevada bruscamente para 250!
             linVel.VectorVelocity = randomDirection * 250
             linVel.Parent = hrp
             
