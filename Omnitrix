@@ -729,6 +729,10 @@ elseif alienName == "Aquatico" then
         overlapParams.FilterType = Enum.RaycastFilterType.Exclude
         overlapParams.FilterDescendantsInstances = {char}
         
+        -- Cores base para comparação matemática
+        local azulPuro = Color3.fromRGB(0, 0, 255)
+        local cianoPuro = Color3.fromRGB(0, 255, 255)
+        
         local aquaticoLoop = RunService.Heartbeat:Connect(function()
             if not char:FindFirstChild("HumanoidRootPart") then return end
             local naAgua = false
@@ -741,12 +745,15 @@ elseif alienName == "Aquatico" then
                     continue
                 end
                 
-                -- Converte a cor da parte para HSV para identificar tons de azul com precisão
-                local h, s, v = part.Color:ToHSV()
+                -- Pega o RGB da parte atual
+                local r, g, b = part.Color.R, part.Color.G, part.Color.B
                 
-                -- RANGE EXPANDIDO: Pega desde o Ciano claro (160°) até o Azul Escuro/Roxeado (270°)
-                -- Saturação e Brilho reduzidos para aceitar tons escuros, claros ou desbotados
-                if h >= (160/360) and h <= (270/360) and s > 0.2 and v > 0.15 then
+                -- Calcula a distância matemática para o Azul e Ciano (Cálculo 3D de proximidade)
+                local distAzul = math.sqrt((r - azulPuro.R)^2 + (g - azulPuro.G)^2 + (b - azulPuro.B)^2)
+                local distCiano = math.sqrt((r - cianoPuro.R)^2 + (g - cianoPuro.G)^2 + (b - cianoPuro.B)^2)
+                
+                -- Se a cor for parecida com azul ou ciano, e o azul/verde dominarem o vermelho (garante que não é cinza/preto)
+                if (distAzul < 0.85 or distCiano < 0.85) and (b > r or g > r) then
                     naAgua = true
                     break
                 end
