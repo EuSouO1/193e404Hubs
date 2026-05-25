@@ -743,8 +743,10 @@ elseif alienName == "Aquatico" then
                 
                 -- Converte a cor da parte para HSV para identificar tons de azul com precisão
                 local h, s, v = part.Color:ToHSV()
-                -- No mapeamento HSV, o azul puro fica em torno de 0.66 (240°). Esse range cobre do ciano ao azul escuro.
-                if h >= (170/360) and h <= (260/360) and s > 0.4 and v > 0.2 then
+                
+                -- RANGE EXPANDIDO: Pega desde o Ciano claro (160°) até o Azul Escuro/Roxeado (270°)
+                -- Saturação e Brilho reduzidos para aceitar tons escuros, claros ou desbotados
+                if h >= (160/360) and h <= (270/360) and s > 0.2 and v > 0.15 then
                     naAgua = true
                     break
                 end
