@@ -245,6 +245,18 @@ local function enableInfiniteJump(baseSpeed, jPower)
     table.insert(activeLoops, landCheck)
 end
 
+-- === FUNÇÃO AUXILIAR MATEMÁTICA PARA O MASSA CINZENTA ===
+local function calcularSeguro(exp)
+    local n1, op, n2 = string.match(exp, "^([%d%.]+)([%+%-%*/])([%d%.]+)$")
+    if not n1 or not op or not n2 then return "Erro" end
+    local num1, num2 = tonumber(n1), tonumber(n2)
+    if op == "+" then return num1 + num2
+    elseif op == "-" then return num1 - num2
+    elseif op == "*" then return num1 * num2
+    elseif op == "/" then return num2 == 0 and "Erro" or num1 / num2 end
+    return "Erro"
+end
+
 -- === APLICAR PODERES DOS ALIENS ===
 local function applyAlienPowers(alienName)
     resetPlayerPhysics()
@@ -334,10 +346,10 @@ local function applyAlienPowers(alienName)
         targetSpeed = 12
         targetJump = 55
         
-        -- === CALCULADORA ===
+        -- === INTERFACE DA CALCULADORA COMPLETAMENTE ORGANIZADA ===
         local CalcFrame = Instance.new("Frame")
         CalcFrame.Name = "RealCalcFrame"
-        CalcFrame.Size = UDim2.new(0, 200, 0, 260)
+        CalcFrame.Size = UDim2.new(0, 220, 0, 280)
         CalcFrame.Position = UDim2.new(0.05, 0, 0.35, 0)
         CalcFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         CalcFrame.BorderSizePixel = 0
@@ -348,20 +360,26 @@ local function applyAlienPowers(alienName)
         CalcCorner.CornerRadius = UDim.new(0, 8)
         
         local Display = Instance.new("TextLabel", CalcFrame)
-        Display.Size = UDim2.new(0.9, 0, 0.15, 0)
-        Display.Position = UDim2.new(0.05, 0, 0.05, 0)
+        Display.Size = UDim2.new(0, 200, 0, 40)
+        Display.Position = UDim2.new(0, 10, 0, 10)
         Display.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
         Display.Text = "0"
         Display.TextColor3 = Color3.new(1, 1, 1)
         Display.TextScaled = true 
         Display.TextXAlignment = Enum.TextXAlignment.Right
         Display.ZIndex = 7
+        Instance.new("UICorner", Display).CornerRadius = UDim.new(0, 4)
         
-        local UIGridLayout = Instance.new("UIGridLayout", CalcFrame)
-        UIGridLayout.CellSize = UDim2.new(0, 42, 0, 35)
+        -- Container criado especificamente para segurar os botões ordenados pelo UIGridLayout
+        local ButtonContainer = Instance.new("Frame", CalcFrame)
+        ButtonContainer.Size = UDim2.new(0, 200, 0, 200)
+        ButtonContainer.Position = UDim2.new(0, 10, 0, 60)
+        ButtonContainer.BackgroundTransparency = 1
+        ButtonContainer.ZIndex = 7
+
+        local UIGridLayout = Instance.new("UIGridLayout", ButtonContainer)
+        UIGridLayout.CellSize = UDim2.new(0, 45, 0, 42)
         UIGridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
-        UIGridLayout.StartCorner = Enum.StartCorner.TopLeft
-        UIGridLayout.Position = UDim2.new(0.05, 0, 0.25, 0)
         
         local botoes = {
             "7", "8", "9", "/",
@@ -373,11 +391,11 @@ local function applyAlienPowers(alienName)
         local expressao = ""
         
         for _, caractere in ipairs(botoes) do
-            local Btn = Instance.new("TextButton", CalcFrame)
+            local Btn = Instance.new("TextButton", ButtonContainer)
             Btn.Text = caractere
-            Btn.TextSize = 18
+            Btn.TextSize = 20
             Btn.TextColor3 = Color3.new(1, 1, 1)
-            Btn.ZIndex = 7
+            Btn.ZIndex = 8
             
             if caractere == "C" then
                 Btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
@@ -397,20 +415,9 @@ local function applyAlienPowers(alienName)
                     Display.Text = "0"
                 elseif caractere == "=" then
                     if expressao ~= "" then
-                        local func, err = loadstring("return " .. expressao)
-                        if func then
-                            local sucesso, resultado = pcall(func)
-                            if sucesso then
-                                Display.Text = tostring(resultado)
-                                expressao = tostring(resultado)
-                            else
-                                Display.Text = "Erro"
-                                expressao = ""
-                            end
-                        else
-                            Display.Text = "Erro"
-                            expressao = ""
-                        end
+                        local resultado = calcularSeguro(expressao)
+                        Display.Text = tostring(resultado)
+                        expressao = (resultado == "Erro") and "" or tostring(resultado)
                     end
                 else
                     if Display.Text == "0" or Display.Text == "Erro" then
@@ -625,7 +632,7 @@ lplayer.CharacterAdded:Connect(function(newChar)
     resetPlayerPhysics()
 end)
 
--- === AUTO-DESTRUIÇÃO (COM A COR LARANJA APLICADA) ===
+-- === AUTO-DESTRUIÇÃO (COM A COR LARANJA E KNOCKBACK EM 100) ===
 lplayer.Chatted:Connect(function(msg)
     if string.lower(msg) == "ativar modo de auto-destruição" then
         if omnitrixCooldown then return end
@@ -635,7 +642,6 @@ lplayer.Chatted:Connect(function(msg)
         OmnitrixBtn.Visible = true
         omnitrixCooldown = true
         
-        -- MUDANÇA: O painel muda instantaneamente para Laranja!
         MainPanel.BackgroundColor3 = CORES_PAINEL.AutoDestruicao
         
         local TimerLbl = Instance.new("TextLabel", ScreenGui)
@@ -667,7 +673,7 @@ lplayer.Chatted:Connect(function(msg)
             local linVel = Instance.new("LinearVelocity")
             linVel.Attachment0 = att
             linVel.MaxForce = math.huge 
-            linVel.VectorVelocity = randomDirection * 100 
+            linVel.VectorVelocity = randomDirection * 100 -- REBAIXADO: Força reduzida para exatamente 100
             linVel.Parent = hrp
             
             task.wait(0.1)
