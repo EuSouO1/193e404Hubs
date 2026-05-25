@@ -437,7 +437,7 @@ local function applyAlienPowers(alienName)
     elseif alienName == "Fantasmatico" then
         isCustomSpeedLoop = true
         targetSpeed = 26
-        targetJump = 10 
+        targetJump = 30 
         workspace.Gravity = originalGravity / 2
         enableInfiniteJump(targetSpeed, 10)
         
