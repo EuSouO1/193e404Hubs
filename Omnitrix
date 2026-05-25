@@ -457,7 +457,6 @@ local function applyAlienPowers(alienName)
         InvisToggle.Text = "Modo Invisivel: OFF"
         InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150)
         InvisToggle.TextColor3 = Color3.new(1, 1, 1)
-        InvisToggle.TextSize = 16
         InvisToggle.TextScaled = true 
         InvisToggle.ZIndex = 6
         Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6)
