@@ -92,7 +92,7 @@ MainPanel.ZIndex = 3
 local UICorner = Instance.new("UICorner", MainPanel)
 UICorner.CornerRadius = UDim.new(0, 12)
 
--- Botão de Configurações (Pequeno no canto superior direito)
+-- Botão de Configurações
 local ConfigsBtn = Instance.new("TextButton", MainPanel)
 ConfigsBtn.Size = UDim2.new(0, 24, 0, 24)
 ConfigsBtn.Position = UDim2.new(1, -28, 0, 4)
@@ -294,8 +294,16 @@ local function resetPlayerPhysics()
         if hrp then
             if hrp:FindFirstChild("InvisAntiVoid") then
                 hrp.InvisAntiVoid:Destroy()
-                hrp.CFrame = hrp.CFrame * CFrame.new(0, 22, 0)
+                
+                -- CONSERTO: Força ficar 100% em pé antes de subir para a superfície
+                local _, camY, _ = hrp.CFrame:ToOrientation()
+                hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 22, hrp.Position.Z) * CFrame.fromOrientation(0, camY, 0)
+            else
+                -- CONSERTO: Se descarregar sem estar invisível, também garante que endireita na hora
+                local _, camY, _ = hrp.CFrame:ToOrientation()
+                hrp.CFrame = CFrame.new(hrp.Position) * CFrame.fromOrientation(0, camY, 0)
             end
+            
             if hrp:FindFirstChild("FantasmaticoGyro") then
                 hrp.FantasmaticoGyro:Destroy()
             end
@@ -523,11 +531,10 @@ local function applyAlienPowers(alienName)
                     targetYHeight = hrp.Position.Y - 20
                     hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0)
                     
-                    -- === INSTANCIA O BODYGYRO PARA FORÇAR FICAR DE PÉ ===
                     local bg = Instance.new("BodyGyro")
                     bg.Name = "FantasmaticoGyro"
-                    bg.MaxTorque = Vector3.new(math.huge, 0, math.huge) -- Trava os eixos X e Z bruscamente, deixando o Y livre
-                    bg.P = 50000 -- Força de resposta muito alta para não inclinar nada
+                    bg.MaxTorque = Vector3.new(math.huge, 0, math.huge) 
+                    bg.P = 50000 
                     bg.CFrame = CFrame.new()
                     bg.Parent = hrp
                     
@@ -542,7 +549,6 @@ local function applyAlienPowers(alienName)
                             hrp.Position = Vector3.new(hrp.Position.X, targetYHeight, hrp.Position.Z)
                             hum.CameraOffset = Vector3.new(0, 20, 0)
                             
-                            -- Atualiza a rotação do gyro para acompanhar a câmera horizontalmente (Y)
                             if bg and workspace.CurrentCamera then
                                 local _, camY, _ = workspace.CurrentCamera.CFrame:ToOrientation()
                                 bg.CFrame = CFrame.fromOrientation(0, camY, 0)
@@ -568,7 +574,10 @@ local function applyAlienPowers(alienName)
                 end
                 
                 hum.CameraOffset = Vector3.new(0, 0, 0)
-                hrp.CFrame = hrp.CFrame * CFrame.new(0, 20, 0)
+                
+                -- CONSERTO: Força ficar 100% em pé e estável logo antes de subir ao chão
+                local _, camY, _ = hrp.CFrame:ToOrientation()
+                hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 20, hrp.Position.Z) * CFrame.fromOrientation(0, camY, 0)
             end
         end)
         
@@ -578,6 +587,10 @@ local function applyAlienPowers(alienName)
             if hrp then
                 if hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
                 if hrp:FindFirstChild("FantasmaticoGyro") then hrp.FantasmaticoGyro:Destroy() end
+                
+                -- CONSERTO EXTRA: Garante boneco reto se for destransformado abruptamente
+                local _, camY, _ = hrp.CFrame:ToOrientation()
+                hrp.CFrame = CFrame.new(hrp.Position) * CFrame.fromOrientation(0, camY, 0)
             end
             InvisToggle:Destroy() 
         end})
