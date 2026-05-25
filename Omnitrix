@@ -182,11 +182,11 @@ ConfigsTitle.ZIndex = 9
 
 -- Botão Toggle do Grito de Transformação (CORRIGIDO TAMANHO E ESCALA)
 local ShoutToggleBtn = Instance.new("TextButton", ConfigsMenu)
-ShoutToggleBtn.Size = UDim2.new(0, 200, 0, 45) -- Aumentado levemente para caber melhor
+ShoutToggleBtn.Size = UDim2.new(0, 200, 0, 45)
 ShoutToggleBtn.Position = UDim2.new(0.5, -100, 0.5, -10)
 ShoutToggleBtn.Text = "Grito no Chat: LIGADO"
 ShoutToggleBtn.TextSize = 14
-ShoutToggleBtn.TextScaled = true -- Garante que o texto se adapte perfeitamente ao botão
+ShoutToggleBtn.TextScaled = true
 ShoutToggleBtn.TextColor3 = Color3.new(1, 1, 1)
 ShoutToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 130, 0)
 ShoutToggleBtn.ZIndex = 9
@@ -229,7 +229,6 @@ ConfigsBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-
 -- === SISTEMA DE ARRASTAR O PAINEL ===
 local dragging, dragInput, dragStart, startPos
 
@@ -264,10 +263,9 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-
 -- === SISTEMA DE CHAT (GRITO) ===
 local function shoutInChat(text)
-    if not gritoAtivo then return end -- Bloqueia se o toggle estiver em OFF
+    if not gritoAtivo then return end
     
     local msg = string.upper(text) .. "!"
     if game:GetService("TextChatService").TextChannels:FindFirstChild("RBXGeneral") then
@@ -296,6 +294,13 @@ local function resetPlayerPhysics()
             hrp.CFrame = hrp.CFrame * CFrame.new(0, 22, 0)
         end
         
+        if hrp and hrp:FindFirstChild("FantasmaticoKeepUpright") then
+            hrp.FantasmaticoKeepUpright:Destroy()
+        end
+        if hrp and hrp:FindFirstChild("FantasmaticoAttachment") then
+            hrp.FantasmaticoAttachment:Destroy()
+        end
+        
         if hum then
             hum.WalkSpeed = 16
             hum.JumpPower = 50
@@ -321,7 +326,7 @@ local function resetPlayerPhysics()
     end
 end
 
--- === PULO INFINITO E VOO ULTRA RÁPIDO (VELOCIDADE 5X ATUALIZADA) ===
+-- === PULO INFINITO E VOO ULTRA RÁPIDO ===
 local function enableInfiniteJump(baseSpeed, jPower)
     local char = lplayer.Character
     local hum = char:FindFirstChildOfClass("Humanoid")
@@ -384,15 +389,14 @@ local function applyAlienPowers(alienName)
         targetSpeed = 40  
         targetJump = 150  
         
-elseif alienName == "XLR8" then
+    elseif alienName == "XLR8" then
         isCustomSpeedLoop = true
         targetJump = 50
         hum.WalkSpeed = 50
         
-        -- Instancia o BodyVelocity de controle para andar sobre a água de forma lisa
         local waterFloat = Instance.new("BodyVelocity")
         waterFloat.Name = "XLR8WaterRun"
-        waterFloat.MaxForce = Vector3.new(0, 0, 0) -- Começa desligado
+        waterFloat.MaxForce = Vector3.new(0, 0, 0)
         waterFloat.Velocity = Vector3.new(0, 0, 0)
         
         local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -404,7 +408,6 @@ elseif alienName == "XLR8" then
             if not char:FindFirstChild("HumanoidRootPart") then return end
             hrp = char.HumanoidRootPart
             
-            -- Controle de aceleração progressiva
             if hum.MoveDirection.Magnitude > 0 then
                 if hum.WalkSpeed < 500 then hum.WalkSpeed = hum.WalkSpeed + 2 end
             else
@@ -417,25 +420,16 @@ elseif alienName == "XLR8" then
             end
             if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
             
-            -- === MECÂNICA DE ANDAR SOBRE A ÁGUA (BROOKHAVEN) ===
             if game.PlaceId == 4924922222 then
                 local alturaY = hrp.Position.Y
-                
-                -- Se estiver rápido (> 75) e pisar na água (Y menor que 0)
                 if hum.WalkSpeed > 75 and hum.MoveDirection.Magnitude > 0 and alturaY < 0 then
-                    -- Ativa a força para cravar o Y no 0 absoluto (superfície)
                     waterFloat.MaxForce = Vector3.new(0, math.huge, 0)
-                    
-                    -- Calcula uma força suave para estabilizar o boneco exatamente na superfície
                     local forcaY = (0 - alturaY) * 10
                     waterFloat.Velocity = Vector3.new(0, forcaY, 0)
                     
-                    -- FORÇA A ANIMAÇÃO DE RUN: Muda o estado do humanoid para impedir a animação de fall
                     if hum:GetState() ~= Enum.HumanoidStateType.Running then
                         hum:ChangeState(Enum.HumanoidStateType.Running)
                     end
-                    
-                -- Desliga a força se subir acima de 0.01, se parar de correr ou se desacelerar
                 elseif alturaY > 0.01 or hum.WalkSpeed <= 75 or hum.MoveDirection.Magnitude == 0 then
                     if waterFloat.MaxForce.Y ~= 0 then
                         waterFloat.MaxForce = Vector3.new(0, 0, 0)
@@ -445,7 +439,6 @@ elseif alienName == "XLR8" then
             end
         end)
         
-        -- Garante que o BodyVelocity seja limpo quando o XLR8 desconfigurar/mudar de alien
         table.insert(activeLoops, xxlr8Loop)
         table.insert(activeLoops, {Disconnect = function() 
             if hrp and hrp:FindFirstChild("XLR8WaterRun") then 
@@ -467,10 +460,12 @@ elseif alienName == "XLR8" then
             modeOn = not modeOn
             if modeOn then
                 BallToggle.Text = "Modo Bola: ON"
-                targetSpeed = 60; targetJump = 0
+                targetSpeed = 60
+                targetJump = 0
             else
                 BallToggle.Text = "Modo Bola: OFF"
-                targetSpeed = 10; targetJump = 60
+                targetSpeed = 10
+                targetJump = 60
             end
         end)
         table.insert(activeLoops, {Disconnect = function() BallToggle:Destroy() end})
@@ -484,104 +479,122 @@ elseif alienName == "XLR8" then
         targetSpeed = 25
         targetJump = 70
         
-elseif alienName == "Fantasmatico" then
+    elseif alienName == "Fantasmatico" then
         isCustomSpeedLoop = true
-        targetSpeed = 26 [cite: 167]
-        targetJump = 30 [cite: 167]
-        workspace.Gravity = originalGravity / 2 [cite: 167]
-        enableInfiniteJump(targetSpeed, 10) [cite: 167]
+        targetSpeed = 26
+        targetJump = 30
+        workspace.Gravity = originalGravity / 2
+        enableInfiniteJump(targetSpeed, 10)
         
-        local noclipLoop = RunService.Stepped:Connect(function() [cite: 167, 168]
-            if char then [cite: 168]
-                for _, part in pairs(char:GetChildren()) do [cite: 168]
-                    if part:IsA("BasePart") then part.CanCollide = false end [cite: 168]
-                end [cite: 168]
-            end [cite: 168]
-        end) [cite: 168]
-        table.insert(activeLoops, noclipLoop) [cite: 169]
-        
-        local InvisToggle = Instance.new("TextButton", ScreenGui) [cite: 169]
-        InvisToggle.Size = UDim2.new(0, 140, 0, 40) [cite: 169]
-        InvisToggle.Position = UDim2.new(0.85, -20, 0.35, 0) [cite: 169]
-        InvisToggle.Text = "Modo Invisivel: OFF" [cite: 169]
-        InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150) [cite: 169]
-        InvisToggle.TextColor3 = Color3.new(1, 1, 1) [cite: 169]
-        InvisToggle.TextSize = 16 [cite: 169]
-        InvisToggle.TextScaled = true [cite: 170]
-        InvisToggle.ZIndex = 6 [cite: 170]
-        Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6) [cite: 170]
-        
-        local isInvis = false [cite: 170]
-        local targetYHeight = 0 [cite: 170]
-        local cameraOffsetLoop = nil [cite: 170]
-        local hrp = char:FindFirstChild("HumanoidRootPart") [cite: 170]
-        
-        InvisToggle.MouseButton1Click:Connect(function() [cite: 170, 171]
-            if not char or not hum or not hrp then return end [cite: 171]
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            -- Cria o alinhamento nativo para travar a rotação X e Z (sempre 100% em pé!)
+            local att = Instance.new("Attachment")
+            att.Name = "FantasmaticoAttachment"
+            att.Parent = hrp
             
-            if not isInvis then [cite: 171]
-                if hum.FloorMaterial ~= Enum.Material.Air then [cite: 171]
-                    isInvis = true [cite: 171]
-                    InvisToggle.Text = "Modo Invisivel: ON" [cite: 171, 172]
-                    targetSpeed = 100 [cite: 172]
+            local align = Instance.new("AlignOrientation")
+            align.Name = "FantasmaticoKeepUpright"
+            align.Mode = Enum.OrientationMode.OneAttachment
+            align.Attachment0 = att
+            align.MaxTorque = math.huge
+            align.Responsiveness = 200
+            -- Trava X e Z em zero. Deixa apenas o Y livre para girar
+            align.CFrame = CFrame.new() 
+            align.Parent = hrp
+        end
+        
+        local noclipLoop = RunService.Stepped:Connect(function()
+            if char then
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+        table.insert(activeLoops, noclipLoop)
+        
+        local InvisToggle = Instance.new("TextButton", ScreenGui)
+        InvisToggle.Size = UDim2.new(0, 140, 0, 40)
+        InvisToggle.Position = UDim2.new(0.85, -20, 0.35, 0)
+        InvisToggle.Text = "Modo Invisivel: OFF"
+        InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150)
+        InvisToggle.TextColor3 = Color3.new(1, 1, 1)
+        InvisToggle.TextSize = 16
+        InvisToggle.TextScaled = true
+        InvisToggle.ZIndex = 6
+        Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6)
+        
+        local isInvis = false
+        local targetYHeight = 0
+        local cameraOffsetLoop = nil
+        
+        InvisToggle.MouseButton1Click:Connect(function()
+            if not char or not hum or not hrp then return end
+            
+            if not isInvis then
+                if hum.FloorMaterial ~= Enum.Material.Air then
+                    isInvis = true
+                    InvisToggle.Text = "Modo Invisivel: ON"
+                    targetSpeed = 100
                     
-                    targetYHeight = hrp.Position.Y - 20 [cite: 172]
-                    hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0) [cite: 173]
+                    targetYHeight = hrp.Position.Y - 20
+                    hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0)
                     
-                    local bv = Instance.new("BodyVelocity") [cite: 173]
-                    bv.Name = "InvisAntiVoid" [cite: 173]
-                    bv.MaxForce = Vector3.new(0, math.huge, 0) [cite: 173]
-                    bv.Velocity = Vector3.new(0, 0, 0) [cite: 174]
-                    bv.Parent = hrp [cite: 174]
+                    local bv = Instance.new("BodyVelocity")
+                    bv.Name = "InvisAntiVoid"
+                    bv.MaxForce = Vector3.new(0, math.huge, 0)
+                    bv.Velocity = Vector3.new(0, 0, 0)
+                    bv.Parent = hrp
                     
-                    cameraOffsetLoop = RunService.RenderStepped:Connect(function() [cite: 174]
-                        if hrp and hum then [cite: 174, 175]
-                            -- === CONSERTO AQUI: Força o boneco a ficar sempre em pé (X e Z zerados) ===
+                    cameraOffsetLoop = RunService.RenderStepped:Connect(function()
+                        if hrp and hum then
+                            -- Corrige CFrame no subsolo para manter retinho e na altura certa
                             local _, currentYRotation, _ = hrp.CFrame:ToOrientation()
                             hrp.CFrame = CFrame.new(hrp.Position.X, targetYHeight, hrp.Position.Z) * CFrame.fromOrientation(0, currentYRotation, 0)
                             
-                            hum.CameraOffset = Vector3.new(0, 20, 0) [cite: 175]
-                        end [cite: 175, 176]
-                    end) [cite: 176]
-                end [cite: 171]
-            else [cite: 176]
-                isInvis = false [cite: 176]
-                InvisToggle.Text = "Modo Invisivel: OFF" [cite: 176]
-                targetSpeed = 26 [cite: 176, 177]
+                            hum.CameraOffset = Vector3.new(0, 20, 0)
+                        end
+                    end)
+                end
+            else
+                isInvis = false
+                InvisToggle.Text = "Modo Invisivel: OFF"
+                targetSpeed = 26
                 
-                if cameraOffsetLoop then [cite: 177]
-                    cameraOffsetLoop:Disconnect() [cite: 177]
-                    cameraOffsetLoop = nil [cite: 177]
-                end [cite: 177, 178]
+                if cameraOffsetLoop then
+                    cameraOffsetLoop:Disconnect()
+                    cameraOffsetLoop = nil
+                end
                 
-                if hrp:FindFirstChild("InvisAntiVoid") then [cite: 178]
-                    hrp.InvisAntiVoid:Destroy() [cite: 178]
-                end [cite: 178]
+                if hrp:FindFirstChild("InvisAntiVoid") then
+                    hrp.InvisAntiVoid:Destroy()
+                end
                 
-                hum.CameraOffset = Vector3.new(0, 0, 0) [cite: 179]
+                hum.CameraOffset = Vector3.new(0, 0, 0)
                 
-                -- === CONSERTO AQUI TAMBÉM: Garante que ele volta pra superfície retinho ===
                 local _, currentYRotation, _ = hrp.CFrame:ToOrientation()
                 hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 20, hrp.Position.Z) * CFrame.fromOrientation(0, currentYRotation, 0)
-            end [cite: 179]
-        end) [cite: 171]
+            end
+        end)
         
-        table.insert(activeLoops, {Disconnect = function() [cite: 179]
-            if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end [cite: 179]
-            if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end [cite: 179, 180]
-            if hrp and hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end [cite: 180]
-            InvisToggle:Destroy() [cite: 180]
-        end}) [cite: 179]
+        table.insert(activeLoops, {Disconnect = function()
+            if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end
+            if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end
+            if hrp and hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
+            if hrp and hrp:FindFirstChild("FantasmaticoKeepUpright") then hrp.FantasmaticoKeepUpright:Destroy() end
+            if hrp and hrp:FindFirstChild("FantasmaticoAttachment") then hrp.FantasmaticoAttachment:Destroy() end
+            InvisToggle:Destroy()
+        end})
         
-        local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function() [cite: 180]
-            if hum and hum.Parent then [cite: 180]
-                local currentMax = isInvis and 100 or (hum.FloorMaterial == Enum.Material.Air and (targetSpeed * 5) or targetSpeed) [cite: 180, 181]
-                if hum.WalkSpeed ~= currentMax then hum.WalkSpeed = currentMax end [cite: 181]
-                if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end [cite: 181]
-                if not hum.UseJumpPower then hum.UseJumpPower = true end [cite: 181]
-            end [cite: 181]
-        end) [cite: 181, 182]
-        table.insert(activeLoops, fantasmaticoSpeedConn) [cite: 182]
+        local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function()
+            if hum and hum.Parent then
+                local currentMax = isInvis and 100 or (hum.FloorMaterial == Enum.Material.Air and (targetSpeed * 5) or targetSpeed)
+                if hum.WalkSpeed ~= currentMax then hum.WalkSpeed = currentMax end
+                if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
+                if not hum.UseJumpPower then hum.UseJumpPower = true end
+            end
+        end)
+        table.insert(activeLoops, fantasmaticoSpeedConn)
 
     elseif alienName == "Insectoide" then
         isCustomSpeedLoop = true
@@ -693,7 +706,6 @@ elseif alienName == "Fantasmatico" then
         targetSpeed = 40
         targetJump = 65
         
-        -- Instancia o CC de forma limpa
         local CC = Instance.new("ColorCorrectionEffect")
         CC.Name = "BestaColorCorrection"
         CC.Brightness = -0.7   
@@ -702,7 +714,6 @@ elseif alienName == "Fantasmatico" then
         CC.TintColor = Color3.fromRGB(30, 20, 10) 
         CC.Parent = Lighting
         
-        -- === LOOP DE PROTEÇÃO DO CC + ESP (CORRIGIDO PARA NÃO SUMIR MAIS) ===
         local bestaLoop = RunService.Heartbeat:Connect(function()
             if hum and hum.Parent then
                 if hum.WalkSpeed ~= targetSpeed then hum.WalkSpeed = targetSpeed end
@@ -710,13 +721,11 @@ elseif alienName == "Fantasmatico" then
                 if not hum.UseJumpPower then hum.UseJumpPower = true end
             end
             
-            -- Garante de forma agressiva que o CC continue ativo no Lighting sem sumir
             if CC and CC.Parent == Lighting then
                 if CC.Brightness ~= -0.7 and CC.Brightness ~= -0.4 then
                     CC.Brightness = -0.7
                 end
             elseif not Lighting:FindFirstChild("BestaColorCorrection") and isTransformed and currentAlienActive == "Besta" then
-                -- Se por algum motivo bugar e sumir, recria na hora
                 CC = Instance.new("ColorCorrectionEffect")
                 CC.Name = "BestaColorCorrection"
                 CC.Brightness = -0.7   
@@ -728,7 +737,6 @@ elseif alienName == "Fantasmatico" then
         end)
         table.insert(activeLoops, bestaLoop)
         
-        -- Piscar de leve a tela (Efeito radar térmico/selvagem da Besta)
         local bestaVisionActive = true
         local visionLoop = task.spawn(function()
             while bestaVisionActive do
@@ -747,7 +755,6 @@ elseif alienName == "Fantasmatico" then
             if CC then CC:Destroy() end 
         end})
         
-        -- ESP dos alvos a até 100 studs
         local bestaESPLoopActive = true
         local bestaESPThread = task.spawn(function()
             while bestaESPLoopActive do
@@ -775,21 +782,17 @@ elseif alienName == "Fantasmatico" then
         end)
         table.insert(activeLoops, {Disconnect = function() bestaESPLoopActive = false; task.cancel(bestaESPThread) end})
         
-elseif alienName == "Aquatico" then
+    elseif alienName == "Aquatico" then
         isCustomSpeedLoop = true
         targetJump = 55
         local timerForaDaAgua = 0
         
-        -- Configuração para ignorar o próprio personagem na detecção de colisão
         local overlapParams = OverlapParams.new()
         overlapParams.FilterType = Enum.RaycastFilterType.Exclude
         overlapParams.FilterDescendantsInstances = {char}
         
-        -- Cores base para comparação matemática
         local azulPuro = Color3.fromRGB(0, 0, 255)
         local cianoPuro = Color3.fromRGB(0, 255, 255)
-        
-        -- Lista de palavras-chave padrão para identificar água pelo nome
         local nomesAgua = {"water", "ocean", "sea", "agua", "rio", "lake"}
         
         local aquaticoLoop = RunService.Heartbeat:Connect(function()
@@ -797,7 +800,6 @@ elseif alienName == "Aquatico" then
             local hrp = char.HumanoidRootPart
             local naAgua = false
             
-            -- 1ª VERIFICAÇÃO: Checagem por Altura (Apenas na Place ID específica)
             if game.PlaceId == 4924922222 then
                 local alturaY = hrp.Position.Y
                 if alturaY >= -6 and alturaY <= -3 then
@@ -805,16 +807,13 @@ elseif alienName == "Aquatico" then
                 end
             end
             
-            -- 2ª VERIFICAÇÃO: Pelas partes do mapa (Caso não tenha detectado pela altura)
             if not naAgua then
                 local parts = workspace:GetPartsInPart(hrp, overlapParams)
                 for _, part in pairs(parts) do
-                    -- Ignora se a parte for de outro jogador ou NPC
                     if part.Parent:FindFirstChildOfClass("Humanoid") or (part.Parent.Parent and part.Parent.Parent:FindFirstChildOfClass("Humanoid")) then
                         continue
                     end
                     
-                    -- Pelo nome da parte
                     local nomeMinusculo = string.lower(part.Name)
                     local achouNome = false
                     for _, palavra in ipairs(nomesAgua) do
@@ -829,7 +828,6 @@ elseif alienName == "Aquatico" then
                         break
                     end
                     
-                    -- Pela cor da parte
                     local r, g, b = part.Color.R, part.Color.G, part.Color.B
                     local distAzul = math.sqrt((r - azulPuro.R)^2 + (g - azulPuro.G)^2 + (b - azulPuro.B)^2)
                     local distCiano = math.sqrt((r - cianoPuro.R)^2 + (g - cianoPuro.G)^2 + (b - cianoPuro.B)^2)
@@ -841,11 +839,10 @@ elseif alienName == "Aquatico" then
                 end
             end
             
-            -- Aplicação dos efeitos de velocidade/pulo e reset do timer
             if naAgua then
                 hum.WalkSpeed = 100
                 hum.JumpPower = 110
-                timerForaDaAgua = 0 -- Reseta o timer ao entrar na água
+                timerForaDaAgua = 0 
                 targetJump = 110
             else
                 timerForaDaAgua = timerForaDaAgua + task.wait()
@@ -898,21 +895,16 @@ local function transform(alienName)
     
     pcall(function() playSound(IDS.Sons.Transformar) end)
     
-    -- Grito customizado da Besta vs Outros Aliens
     if alienName == "Besta" then
         shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH")
     else
         shoutInChat(alienName)
     end
     
-    -- Ativa as habilidades do Alien (XLR8, Besta, Aquático, etc)
     applyAlienPowers(alienName)
     
-    -- === SISTEMA DE DESCARREGAMENTO ASSÍNCRONO EM THREAD ===
     task.spawn(function()
-        local timeActive = math.random(120, 360) -- Tempo transformado (entre 2 e 6 minutos)
-        
-        -- Espera o tempo total menos os 5 segundos do aviso de descarregamento
+        local timeActive = math.random(120, 360)
         local tempoEsperaPrincipal = timeActive - 5
         local tempoPassado = 0
         
@@ -921,12 +913,9 @@ local function transform(alienName)
             tempoPassado = tempoPassado + 1
         end
         
-        -- Se ainda estiver transformado com o mesmo alien, começa o show dos 5 segundos piscando
         if isTransformed and currentAlienActive == alienName then
             pcall(function() playSound(IDS.Sons.Descarregando) end)
             
-            -- Pisca entre Verde (Carregado) e Vermelho (Descarregado) a cada 0.25 segundos por 5 segundos
-            -- 5 segundos / 0.25 segundos = 20 trocas de cor
             for i = 1, 20 do
                 if not isTransformed or currentAlienActive ~= alienName then break end
                 if MainPanel.BackgroundColor3 == CORES_PAINEL.Transformado or MainPanel.BackgroundColor3 == CORES_PAINEL.Carregado then
@@ -937,19 +926,16 @@ local function transform(alienName)
                 task.wait(0.25)
             end
             
-            -- Finaliza o tempo e destransforma o player se ele ainda estiver no loop
             if isTransformed and currentAlienActive == alienName then
                 isTransformed = false
                 currentAlienActive = ""
-                resetPlayerPhysics() -- Tira todos os poderes, loops, plataformas e velocidade aqui!
                 
+                resetPlayerPhysics()
                 omnitrixCooldown = true
                 MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
                 
-                -- Tempo de recarga do Omnitrix (480 segundos = 8 minutos)
                 task.wait(480)
                 
-                -- Recarrega o relógio de volta para o estado inicial
                 omnitrixCooldown = false
                 MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
                 pcall(function() playSound(IDS.Sons.Recarregar) end)
@@ -1036,8 +1022,10 @@ lplayer.Chatted:Connect(function(msg)
         MainPanel.BackgroundColor3 = CORES_PAINEL.AutoDestruicao
         
         local TimerLbl = Instance.new("TextLabel", ScreenGui)
-        TimerLbl.Size = UDim2.new(0, 300, 0, 50); TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
-        TimerLbl.TextColor3 = Color3.new(1,0,0); TimerLbl.TextSize = 40; TimerLbl.ZIndex = 6
+        TimerLbl.Size = UDim2.new(0, 300, 0, 50)
+        TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
+        TimerLbl.TextColor3 = Color3.new(1,0,0); TimerLbl.TextSize = 40;
+        TimerLbl.ZIndex = 6
         TimerLbl.BackgroundTransparency = 1
         
         for i = 20, 1, -1 do
