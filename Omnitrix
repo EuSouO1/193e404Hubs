@@ -384,24 +384,69 @@ local function applyAlienPowers(alienName)
         targetSpeed = 40  
         targetJump = 150  
         
-    elseif alienName == "XLR8" then
+elseif alienName == "XLR8" then
         isCustomSpeedLoop = true
         targetJump = 50
         hum.WalkSpeed = 50
+        
+        -- Instancia o BodyVelocity de controle para andar sobre a água de forma lisa
+        local waterFloat = Instance.new("BodyVelocity")
+        waterFloat.Name = "XLR8WaterRun"
+        waterFloat.MaxForce = Vector3.new(0, 0, 0) -- Começa desligado
+        waterFloat.Velocity = Vector3.new(0, 0, 0)
+        
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            waterFloat.Parent = hrp
+        end
+        
         local xxlr8Loop = RunService.Heartbeat:Connect(function()
+            if not char:FindFirstChild("HumanoidRootPart") then return end
+            hrp = char.HumanoidRootPart
+            
+            -- Controle de aceleração progressiva
             if hum.MoveDirection.Magnitude > 0 then
                 if hum.WalkSpeed < 500 then hum.WalkSpeed = hum.WalkSpeed + 2 end
             else
                 if hum.WalkSpeed > 50 then
                     hum.WalkSpeed = 1
-                    if char:FindFirstChild("HumanoidRootPart") then char.HumanoidRootPart.Velocity = Vector3.new(0,0,0) end
+                    hrp.Velocity = Vector3.new(0,0,0)
                     task.wait(0.1)
                     hum.WalkSpeed = 50
                 end
             end
             if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
+            
+            -- === MECÂNICA DE ANDAR SOBRE A ÁGUA (BROOKHAVEN) ===
+            if game.PlaceId == 4924922222 then
+                local alturaY = hrp.Position.Y
+                
+                -- Se estiver rápido (> 75) e pisar na água (Y menor que 0)
+                if hum.WalkSpeed > 75 and hum.MoveDirection.Magnitude > 0 and alturaY < 0 then
+                    -- Ativa a força para cravar o Y no 0 absoluto (superfície)
+                    waterFloat.MaxForce = Vector3.new(0, math.huge, 0)
+                    
+                    -- Calcula uma força suave para estabilizar o boneco exatamente na superfície
+                    local forcaY = (0 - alturaY) * 10
+                    waterFloat.Velocity = Vector3.new(0, forcaY, 0)
+                    
+                -- Desliga a força se subir acima de 0.01, se parar de correr ou se desacelerar
+                elseif alturaY > 0.01 or hum.WalkSpeed <= 75 or hum.MoveDirection.Magnitude == 0 then
+                    if waterFloat.MaxForce.Y ~= 0 then
+                        waterFloat.MaxForce = Vector3.new(0, 0, 0)
+                        waterFloat.Velocity = Vector3.new(0, 0, 0)
+                    end
+                end
+            end
         end)
+        
+        -- Garante que o BodyVelocity seja limpo quando o XLR8 desconfigurar/mudar de alien
         table.insert(activeLoops, xxlr8Loop)
+        table.insert(activeLoops, {Disconnect = function() 
+            if hrp and hrp:FindFirstChild("XLR8WaterRun") then 
+                hrp.XLR8WaterRun:Destroy() 
+            end 
+        end})
         
     elseif alienName == "Bala de Canhão" then
         targetSpeed = 10
