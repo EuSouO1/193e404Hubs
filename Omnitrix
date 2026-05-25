@@ -389,7 +389,7 @@ elseif alienName == "XLR8" then
         targetJump = 50
         hum.WalkSpeed = 50
         
-        -- Variável para guardar a plataforma invisível de água
+        -- Variável para guardar a super plataforma de água
         local waterPlatform = nil
         
         local function removerPlataforma()
@@ -416,18 +416,19 @@ elseif alienName == "XLR8" then
             end
             if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
             
-            -- === MECÂNICA DA PLATAFORMA DE ÁGUA (BROOKHAVEN) ===
+            -- === MECÂNICA DA SUPER PLATAFORMA (BROOKHAVEN) ===
             if game.PlaceId == 4924922222 then
                 local alturaY = hrp.Position.Y
                 
-                -- Se estiver rápido (> 75), correndo e pisar na água (Y menor que 0)
+                -- Se estiver rápido (> 75), correndo e entrar na área da água (Y menor que 0.2)
                 if hum.WalkSpeed > 75 and hum.MoveDirection.Magnitude > 0 and alturaY < 0.2 then
                     
-                    -- Se a plataforma ainda não existir, cria ela
+                    -- Se a plataforma não existir, cria o bloco gigante
                     if not waterPlatform then
                         waterPlatform = Instance.new("Part")
                         waterPlatform.Name = "XLR8WaterPlatform"
-                        waterPlatform.Size = Vector3.new(100, 0.001, 100)
+                        -- Tamanho 100 no Y para criar a base que sobe do void
+                        waterPlatform.Size = Vector3.new(100, 100, 100)
                         waterPlatform.Transparency = 1 -- Totalmente invisível
                         waterPlatform.Anchored = true
                         waterPlatform.CanCollide = true
@@ -435,18 +436,17 @@ elseif alienName == "XLR8" then
                         waterPlatform.Parent = workspace
                     end
                     
-                    -- Atualiza a posição da plataforma seguindo o X e Z do player, travada no Y correto
-                    -- Colocamos -0.5 para alinhar perfeitamente com a sola dos pés do personagem
-                    waterPlatform.Position = Vector3.new(hrp.Position.X, -0.5, hrp.Position.Z)
+                    -- Posiciona o centro em Y = -50 (o topo do bloco fica exatamente em Y = 0)
+                    waterPlatform.Position = Vector3.new(hrp.Position.X, -50, hrp.Position.Z)
                     
-                -- Se o player parar, desacelerar ou pular muito acima da água, deleta a plataforma
+                -- Se o player pular alto para fora da água, parar ou desacelerar, desativa
                 elseif alturaY > 0.5 or hum.WalkSpeed <= 75 or hum.MoveDirection.Magnitude == 0 then
                     removerPlataforma()
                 end
             end
         end)
         
-        -- Garante a limpeza completa quando o XLR8 desconfigurar / mudar de alien
+        -- Garante a limpeza completa quando mudar de alien ou resetar
         table.insert(activeLoops, xxlr8Loop)
         table.insert(activeLoops, {Disconnect = function() 
             removerPlataforma()
