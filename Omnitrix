@@ -530,7 +530,7 @@ local function applyAlienPowers(alienName)
 
     elseif alienName == "Insectoide" then
         isCustomSpeedLoop = true
-        targetSpeed = 35
+        targetSpeed = 18
         targetJump = 30
         workspace.Gravity = originalGravity / 1.5
         
