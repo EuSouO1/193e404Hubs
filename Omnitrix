@@ -27,7 +27,7 @@ local IDS = {
         [5] = {Nome = "Ultra T", Emoji = "🧬"},
         [6] = {Nome = "Diamante", Emoji = "💎"},
         [7] = {Nome = "Fantasmatico", Emoji = "👻"},
-        [8] = {Nome = "Insectoide", Emoji = "🪰"},
+        [8] = {Nome = "Insectoide", Emoji = "🦋"},
         [9] = {Nome = "Massa Cinzenta", Emoji = "🧠"},
         [10] = {Nome = "Besta", Emoji = "🐕"},
         [11] = {Nome = "Aquatico", Emoji = "🦈"}
@@ -218,16 +218,32 @@ local function resetPlayerPhysics()
     end
 end
 
--- === PULO INFINITO ===
-local function enableInfiniteJump(speed, jPower)
+-- === PULO INFINITO E VOO ULTRA RÁPIDO (5X MAIS RÁPIDO) ===
+local function enableInfiniteJump(baseSpeed, jPower)
     local char = lplayer.Character
     local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    
+    local flySpeed = baseSpeed * 5
+    
     local jumpConn = UserInputService.JumpRequest:Connect(function()
         if char and hum and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.Velocity = Vector3.new(char.HumanoidRootPart.Velocity.X, jPower * 1.5, char.HumanoidRootPart.Velocity.Z)
+            -- Quando voa, a velocidade é multiplicada por 5
+            hum.WalkSpeed = flySpeed
         end
     end)
     table.insert(activeLoops, jumpConn)
+    
+    -- Loop para resetar a velocidade para a base quando o player tocar o chão
+    local landCheck = RunService.Heartbeat:Connect(function()
+        if hum.FloorMaterial ~= Enum.Material.Air then
+            if hum.WalkSpeed ~= baseSpeed then
+                hum.WalkSpeed = baseSpeed
+            end
+        end
+    end)
+    table.insert(activeLoops, landCheck)
 end
 
 -- === APLICAR PODERES DOS ALIENS ===
@@ -241,7 +257,7 @@ local function applyAlienPowers(alienName)
     -- Definindo valores base padrão do Alien selecionado
     local targetSpeed = 16
     local targetJump = 50
-    local isCustomSpeedLoop = false -- Controla se o alien tem loop próprio de velocidade (XLR8 e Aquático)
+    local isCustomSpeedLoop = false -- Controla se o alien tem loop próprio de velocidade (XLR8, Aquático, Fantasmático e Insectóide)
     
     if alienName == "Chama" then
         targetSpeed = 20
@@ -249,8 +265,8 @@ local function applyAlienPowers(alienName)
         workspace.Gravity = originalGravity / 3
         
     elseif alienName == "Quatro Braços" then
-        targetSpeed = 32
-        targetJump = 100
+        targetSpeed = 40  -- Aumentado conforme pedido
+        targetJump = 150  -- Aumentado conforme pedido
         
     elseif alienName == "XLR8" then
         isCustomSpeedLoop = true
@@ -303,12 +319,14 @@ local function applyAlienPowers(alienName)
         targetJump = 70
         
     elseif alienName == "Fantasmatico" then
+        isCustomSpeedLoop = true
         targetSpeed = 26
         targetJump = 10 
         workspace.Gravity = originalGravity / 2
         enableInfiniteJump(targetSpeed, 10)
         
     elseif alienName == "Insectoide" then
+        isCustomSpeedLoop = true
         targetSpeed = 20
         targetJump = 10 
         workspace.Gravity = originalGravity / 2.5
@@ -347,7 +365,6 @@ local function applyAlienPowers(alienName)
         UIGridLayout.StartCorner = Enum.StartCorner.TopLeft
         UIGridLayout.Position = UDim2.new(0.05, 0, 0.25, 0)
         
-        -- Configuração dos botões da calculadora
         local botoes = {
             "7", "8", "9", "/",
             "4", "5", "6", "*",
@@ -364,7 +381,6 @@ local function applyAlienPowers(alienName)
             Btn.TextColor3 = Color3.new(1, 1, 1)
             Btn.ZIndex = 7
             
-            -- Estilização de cores baseada na função do botão
             if caractere == "C" then
                 Btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
             elseif caractere == "=" then
@@ -383,13 +399,12 @@ local function applyAlienPowers(alienName)
                     Display.Text = "0"
                 elseif caractere == "=" then
                     if expressao ~= "" then
-                        -- Usa loadstring de forma simples e segura para calcular a string matemática
                         local func, err = loadstring("return " .. expressao)
                         if func then
                             local sucesso, resultado = pcall(func)
                             if sucesso then
                                 Display.Text = tostring(resultado)
-                                expressao = tostring(resultado) -- Permite continuar calculando a partir do resultado
+                                expressao = tostring(resultado)
                             else
                                 Display.Text = "Erro"
                                 expressao = ""
@@ -400,7 +415,6 @@ local function applyAlienPowers(alienName)
                         end
                     end
                 else
-                    -- Se a tela estiver mostrando "0" ou "Erro", limpa para colocar o novo número
                     if Display.Text == "0" or Display.Text == "Erro" then
                         if tonumber(caractere) then expressao = "" end
                     end
@@ -432,30 +446,35 @@ local function applyAlienPowers(alienName)
                 CC.Brightness = -0.7 
             end
         end)
-        
         table.insert(activeLoops, {Disconnect = function() task.cancel(visionLoop); if CC then CC:Destroy() end end})
         
-        local espLoop = RunService.Heartbeat:Connect(function()
-            if not char:FindFirstChild("HumanoidRootPart") then return end
-            for _, p in pairs(workspace:GetDescendants()) do
-                if p:IsA("Humanoid") and p.Parent ~= char and p.Parent:FindFirstChild("HumanoidRootPart") then
-                    local targetHRP = p.Parent.HumanoidRootPart
-                    local dist = (char.HumanoidRootPart.Position - targetHRP.Position).Magnitude
-                    if dist <= 100 then
-                        if not p.Parent:FindFirstChild("BestaESP") then
-                            local hl = Instance.new("Highlight", p.Parent)
-                            hl.Name = "BestaESP"
-                            hl.FillColor = Color3.new(1, 0, 0)
-                            hl.OutlineColor = Color3.new(1, 0, 0)
-                            hl.FillTransparency = 0.2
+        -- === OTIMIZAÇÃO: ESP EM THREAD SEPARADA COM 1 SEGUNDO DE ESPERA ===
+        local bestaESPLoopActive = true
+        local bestaESPThread = task.spawn(function()
+            while bestaESPLoopActive do
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    for _, p in pairs(workspace:GetDescendants()) do
+                        if p:IsA("Humanoid") and p.Parent ~= char and p.Parent:FindFirstChild("HumanoidRootPart") then
+                            local targetHRP = p.Parent.HumanoidRootPart
+                            local dist = (char.HumanoidRootPart.Position - targetHRP.Position).Magnitude
+                            if dist <= 100 then
+                                if not p.Parent:FindFirstChild("BestaESP") then
+                                    local hl = Instance.new("Highlight", p.Parent)
+                                    hl.Name = "BestaESP"
+                                    hl.FillColor = Color3.new(1, 0, 0)
+                                    hl.OutlineColor = Color3.new(1, 0, 0)
+                                    hl.FillTransparency = 0.2
+                                end
+                            else
+                                if p.Parent:FindFirstChild("BestaESP") then p.Parent.BestaESP:Destroy() end
+                            end
                         end
-                    else
-                        if p.Parent:FindFirstChild("BestaESP") then p.Parent.BestaESP:Destroy() end
                     end
                 end
+                task.wait(1) -- Verifica a cada 1 segundo (Adeus Lag!)
             end
         end)
-        table.insert(activeLoops, espLoop)
+        table.insert(activeLoops, {Disconnect = function() bestaESPLoopActive = false; task.cancel(bestaESPThread) end})
         
     elseif alienName == "Aquatico" then
         isCustomSpeedLoop = true
@@ -517,7 +536,6 @@ local function transform(alienName)
     
     pcall(function() playSound(IDS.Sons.Transformar) end)
     
-    -- Se for o Besta ele ruge no chat, se for outro alien ele fala o nome normal
     if alienName == "Besta" then
         shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH")
     else
