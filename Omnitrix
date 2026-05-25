@@ -734,7 +734,7 @@ local function applyAlienPowers(alienName)
                 end
             end
             if naAgua then
-                hum.WalkSpeed = 75; hum.JumpPower = 55; timerForaDaAgua = 0
+                hum.WalkSpeed = 100; hum.JumpPower = 110; timerForaDaAgua = 0
             else
                 timerForaDaAgua = timerForaDaAgua + task.wait()
                 if timerForaDaAgua >= 120 then
