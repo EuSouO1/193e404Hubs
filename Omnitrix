@@ -34,11 +34,13 @@ local IDS = {
     }
 }
 
--- === CONFIGURAÇÃO DE CORES DO FRAME ===
+-- === CONFIGURAÇÃO DE CORES DO FRAME (ATUALIZADO!) ===
 local CORES_PAINEL = {
-    Carregado = Color3.fromRGB(0, 180, 0),     
-    Transformado = Color3.fromRGB(200, 200, 200), 
-    Descarregaged = Color3.fromRGB(180, 0, 0)    
+    Carregado = Color3.fromRGB(0, 180, 0),        -- Verde
+    Transformado = Color3.fromRGB(200, 200, 200),    -- Cinza Claro / Branco
+    Descarregaged = Color3.fromRGB(180, 0, 0),       -- Vermelho
+    AutoDestruicao = Color3.fromRGB(255, 100, 0),    -- Laranja (Novo!)
+    DnaDetec = Color3.fromRGB(255, 215, 0)          -- Amarelo para uso futuro (Novo!)
 }
 
 -- === VARIÁVEIS DE CONTROLE ===
@@ -332,7 +334,7 @@ local function applyAlienPowers(alienName)
         targetSpeed = 12
         targetJump = 55
         
-        -- === CALCULADORA AJUSTADA ===
+        -- === CALCULADORA ===
         local CalcFrame = Instance.new("Frame")
         CalcFrame.Name = "RealCalcFrame"
         CalcFrame.Size = UDim2.new(0, 200, 0, 260)
@@ -623,7 +625,7 @@ lplayer.CharacterAdded:Connect(function(newChar)
     resetPlayerPhysics()
 end)
 
--- === AUTO-DESTRUIÇÃO (SISTEMA DE LANÇAMENTO RANDOM LINEAR DE 500 REAIS) ===
+-- === AUTO-DESTRUIÇÃO (COM A COR LARANJA APLICADA) ===
 lplayer.Chatted:Connect(function(msg)
     if string.lower(msg) == "ativar modo de auto-destruição" then
         if omnitrixCooldown then return end
@@ -632,7 +634,9 @@ lplayer.Chatted:Connect(function(msg)
         SelectionPanel.Visible = false
         OmnitrixBtn.Visible = true
         omnitrixCooldown = true
-        MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
+        
+        -- MUDANÇA: O painel muda instantaneamente para Laranja!
+        MainPanel.BackgroundColor3 = CORES_PAINEL.AutoDestruicao
         
         local TimerLbl = Instance.new("TextLabel", ScreenGui)
         TimerLbl.Size = UDim2.new(0, 300, 0, 50); TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
@@ -652,26 +656,22 @@ lplayer.Chatted:Connect(function(msg)
         local char = lplayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
-            -- Gera um vetor de direção aleatório tridimensional (X, Y, Z) e normaliza
             local randomDirection = Vector3.new(
                 math.random(-100, 100),
-                math.random(10, 100), -- Um pouco pra cima pra descolar do chão
+                math.random(10, 100), 
                 math.random(-100, 100)
             ).Unit
             
-            -- Cria a força usando as restrições físicas atuais (LinearVelocity)
             local att = Instance.new("Attachment", hrp)
             
             local linVel = Instance.new("LinearVelocity")
             linVel.Attachment0 = att
-            linVel.MaxForce = math.huge -- Força infinita para garantir o empurrão instantâneo
-            linVel.VectorVelocity = randomDirection * 500 -- Velocidade fixa de 500 na direção aleatória
+            linVel.MaxForce = math.huge 
+            linVel.VectorVelocity = randomDirection * 500 
             linVel.Parent = hrp
             
-            -- Mantém empurrando exatamente pela duração solicitada (0.1 segundos)
             task.wait(0.1)
             
-            -- Limpa os objetos físicos para o player voltar a cair normalmente com a gravidade
             linVel:Destroy()
             att:Destroy()
         end
