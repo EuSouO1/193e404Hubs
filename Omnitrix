@@ -27,7 +27,7 @@ local IDS = {
         [5] = {Nome = "Ultra T", Emoji = "🧬"},
         [6] = {Nome = "Diamante", Emoji = "💎"},
         [7] = {Nome = "Fantasmatico", Emoji = "👻"},
-        [8] = {Nome = "Insectoide", Emoji = "🦋"},
+        [8] = {Nome = "Insectoide", Emoji = "🦋"}, -- Emoji alterado para Borboleta devido a bugs do Roblox
         [9] = {Nome = "Massa Cinzenta", Emoji = "🧠"},
         [10] = {Nome = "Besta", Emoji = "🐕"},
         [11] = {Nome = "Aquatico", Emoji = "🦈"}
@@ -229,13 +229,11 @@ local function enableInfiniteJump(baseSpeed, jPower)
     local jumpConn = UserInputService.JumpRequest:Connect(function()
         if char and hum and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.Velocity = Vector3.new(char.HumanoidRootPart.Velocity.X, jPower * 1.5, char.HumanoidRootPart.Velocity.Z)
-            -- Quando voa, a velocidade é multiplicada por 5
             hum.WalkSpeed = flySpeed
         end
     end)
     table.insert(activeLoops, jumpConn)
     
-    -- Loop para resetar a velocidade para a base quando o player tocar o chão
     local landCheck = RunService.Heartbeat:Connect(function()
         if hum.FloorMaterial ~= Enum.Material.Air then
             if hum.WalkSpeed ~= baseSpeed then
@@ -254,10 +252,9 @@ local function applyAlienPowers(alienName)
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
     
-    -- Definindo valores base padrão do Alien selecionado
     local targetSpeed = 16
     local targetJump = 50
-    local isCustomSpeedLoop = false -- Controla se o alien tem loop próprio de velocidade (XLR8, Aquático, Fantasmático e Insectóide)
+    local isCustomSpeedLoop = false
     
     if alienName == "Chama" then
         targetSpeed = 20
@@ -265,8 +262,8 @@ local function applyAlienPowers(alienName)
         workspace.Gravity = originalGravity / 3
         
     elseif alienName == "Quatro Braços" then
-        targetSpeed = 40  -- Aumentado conforme pedido
-        targetJump = 150  -- Aumentado conforme pedido
+        targetSpeed = 40  
+        targetJump = 150  
         
     elseif alienName == "XLR8" then
         isCustomSpeedLoop = true
@@ -336,7 +333,7 @@ local function applyAlienPowers(alienName)
         targetSpeed = 12
         targetJump = 55
         
-        -- === INTERFACE DA CALCULADORA REAL ===
+        -- === INTERFACE DA CALCULADORA REAL (AJUSTADA E TEXTO GRANDE) ===
         local CalcFrame = Instance.new("Frame")
         CalcFrame.Name = "RealCalcFrame"
         CalcFrame.Size = UDim2.new(0, 200, 0, 260)
@@ -355,7 +352,7 @@ local function applyAlienPowers(alienName)
         Display.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
         Display.Text = "0"
         Display.TextColor3 = Color3.new(1, 1, 1)
-        Display.TextSize = 20
+        Display.TextScaled = true -- BUFF: Faz o texto se ajustar ao tamanho total do painel de exibição
         Display.TextXAlignment = Enum.TextXAlignment.Right
         Display.ZIndex = 7
         
@@ -448,7 +445,6 @@ local function applyAlienPowers(alienName)
         end)
         table.insert(activeLoops, {Disconnect = function() task.cancel(visionLoop); if CC then CC:Destroy() end end})
         
-        -- === OTIMIZAÇÃO: ESP EM THREAD SEPARADA COM 1 SEGUNDO DE ESPERA ===
         local bestaESPLoopActive = true
         local bestaESPThread = task.spawn(function()
             while bestaESPLoopActive do
@@ -471,7 +467,7 @@ local function applyAlienPowers(alienName)
                         end
                     end
                 end
-                task.wait(1) -- Verifica a cada 1 segundo (Adeus Lag!)
+                task.wait(1) 
             end
         end)
         table.insert(activeLoops, {Disconnect = function() bestaESPLoopActive = false; task.cancel(bestaESPThread) end})
@@ -505,7 +501,6 @@ local function applyAlienPowers(alienName)
         table.insert(activeLoops, aquaticoLoop)
     end
     
-    -- === LOOP PROTETOR / ATUALIZADOR DE ATRIBUTOS DO ALIEN ===
     if not isCustomSpeedLoop then
         local attributeProtector = RunService.Heartbeat:Connect(function()
             if hum and hum.Parent then
@@ -658,8 +653,10 @@ lplayer.Chatted:Connect(function(msg)
         
         local hrp = lplayer.Character:FindFirstChild("HumanoidRootPart")
         if hrp then
-            hrp.Velocity = Vector3.new(math.random(-500, 500), 8000, math.random(-500, 500))
-            hrp.RotVelocity = Vector3.new(500, 500, 500)
+            -- === MUITO NERFADO ===
+            -- Velocidade reduzida de 8000 para 60 de pulo e rotação suave para não quebrar o boneco
+            hrp.Velocity = Vector3.new(math.random(-10, 10), 60, math.random(-10, 10))
+            hrp.RotVelocity = Vector3.new(10, 10, 10)
         end
     end
 end)
