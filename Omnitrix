@@ -194,7 +194,7 @@ local function shoutInChat(text)
     end
 end
 
--- === RESTAURAR FÍSICA AO NORMAL ===
+-- === RESTAURAR FÍSICA AO NORMAL (SEGURANÇA CONTRA VOID ADICIONADA) ===
 local function resetPlayerPhysics()
     for _, loop in pairs(activeLoops) do pcall(function() loop:Disconnect() end) end
     activeLoops = {}
@@ -202,19 +202,24 @@ local function resetPlayerPhysics()
     workspace.Gravity = originalGravity
     local char = lplayer.Character
     if char then
-        if char:FindFirstChildOfClass("Humanoid") then
-            local hum = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        
+        -- SEGURANÇA MÁXIMA: Se o player descarregar enquanto estiver invisível embaixo da terra, joga ele para cima imediatamente!
+        if hrp and hrp:FindFirstChild("InvisAntiVoid") then
+            hrp.InvisAntiVoid:Destroy()
+            hrp.CFrame = hrp.CFrame * CFrame.new(0, 22, 0) -- Joga um pouco mais alto para garantir que saia do chão
+        end
+        
+        if hum then
             hum.WalkSpeed = 16
             hum.JumpPower = 50
             hum.UseJumpPower = true
-            hum.CameraOffset = Vector3.new(0, 0, 0) -- Reseta offset da câmera
+            hum.CameraOffset = Vector3.new(0, 0, 0) -- Reseta o deslocamento da câmera
         end
+        
         for _, part in pairs(char:GetChildren()) do
             if part:IsA("BasePart") then part.CanCollide = true end
-        end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp and hrp:FindFirstChild("InvisAntiVoid") then
-            hrp.InvisAntiVoid:Destroy()
         end
     end
     
@@ -357,7 +362,7 @@ local function applyAlienPowers(alienName)
         end)
         table.insert(activeLoops, noclipLoop)
         
-        -- === SISTEMA DE INVISIBILIDADE COM CONTROLE ANTI-VOID E CÂMERA DINÂMICA ===
+        -- === SISTEMA DE INVISIBILIDADE ===
         local InvisToggle = Instance.new("TextButton", ScreenGui)
         InvisToggle.Size = UDim2.new(0, 140, 0, 40)
         InvisToggle.Position = UDim2.new(0.85, -20, 0.35, 0)
@@ -365,7 +370,7 @@ local function applyAlienPowers(alienName)
         InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150)
         InvisToggle.TextColor3 = Color3.new(1, 1, 1)
         InvisToggle.TextSize = 16
-        InvisToggle.TextScaled = true -- CORRIGIDO: Texto nunca mais sai do botão!
+        InvisToggle.TextScaled = true 
         InvisToggle.ZIndex = 6
         Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6)
         
@@ -378,58 +383,47 @@ local function applyAlienPowers(alienName)
             if not char or not hum or not hrp then return end
             
             if not isInvis then
-                -- Verifica se o player está firme no chão / em cima de alguma coisa
                 if hum.FloorMaterial ~= Enum.Material.Air then
                     isInvis = true
                     InvisToggle.Text = "Modo Invisivel: ON"
-                    targetSpeed = 100 -- Sobe a velocidade para 100 quando invisível
+                    targetSpeed = 100 
                     
-                    -- Calcula a altura alvo cravada (-20 studs de onde ele estava)
                     targetYHeight = hrp.Position.Y - 20
-                    
-                    -- Teleporta o player para baixo instantaneamente
                     hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0)
                     
-                    -- Adiciona um BodyVelocity bruto para forçar a trava no eixo Y (Impedindo queda no Void)
                     local bv = Instance.new("BodyVelocity")
                     bv.Name = "InvisAntiVoid"
-                    bv.MaxForce = Vector3.new(0, math.huge, 0) -- Trava absoluta apenas no eixo Y
+                    bv.MaxForce = Vector3.new(0, math.huge, 0) 
                     bv.Velocity = Vector3.new(0, 0, 0)
                     bv.Parent = hrp
                     
-                    -- Loop dinâmico para cravar a posição Y exata e deslocar a câmera dinamicamente +20 studs acima seguindo o player
                     cameraOffsetLoop = RunService.RenderStepped:Connect(function()
                         if hrp and hum then
-                            -- Força o player a ficar cravado nos -20 studs do eixo Y calculado
                             hrp.Position = Vector3.new(hrp.Position.X, targetYHeight, hrp.Position.Z)
-                            -- Desloca a câmera 20 studs para cima relativo ao corpo, fazendo ela acompanhar o movimento perfeitamente!
                             hum.CameraOffset = Vector3.new(0, 20, 0)
                         end
                     end)
                 end
             else
-                -- Desliga o Modo Invisível
                 isInvis = false
                 InvisToggle.Text = "Modo Invisivel: OFF"
-                targetSpeed = 26 -- Volta para a velocidade normal do fantasmático
+                targetSpeed = 26 
                 
                 if cameraOffsetLoop then
                     cameraOffsetLoop:Disconnect()
                     cameraOffsetLoop = nil
                 end
                 
-                -- Limpa o BodyVelocity para soltar a física do eixo Y
                 if hrp:FindFirstChild("InvisAntiVoid") then
                     hrp.InvisAntiVoid:Destroy()
                 end
                 
-                -- Reseta o offset da câmera e joga o player de volta para cima (+20 studs)
                 hum.CameraOffset = Vector3.new(0, 0, 0)
                 hrp.CFrame = hrp.CFrame * CFrame.new(0, 20, 0)
             end
         end)
         
-        -- Limpeza automática ao descarregar o Omnitrix ou trocar de alien
+        -- Limpeza em caso de troca manual de alien
         table.insert(activeLoops, {Disconnect = function() 
             if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end
             if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end
@@ -437,7 +431,6 @@ local function applyAlienPowers(alienName)
             InvisToggle:Destroy() 
         end})
         
-        -- Loop protetor de velocidade customizado do Fantasmático
         local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function()
             if hum and hum.Parent then
                 if hum.WalkSpeed ~= targetSpeed then hum.WalkSpeed = targetSpeed end
@@ -451,7 +444,6 @@ local function applyAlienPowers(alienName)
         targetSpeed = 12
         targetJump = 55
         
-        -- === INTERFACE DA CALCULADORA COMPLETAMENTE ORGANIZADA ===
         local CalcFrame = Instance.new("Frame")
         CalcFrame.Name = "RealCalcFrame"
         CalcFrame.Size = UDim2.new(0, 220, 0, 280)
@@ -786,7 +778,7 @@ lplayer.Chatted:Connect(function(msg)
             local linVel = Instance.new("LinearVelocity")
             linVel.Attachment0 = att
             linVel.MaxForce = math.huge 
-            linVel.VectorVelocity = randomDirection * 100
+            linVel.VectorVelocity = randomDirection * 250
             linVel.Parent = hrp
             
             task.wait(0.1)
