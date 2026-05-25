@@ -736,65 +736,70 @@ elseif alienName == "Aquatico" then
         -- Lista de palavras-chave padrão para identificar água pelo nome
         local nomesAgua = {"water", "ocean", "sea", "agua", "rio", "lake"}
         
-        -- Se for a Place ID específica, adiciona "baseplate" na lista de detecção
-        if game.PlaceId == 4924922222 then
-            table.insert(nomesAgua, "baseplate")
-        end
-        
         local aquaticoLoop = RunService.Heartbeat:Connect(function()
             if not char:FindFirstChild("HumanoidRootPart") then return end
+            local hrp = char.HumanoidRootPart
             local naAgua = false
             
-            -- Detecta partes encostando no HumanoidRootPart usando o filtro configurado
-            local parts = workspace:GetPartsInPart(char.HumanoidRootPart, overlapParams)
-            for _, part in pairs(parts) do
-                -- Ignora se a parte for de outro jogador ou NPC (tiver um Humanoid no modelo)
-                if part.Parent:FindFirstChildOfClass("Humanoid") or (part.Parent.Parent and part.Parent.Parent:FindFirstChildOfClass("Humanoid")) then
-                    continue
-                end
-                
-                -- 1ª VERIFICAÇÃO: Pelo nome da parte (Filtro de strings parecidas)
-                local nomeMinusculo = string.lower(part.Name)
-                local achouNome = false
-                for _, palavra in ipairs(nomesAgua) do
-                    if string.find(nomeMinusculo, palavra) then
-                        achouNome = true
-                        break
-                    end
-                end
-                
-                if achouNome then
+            -- 1ª VERIFICAÇÃO: Checagem por Altura (Apenas na Place ID específica)
+            if game.PlaceId == 4924922222 then
+                local alturaY = hrp.Position.Y
+                if alturaY >= -6 and alturaY <= -3 then
                     naAgua = true
-                    break
-                end
-                
-                -- 2ª VERIFICAÇÃO: Pela cor da parte (Caso o nome não seja detectado)
-                local r, g, b = part.Color.R, part.Color.G, part.Color.B
-                local distAzul = math.sqrt((r - azulPuro.R)^2 + (g - azulPuro.G)^2 + (b - azulPuro.B)^2)
-                local distCiano = math.sqrt((r - cianoPuro.R)^2 + (g - cianoPuro.G)^2 + (b - cianoPuro.B)^2)
-                
-                if (distAzul < 0.85 or distCiano < 0.85) and (b > r or g > r) then
-                    naAgua = true
-                    break
                 end
             end
             
+            -- 2ª VERIFICAÇÃO: Pelas partes do mapa (Caso não tenha detectado pela altura)
+            if not naAgua then
+                local parts = workspace:GetPartsInPart(hrp, overlapParams)
+                for _, part in pairs(parts) do
+                    -- Ignora se a parte for de outro jogador ou NPC
+                    if part.Parent:FindFirstChildOfClass("Humanoid") or (part.Parent.Parent and part.Parent.Parent:FindFirstChildOfClass("Humanoid")) then
+                        continue
+                    end
+                    
+                    -- Pelo nome da parte
+                    local nomeMinusculo = string.lower(part.Name)
+                    local achouNome = false
+                    for _, palavra in ipairs(nomesAgua) do
+                        if string.find(nomeMinusculo, palavra) then
+                            achouNome = true
+                            break
+                        end
+                    end
+                    
+                    if achouNome then
+                        naAgua = true
+                        break
+                    end
+                    
+                    -- Pela cor da parte
+                    local r, g, b = part.Color.R, part.Color.G, part.Color.B
+                    local distAzul = math.sqrt((r - azulPuro.R)^2 + (g - azulPuro.G)^2 + (b - azulPuro.B)^2)
+                    local distCiano = math.sqrt((r - cianoPuro.R)^2 + (g - cianoPuro.G)^2 + (b - cianoPuro.B)^2)
+                    
+                    if (distAzul < 0.85 or distCiano < 0.85) and (b > r or g > r) then
+                        naAgua = true
+                        break
+                    end
+                end
+            end
+            
+            -- Aplicação dos efeitos de velocidade/pulo e reset do timer
             if naAgua then
-                -- Valores de velocidade e pulo na água
                 hum.WalkSpeed = 100
                 hum.JumpPower = 110
-                timerForaDaAgua = 0 -- Reseta o timer para quando ele sair começar do zero!
-                targetJump = 110 -- Atualiza o targetJump para não resetar no final do frame
+                timerForaDaAgua = 0 -- Reseta o timer ao entrar na água
+                targetJump = 110
             else
                 timerForaDaAgua = timerForaDaAgua + task.wait()
-                targetJump = 55 -- Volta o pulo padrão fora d'água
+                targetJump = 55
                 
                 if timerForaDaAgua >= 120 then
                     hum.WalkSpeed = 0
                     hum.JumpPower = 0
                     targetJump = 0
                 else
-                    -- Velocidade começa reiniciada do máximo (15) e vai diminuindo com o tempo fora d'água
                     hum.WalkSpeed = math.max(0, 15 - (timerForaDaAgua * 0.12))
                 end
             end
