@@ -27,7 +27,7 @@ local IDS = {
         [5] = {Nome = "Ultra T", Emoji = "🧬"},
         [6] = {Nome = "Diamante", Emoji = "💎"},
         [7] = {Nome = "Fantasmatico", Emoji = "👻"},
-        [8] = {Nome = "Insectoide", Emoji = "🦋"}, -- Emoji alterado para Borboleta devido a bugs do Roblox
+        [8] = {Nome = "Insectoide", Emoji = "🦋"}, 
         [9] = {Nome = "Massa Cinzenta", Emoji = "🧠"},
         [10] = {Nome = "Besta", Emoji = "🐕"},
         [11] = {Nome = "Aquatico", Emoji = "🦈"}
@@ -36,9 +36,9 @@ local IDS = {
 
 -- === CONFIGURAÇÃO DE CORES DO FRAME ===
 local CORES_PAINEL = {
-    Carregado = Color3.fromRGB(0, 180, 0),     -- Verde
-    Transformado = Color3.fromRGB(200, 200, 200), -- Cinza Claro / Branco
-    Descarregaged = Color3.fromRGB(180, 0, 0)    -- Vermelho
+    Carregado = Color3.fromRGB(0, 180, 0),     
+    Transformado = Color3.fromRGB(200, 200, 200), 
+    Descarregaged = Color3.fromRGB(180, 0, 0)    
 }
 
 -- === VARIÁVEIS DE CONTROLE ===
@@ -75,7 +75,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
 
--- Main Drag Panel (O painel que muda de cor)
+-- Main Drag Panel
 local MainPanel = Instance.new("Frame", ScreenGui)
 MainPanel.Size = UDim2.new(0, 240, 0, 160)
 MainPanel.Position = UDim2.new(0.5, -120, 0.5, -80)
@@ -87,7 +87,7 @@ MainPanel.ZIndex = 3
 local UICorner = Instance.new("UICorner", MainPanel)
 UICorner.CornerRadius = UDim.new(0, 12)
 
--- Botão do Relógio (Texto/Emoji)
+-- Botão do Relógio
 local OmnitrixBtn = Instance.new("TextButton", MainPanel)
 OmnitrixBtn.Size = UDim2.new(0, 110, 0, 110)
 OmnitrixBtn.Position = UDim2.new(0.5, -55, 0.5, -55)
@@ -105,7 +105,7 @@ SelectionPanel.BackgroundTransparency = 1
 SelectionPanel.Visible = false
 SelectionPanel.ZIndex = 4
 
--- Silhueta do Alien (Texto/Emoji)
+-- Silhueta do Alien
 local SilhouetteImg = Instance.new("TextButton", SelectionPanel)
 SilhouetteImg.Size = UDim2.new(0, 100, 0, 100)
 SilhouetteImg.Position = UDim2.new(0.5, -50, 0.5, -50)
@@ -144,7 +144,7 @@ local CornerPrev = Instance.new("UICorner", PrevBtn)
 CornerPrev.CornerRadius = UDim.new(0, 6)
 
 
--- === SISTEMA DE ARRASTAR O PAINEL (DRAGGABLE) ===
+-- === SISTEMA DE ARRASTAR O PAINEL ===
 local dragging, dragInput, dragStart, startPos
 
 local function update(input)
@@ -206,7 +206,6 @@ local function resetPlayerPhysics()
         hum.UseJumpPower = true
     end
     
-    -- Destrói o ColorCorrection do Besta se ele existir
     if Lighting:FindFirstChild("BestaColorCorrection") then 
         Lighting.BestaColorCorrection:Destroy() 
     end
@@ -269,7 +268,7 @@ local function applyAlienPowers(alienName)
         isCustomSpeedLoop = true
         targetJump = 50
         hum.WalkSpeed = 50
-        local xlr8Loop = RunService.Heartbeat:Connect(function()
+        local xxlr8Loop = RunService.Heartbeat:Connect(function()
             if hum.MoveDirection.Magnitude > 0 then
                 if hum.WalkSpeed < 500 then hum.WalkSpeed = hum.WalkSpeed + 2 end
             else
@@ -282,7 +281,7 @@ local function applyAlienPowers(alienName)
             end
             if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
         end)
-        table.insert(activeLoops, xlr8Loop)
+        table.insert(activeLoops, xxlr8Loop)
         
     elseif alienName == "Bala de Canhão" then
         targetSpeed = 10
@@ -333,7 +332,7 @@ local function applyAlienPowers(alienName)
         targetSpeed = 12
         targetJump = 55
         
-        -- === INTERFACE DA CALCULADORA REAL (AJUSTADA E TEXTO GRANDE) ===
+        -- === CALCULADORA AJUSTADA ===
         local CalcFrame = Instance.new("Frame")
         CalcFrame.Name = "RealCalcFrame"
         CalcFrame.Size = UDim2.new(0, 200, 0, 260)
@@ -352,7 +351,7 @@ local function applyAlienPowers(alienName)
         Display.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
         Display.Text = "0"
         Display.TextColor3 = Color3.new(1, 1, 1)
-        Display.TextScaled = true -- BUFF: Faz o texto se ajustar ao tamanho total do painel de exibição
+        Display.TextScaled = true 
         Display.TextXAlignment = Enum.TextXAlignment.Right
         Display.ZIndex = 7
         
@@ -559,7 +558,7 @@ local function transform(alienName)
     pcall(function() playSound(IDS.Sons.Recarregar) end)
 end
 
--- === MENU DE SELEÇÃO / SPAM DETECT ===
+-- === MENU DE SELEÇÃO ===
 local function updateSilhouette()
     SilhouetteImg.Text = IDS.Silhuetas[currentAlienIndex].Emoji
 end
@@ -616,7 +615,6 @@ SilhouetteImg.MouseButton1Click:Connect(function()
     transform(chosenAlien)
 end)
 
--- === CORREÇÃO DE RESPAWN ===
 lplayer.CharacterAdded:Connect(function(newChar)
     task.wait(1)
     if ScreenGui and ScreenGui.Parent then
@@ -625,7 +623,7 @@ lplayer.CharacterAdded:Connect(function(newChar)
     resetPlayerPhysics()
 end)
 
--- === AUTO-DESTRUIÇÃO ===
+-- === AUTO-DESTRUIÇÃO (SISTEMA DE LANÇAMENTO RANDOM LINEAR DE 500 REAIS) ===
 lplayer.Chatted:Connect(function(msg)
     if string.lower(msg) == "ativar modo de auto-destruição" then
         if omnitrixCooldown then return end
@@ -651,12 +649,31 @@ lplayer.Chatted:Connect(function(msg)
         resetPlayerPhysics()
         ScreenGui:Destroy()
         
-        local hrp = lplayer.Character:FindFirstChild("HumanoidRootPart")
+        local char = lplayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then
-            -- === MUITO NERFADO ===
-            -- Velocidade reduzida de 8000 para 60 de pulo e rotação suave para não quebrar o boneco
-            hrp.Velocity = Vector3.new(math.random(-10, 10), 60, math.random(-10, 10))
-            hrp.RotVelocity = Vector3.new(10, 10, 10)
+            -- Gera um vetor de direção aleatório tridimensional (X, Y, Z) e normaliza
+            local randomDirection = Vector3.new(
+                math.random(-100, 100),
+                math.random(10, 100), -- Um pouco pra cima pra descolar do chão
+                math.random(-100, 100)
+            ).Unit
+            
+            -- Cria a força usando as restrições físicas atuais (LinearVelocity)
+            local att = Instance.new("Attachment", hrp)
+            
+            local linVel = Instance.new("LinearVelocity")
+            linVel.Attachment0 = att
+            linVel.MaxForce = math.huge -- Força infinita para garantir o empurrão instantâneo
+            linVel.VectorVelocity = randomDirection * 500 -- Velocidade fixa de 500 na direção aleatória
+            linVel.Parent = hrp
+            
+            -- Mantém empurrando exatamente pela duração solicitada (0.1 segundos)
+            task.wait(0.1)
+            
+            -- Limpa os objetos físicos para o player voltar a cair normalmente com a gravidade
+            linVel:Destroy()
+            att:Destroy()
         end
     end
 end)
