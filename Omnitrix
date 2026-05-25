@@ -484,98 +484,104 @@ elseif alienName == "XLR8" then
         targetSpeed = 25
         targetJump = 70
         
-    elseif alienName == "Fantasmatico" then
+elseif alienName == "Fantasmatico" then
         isCustomSpeedLoop = true
-        targetSpeed = 26
-        targetJump = 30 
-        workspace.Gravity = originalGravity / 2
-        enableInfiniteJump(targetSpeed, 10)
+        targetSpeed = 26 [cite: 167]
+        targetJump = 30 [cite: 167]
+        workspace.Gravity = originalGravity / 2 [cite: 167]
+        enableInfiniteJump(targetSpeed, 10) [cite: 167]
         
-        local noclipLoop = RunService.Stepped:Connect(function()
-            if char then
-                for _, part in pairs(char:GetChildren()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
-                end
-            end
-        end)
-        table.insert(activeLoops, noclipLoop)
+        local noclipLoop = RunService.Stepped:Connect(function() [cite: 167, 168]
+            if char then [cite: 168]
+                for _, part in pairs(char:GetChildren()) do [cite: 168]
+                    if part:IsA("BasePart") then part.CanCollide = false end [cite: 168]
+                end [cite: 168]
+            end [cite: 168]
+        end) [cite: 168]
+        table.insert(activeLoops, noclipLoop) [cite: 169]
         
-        local InvisToggle = Instance.new("TextButton", ScreenGui)
-        InvisToggle.Size = UDim2.new(0, 140, 0, 40)
-        InvisToggle.Position = UDim2.new(0.85, -20, 0.35, 0)
-        InvisToggle.Text = "Modo Invisivel: OFF"
-        InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150)
-        InvisToggle.TextColor3 = Color3.new(1, 1, 1)
-        InvisToggle.TextSize = 16
-        InvisToggle.TextScaled = true 
-        InvisToggle.ZIndex = 6
-        Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6)
+        local InvisToggle = Instance.new("TextButton", ScreenGui) [cite: 169]
+        InvisToggle.Size = UDim2.new(0, 140, 0, 40) [cite: 169]
+        InvisToggle.Position = UDim2.new(0.85, -20, 0.35, 0) [cite: 169]
+        InvisToggle.Text = "Modo Invisivel: OFF" [cite: 169]
+        InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150) [cite: 169]
+        InvisToggle.TextColor3 = Color3.new(1, 1, 1) [cite: 169]
+        InvisToggle.TextSize = 16 [cite: 169]
+        InvisToggle.TextScaled = true [cite: 170]
+        InvisToggle.ZIndex = 6 [cite: 170]
+        Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6) [cite: 170]
         
-        local isInvis = false
-        local targetYHeight = 0
-        local cameraOffsetLoop = nil
-        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local isInvis = false [cite: 170]
+        local targetYHeight = 0 [cite: 170]
+        local cameraOffsetLoop = nil [cite: 170]
+        local hrp = char:FindFirstChild("HumanoidRootPart") [cite: 170]
         
-        InvisToggle.MouseButton1Click:Connect(function()
-            if not char or not hum or not hrp then return end
+        InvisToggle.MouseButton1Click:Connect(function() [cite: 170, 171]
+            if not char or not hum or not hrp then return end [cite: 171]
             
-            if not isInvis then
-                if hum.FloorMaterial ~= Enum.Material.Air then
-                    isInvis = true
-                    InvisToggle.Text = "Modo Invisivel: ON"
-                    targetSpeed = 100 
+            if not isInvis then [cite: 171]
+                if hum.FloorMaterial ~= Enum.Material.Air then [cite: 171]
+                    isInvis = true [cite: 171]
+                    InvisToggle.Text = "Modo Invisivel: ON" [cite: 171, 172]
+                    targetSpeed = 100 [cite: 172]
                     
-                    targetYHeight = hrp.Position.Y - 20
-                    hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0)
+                    targetYHeight = hrp.Position.Y - 20 [cite: 172]
+                    hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0) [cite: 173]
                     
-                    local bv = Instance.new("BodyVelocity")
-                    bv.Name = "InvisAntiVoid"
-                    bv.MaxForce = Vector3.new(0, math.huge, 0) 
-                    bv.Velocity = Vector3.new(0, 0, 0)
-                    bv.Parent = hrp
+                    local bv = Instance.new("BodyVelocity") [cite: 173]
+                    bv.Name = "InvisAntiVoid" [cite: 173]
+                    bv.MaxForce = Vector3.new(0, math.huge, 0) [cite: 173]
+                    bv.Velocity = Vector3.new(0, 0, 0) [cite: 174]
+                    bv.Parent = hrp [cite: 174]
                     
-                    cameraOffsetLoop = RunService.RenderStepped:Connect(function()
-                        if hrp and hum then
-                            hrp.Position = Vector3.new(hrp.Position.X, targetYHeight, hrp.Position.Z)
-                            hum.CameraOffset = Vector3.new(0, 20, 0)
-                        end
-                    end)
-                end
-            else
-                isInvis = false
-                InvisToggle.Text = "Modo Invisivel: OFF"
-                targetSpeed = 26 
+                    cameraOffsetLoop = RunService.RenderStepped:Connect(function() [cite: 174]
+                        if hrp and hum then [cite: 174, 175]
+                            -- === CONSERTO AQUI: Força o boneco a ficar sempre em pé (X e Z zerados) ===
+                            local _, currentYRotation, _ = hrp.CFrame:ToOrientation()
+                            hrp.CFrame = CFrame.new(hrp.Position.X, targetYHeight, hrp.Position.Z) * CFrame.fromOrientation(0, currentYRotation, 0)
+                            
+                            hum.CameraOffset = Vector3.new(0, 20, 0) [cite: 175]
+                        end [cite: 175, 176]
+                    end) [cite: 176]
+                end [cite: 171]
+            else [cite: 176]
+                isInvis = false [cite: 176]
+                InvisToggle.Text = "Modo Invisivel: OFF" [cite: 176]
+                targetSpeed = 26 [cite: 176, 177]
                 
-                if cameraOffsetLoop then
-                    cameraOffsetLoop:Disconnect()
-                    cameraOffsetLoop = nil
-                end
+                if cameraOffsetLoop then [cite: 177]
+                    cameraOffsetLoop:Disconnect() [cite: 177]
+                    cameraOffsetLoop = nil [cite: 177]
+                end [cite: 177, 178]
                 
-                if hrp:FindFirstChild("InvisAntiVoid") then
-                    hrp.InvisAntiVoid:Destroy()
-                end
+                if hrp:FindFirstChild("InvisAntiVoid") then [cite: 178]
+                    hrp.InvisAntiVoid:Destroy() [cite: 178]
+                end [cite: 178]
                 
-                hum.CameraOffset = Vector3.new(0, 0, 0)
-                hrp.CFrame = hrp.CFrame * CFrame.new(0, 20, 0)
-            end
-        end)
+                hum.CameraOffset = Vector3.new(0, 0, 0) [cite: 179]
+                
+                -- === CONSERTO AQUI TAMBÉM: Garante que ele volta pra superfície retinho ===
+                local _, currentYRotation, _ = hrp.CFrame:ToOrientation()
+                hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 20, hrp.Position.Z) * CFrame.fromOrientation(0, currentYRotation, 0)
+            end [cite: 179]
+        end) [cite: 171]
         
-        table.insert(activeLoops, {Disconnect = function() 
-            if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end
-            if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end
-            if hrp and hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
-            InvisToggle:Destroy() 
-        end})
+        table.insert(activeLoops, {Disconnect = function() [cite: 179]
+            if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end [cite: 179]
+            if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end [cite: 179, 180]
+            if hrp and hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end [cite: 180]
+            InvisToggle:Destroy() [cite: 180]
+        end}) [cite: 179]
         
-        local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function()
-            if hum and hum.Parent then
-                local currentMax = isInvis and 100 or (hum.FloorMaterial == Enum.Material.Air and (targetSpeed * 5) or targetSpeed)
-                if hum.WalkSpeed ~= currentMax then hum.WalkSpeed = currentMax end
-                if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
-                if not hum.UseJumpPower then hum.UseJumpPower = true end
-            end
-        end)
-        table.insert(activeLoops, fantasmaticoSpeedConn)
+        local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function() [cite: 180]
+            if hum and hum.Parent then [cite: 180]
+                local currentMax = isInvis and 100 or (hum.FloorMaterial == Enum.Material.Air and (targetSpeed * 5) or targetSpeed) [cite: 180, 181]
+                if hum.WalkSpeed ~= currentMax then hum.WalkSpeed = currentMax end [cite: 181]
+                if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end [cite: 181]
+                if not hum.UseJumpPower then hum.UseJumpPower = true end [cite: 181]
+            end [cite: 181]
+        end) [cite: 181, 182]
+        table.insert(activeLoops, fantasmaticoSpeedConn) [cite: 182]
 
     elseif alienName == "Insectoide" then
         isCustomSpeedLoop = true
