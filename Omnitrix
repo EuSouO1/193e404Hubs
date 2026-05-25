@@ -39,8 +39,8 @@ local CORES_PAINEL = {
     Carregado = Color3.fromRGB(0, 180, 0),        -- Verde
     Transformado = Color3.fromRGB(200, 200, 200),    -- Cinza Claro / Branco
     Descarregaged = Color3.fromRGB(180, 0, 0),       -- Vermelho
-    AutoDestruicao = Color3.fromRGB(255, 100, 0),    -- Laranja (Novo!)
-    DnaDetec = Color3.fromRGB(255, 215, 0)          -- Amarelo para uso futuro (Novo!)
+    AutoDestruicao = Color3.fromRGB(255, 100, 0),    -- Laranja
+    DnaDetec = Color3.fromRGB(255, 215, 0)          -- Amarelo para uso futuro
 }
 
 -- === VARIÁVEIS DE CONTROLE ===
@@ -321,7 +321,7 @@ local function applyAlienPowers(alienName)
 
     elseif alienName == "Ultra T" then
         targetSpeed = 20
-        targetJump = 5  
+        targetJump = 25  -- CORRIGIDO: Força do pulo alterada para exatamente 25!
         workspace.Gravity = originalGravity / 6
         
     elseif alienName == "Diamante" then
@@ -370,7 +370,6 @@ local function applyAlienPowers(alienName)
         Display.ZIndex = 7
         Instance.new("UICorner", Display).CornerRadius = UDim.new(0, 4)
         
-        -- Container criado especificamente para segurar os botões ordenados pelo UIGridLayout
         local ButtonContainer = Instance.new("Frame", CalcFrame)
         ButtonContainer.Size = UDim2.new(0, 200, 0, 200)
         ButtonContainer.Position = UDim2.new(0, 10, 0, 60)
@@ -443,15 +442,26 @@ local function applyAlienPowers(alienName)
         CC.TintColor = Color3.fromRGB(30, 20, 10) 
         CC.Parent = Lighting
         
+        -- VARIÁVEL DE CONTROLE EXCLUSIVA PARA SEGURAR A VISÃO ATIVA
+        local bestaVisionActive = true
+        
         local visionLoop = task.spawn(function()
-            while true do
+            while bestaVisionActive do
                 task.wait(math.random(4, 8))
+                if not bestaVisionActive then break end
                 CC.Brightness = -0.4 
                 task.wait(0.2)
+                if not bestaVisionActive then break end
                 CC.Brightness = -0.7 
             end
         end)
-        table.insert(activeLoops, {Disconnect = function() task.cancel(visionLoop); if CC then CC:Destroy() end end})
+        
+        -- CORREÇÃO AQUI: Quando o alien muda ou descarrega, a thread para instantaneamente!
+        table.insert(activeLoops, {Disconnect = function() 
+            bestaVisionActive = false 
+            task.cancel(visionLoop) 
+            if CC then CC:Destroy() end 
+        end})
         
         local bestaESPLoopActive = true
         local bestaESPThread = task.spawn(function()
@@ -632,7 +642,7 @@ lplayer.CharacterAdded:Connect(function(newChar)
     resetPlayerPhysics()
 end)
 
--- === AUTO-DESTRUIÇÃO (COM A COR LARANJA E KNOCKBACK EM 100) ===
+-- === AUTO-DESTRUIÇÃO ===
 lplayer.Chatted:Connect(function(msg)
     if string.lower(msg) == "ativar modo de auto-destruição" then
         if omnitrixCooldown then return end
@@ -673,7 +683,7 @@ lplayer.Chatted:Connect(function(msg)
             local linVel = Instance.new("LinearVelocity")
             linVel.Attachment0 = att
             linVel.MaxForce = math.huge 
-            linVel.VectorVelocity = randomDirection * 100 -- REBAIXADO: Força reduzida para exatamente 100
+            linVel.VectorVelocity = randomDirection * 100
             linVel.Parent = hrp
             
             task.wait(0.1)
