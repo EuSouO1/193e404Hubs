@@ -733,8 +733,13 @@ elseif alienName == "Aquatico" then
         local azulPuro = Color3.fromRGB(0, 0, 255)
         local cianoPuro = Color3.fromRGB(0, 255, 255)
         
-        -- Lista de palavras-chave para identificar água pelo nome da parte
+        -- Lista de palavras-chave padrão para identificar água pelo nome
         local nomesAgua = {"water", "ocean", "sea", "agua", "rio", "lake"}
+        
+        -- Se for a Place ID específica, adiciona "baseplate" na lista de detecção
+        if game.PlaceId == 4924922222 then
+            table.insert(nomesAgua, "baseplate")
+        end
         
         local aquaticoLoop = RunService.Heartbeat:Connect(function()
             if not char:FindFirstChild("HumanoidRootPart") then return end
@@ -778,7 +783,7 @@ elseif alienName == "Aquatico" then
                 -- Valores de velocidade e pulo na água
                 hum.WalkSpeed = 100
                 hum.JumpPower = 110
-                timerForaDaAgua = 0
+                timerForaDaAgua = 0 -- Reseta o timer para quando ele sair começar do zero!
                 targetJump = 110 -- Atualiza o targetJump para não resetar no final do frame
             else
                 timerForaDaAgua = timerForaDaAgua + task.wait()
@@ -789,6 +794,7 @@ elseif alienName == "Aquatico" then
                     hum.JumpPower = 0
                     targetJump = 0
                 else
+                    -- Velocidade começa reiniciada do máximo (15) e vai diminuindo com o tempo fora d'água
                     hum.WalkSpeed = math.max(0, 15 - (timerForaDaAgua * 0.12))
                 end
             end
