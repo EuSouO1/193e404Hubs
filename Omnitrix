@@ -719,31 +719,59 @@ local function applyAlienPowers(alienName)
         end)
         table.insert(activeLoops, {Disconnect = function() bestaESPLoopActive = false; task.cancel(bestaESPThread) end})
         
-    elseif alienName == "Aquatico" then
+elseif alienName == "Aquatico" then
         isCustomSpeedLoop = true
         targetJump = 55
         local timerForaDaAgua = 0
+        
+        -- Configuração para ignorar o próprio personagem na detecção de colisão
+        local overlapParams = OverlapParams.new()
+        overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+        overlapParams.FilterDescendantsInstances = {char}
+        
         local aquaticoLoop = RunService.Heartbeat:Connect(function()
             if not char:FindFirstChild("HumanoidRootPart") then return end
             local naAgua = false
-            local parts = workspace:GetPartsInPart(char.HumanoidRootPart)
+            
+            -- Detecta partes encostando no HumanoidRootPart usando o filtro configurado
+            local parts = workspace:GetPartsInPart(char.HumanoidRootPart, overlapParams)
             for _, part in pairs(parts) do
-                if part.Color.B > 0.6 and part.Color.G < 0.5 and part.Color.R < 0.5 then
+                -- Ignora se a parte for de outro jogador ou NPC (tiver um Humanoid no modelo)
+                if part.Parent:FindFirstChildOfClass("Humanoid") or (part.Parent.Parent and part.Parent.Parent:FindFirstChildOfClass("Humanoid")) then
+                    continue
+                end
+                
+                -- Converte a cor da parte para HSV para identificar tons de azul com precisão
+                local h, s, v = part.Color:ToHSV()
+                -- No mapeamento HSV, o azul puro fica em torno de 0.66 (240°). Esse range cobre do ciano ao azul escuro.
+                if h >= (170/360) and h <= (260/360) and s > 0.4 and v > 0.2 then
                     naAgua = true
                     break
                 end
             end
+            
             if naAgua then
-                hum.WalkSpeed = 100; hum.JumpPower = 110; timerForaDaAgua = 0
+                -- Valores tunados que você mandou
+                hum.WalkSpeed = 100
+                hum.JumpPower = 110
+                timerForaDaAgua = 0
+                targetJump = 110 -- Atualiza o targetJump para não resetar no final do frame
             else
                 timerForaDaAgua = timerForaDaAgua + task.wait()
+                targetJump = 55 -- Volta o pulo padrão fora d'água
+                
                 if timerForaDaAgua >= 120 then
-                    hum.WalkSpeed = 0; hum.JumpPower = 0
+                    hum.WalkSpeed = 0
+                    hum.JumpPower = 0
+                    targetJump = 0
                 else
                     hum.WalkSpeed = math.max(0, 15 - (timerForaDaAgua * 0.12))
                 end
             end
-            if hum.JumpPower ~= targetJump and timerForaDaAgua < 120 then hum.JumpPower = targetJump end
+            
+            if hum.JumpPower ~= targetJump and timerForaDaAgua < 120 then 
+                hum.JumpPower = targetJump 
+            end
         end)
         table.insert(activeLoops, aquaticoLoop)
     end
