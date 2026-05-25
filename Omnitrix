@@ -211,7 +211,7 @@ local function resetPlayerPhysics()
         Lighting.BestaColorCorrection:Destroy() 
     end
     
-    if ScreenGui:FindFirstChild("CalcFrame") then ScreenGui.CalcFrame:Destroy() end
+    if ScreenGui:FindFirstChild("RealCalcFrame") then ScreenGui.RealCalcFrame:Destroy() end
     
     for _, p in pairs(workspace:GetDescendants()) do
         if p:IsA("Highlight") and p.Name == "BestaESP" then p:Destroy() end
@@ -245,7 +245,7 @@ local function applyAlienPowers(alienName)
     
     if alienName == "Chama" then
         targetSpeed = 20
-        targetJump = 50  -- Abaixado conforme pedido
+        targetJump = 25  
         workspace.Gravity = originalGravity / 3
         
     elseif alienName == "Quatro Braços" then
@@ -295,7 +295,7 @@ local function applyAlienPowers(alienName)
 
     elseif alienName == "Ultra T" then
         targetSpeed = 20
-        targetJump = 25  -- Abaixado conforme pedido
+        targetJump = 5  
         workspace.Gravity = originalGravity / 6
         
     elseif alienName == "Diamante" then
@@ -304,36 +304,118 @@ local function applyAlienPowers(alienName)
         
     elseif alienName == "Fantasmatico" then
         targetSpeed = 26
-        targetJump = 10 -- Ajustado para voo equilibrado
+        targetJump = 10 
         workspace.Gravity = originalGravity / 2
         enableInfiniteJump(targetSpeed, 10)
         
     elseif alienName == "Insectoide" then
         targetSpeed = 20
-        targetJump = 10 -- Ajustado para voo equilibrado
+        targetJump = 10 
         workspace.Gravity = originalGravity / 2.5
         enableInfiniteJump(targetSpeed, 20)
         
     elseif alienName == "Massa Cinzenta" then
         targetSpeed = 12
         targetJump = 55
-        local CalcFrame = Instance.new("Frame", ScreenGui)
-        CalcFrame.Size = UDim2.new(0, 150, 0, 150)
-        CalcFrame.Position = UDim2.new(0.1, 0, 0.4, 0)
-        CalcFrame.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+        
+        -- === INTERFACE DA CALCULADORA REAL ===
+        local CalcFrame = Instance.new("Frame")
+        CalcFrame.Name = "RealCalcFrame"
+        CalcFrame.Size = UDim2.new(0, 200, 0, 260)
+        CalcFrame.Position = UDim2.new(0.05, 0, 0.35, 0)
+        CalcFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        CalcFrame.BorderSizePixel = 0
         CalcFrame.ZIndex = 6
-        local CalcTxt = Instance.new("TextLabel", CalcFrame)
-        CalcTxt.Size = UDim2.new(1, 0, 0.3, 0); CalcTxt.Text = "Massa Cinzenta Inteligência"; CalcTxt.TextColor3 = Color3.new(1,1,1); CalcTxt.TextScaled = true; CalcTxt.ZIndex = 7
-        local CalcBtn = Instance.new("TextButton", CalcFrame)
-        CalcBtn.Size = UDim2.new(0.8, 0, 0.5, 0); CalcBtn.Position = UDim2.new(0.1, 0, 0.4, 0); CalcBtn.Text = "Calcular"; CalcBtn.ZIndex = 7
-        CalcBtn.MouseButton1Click:Connect(function() CalcTxt.Text = "Resultado: " .. tostring(math.random(1000, 99999)) end)
+        CalcFrame.Parent = ScreenGui
+        
+        local CalcCorner = Instance.new("UICorner", CalcFrame)
+        CalcCorner.CornerRadius = UDim.new(0, 8)
+        
+        local Display = Instance.new("TextLabel", CalcFrame)
+        Display.Size = UDim2.new(0.9, 0, 0.15, 0)
+        Display.Position = UDim2.new(0.05, 0, 0.05, 0)
+        Display.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+        Display.Text = "0"
+        Display.TextColor3 = Color3.new(1, 1, 1)
+        Display.TextSize = 20
+        Display.TextXAlignment = Enum.TextXAlignment.Right
+        Display.ZIndex = 7
+        
+        local UIGridLayout = Instance.new("UIGridLayout", CalcFrame)
+        UIGridLayout.CellSize = UDim2.new(0, 42, 0, 35)
+        UIGridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
+        UIGridLayout.StartCorner = Enum.StartCorner.TopLeft
+        UIGridLayout.Position = UDim2.new(0.05, 0, 0.25, 0)
+        
+        -- Configuração dos botões da calculadora
+        local botoes = {
+            "7", "8", "9", "/",
+            "4", "5", "6", "*",
+            "1", "2", "3", "-",
+            "C", "0", "=", "+"
+        }
+        
+        local expressao = ""
+        
+        for _, caractere in ipairs(botoes) do
+            local Btn = Instance.new("TextButton", CalcFrame)
+            Btn.Text = caractere
+            Btn.TextSize = 18
+            Btn.TextColor3 = Color3.new(1, 1, 1)
+            Btn.ZIndex = 7
+            
+            -- Estilização de cores baseada na função do botão
+            if caractere == "C" then
+                Btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+            elseif caractere == "=" then
+                Btn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+            elseif tonumber(caractere) then
+                Btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            else
+                Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+            end
+            
+            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+            
+            Btn.MouseButton1Click:Connect(function()
+                if caractere == "C" then
+                    expressao = ""
+                    Display.Text = "0"
+                elseif caractere == "=" then
+                    if expressao ~= "" then
+                        -- Usa loadstring de forma simples e segura para calcular a string matemática
+                        local func, err = loadstring("return " .. expressao)
+                        if func then
+                            local sucesso, resultado = pcall(func)
+                            if sucesso then
+                                Display.Text = tostring(resultado)
+                                expressao = tostring(resultado) -- Permite continuar calculando a partir do resultado
+                            else
+                                Display.Text = "Erro"
+                                expressao = ""
+                            end
+                        else
+                            Display.Text = "Erro"
+                            expressao = ""
+                        end
+                    end
+                else
+                    -- Se a tela estiver mostrando "0" ou "Erro", limpa para colocar o novo número
+                    if Display.Text == "0" or Display.Text == "Erro" then
+                        if tonumber(caractere) then expressao = "" end
+                    end
+                    expressao = expressao .. caractere
+                    Display.Text = expressao
+                end
+            end)
+        end
+        
         table.insert(activeLoops, {Disconnect = function() CalcFrame:Destroy() end})
         
     elseif alienName == "Besta" then
         targetSpeed = 40
         targetJump = 65
         
-        -- === NOVO SISTEMA DE VISÃO COM COLOR CORRECTION ===
         local CC = Instance.new("ColorCorrectionEffect")
         CC.Name = "BestaColorCorrection"
         CC.Brightness = -0.7   
@@ -434,7 +516,14 @@ local function transform(alienName)
     MainPanel.BackgroundColor3 = CORES_PAINEL.Transformado
     
     pcall(function() playSound(IDS.Sons.Transformar) end)
-    shoutInChat(alienName)
+    
+    -- Se for o Besta ele ruge no chat, se for outro alien ele fala o nome normal
+    if alienName == "Besta" then
+        shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH")
+    else
+        shoutInChat(alienName)
+    end
+    
     applyAlienPowers(alienName)
     
     local timeActive = math.random(120, 360)
