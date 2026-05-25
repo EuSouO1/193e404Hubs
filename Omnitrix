@@ -768,7 +768,7 @@ lplayer.Chatted:Connect(function(msg)
             local linVel = Instance.new("LinearVelocity")
             linVel.Attachment0 = att
             linVel.MaxForce = math.huge 
-            linVel.VectorVelocity = randomDirection * 100
+            linVel.VectorVelocity = randomDirection * 200
             linVel.Parent = hrp
             
             task.wait(0.1)
