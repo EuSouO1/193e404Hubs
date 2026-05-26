@@ -891,7 +891,7 @@ local function applyAlienPowers(alienName)
 			end
 		end)
 		table.insert(activeLoops, aquaticoLoop)
-		
+
 		-- =====================================================================================
 		-- MECÂNICAS DOS ALIENS SECUNDÁRIOS DESBLOQUEÁVEIS
 		-- =====================================================================================
@@ -1323,7 +1323,15 @@ SilhouetteImg.MouseButton1Click:Connect(function()
 	end
 
 	if not isOmnitrixOn or ConfigsMenu.Visible then return end
-	local chosenAlien = IDS.Silhuetas[currentAlienIndex].Nome
+
+	-- ISSO RESOLVE: Verifica qual tabela está ativa no momento do clique
+	local chosenAlien
+	if isSecondarySelected then
+		chosenAlien = AliensSecundarios[currentAlienIndex].Nome
+	else
+		chosenAlien = IDS.Silhuetas[currentAlienIndex].Nome
+	end
+
 	transform(chosenAlien)
 end)
 
