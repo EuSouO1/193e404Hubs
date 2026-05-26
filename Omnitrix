@@ -492,7 +492,7 @@ local function applyAlienPowers(alienName)
         targetSpeed = 26
         targetJump = 30 
         workspace.Gravity = originalGravity / 2
-        enableInfiniteJump(targetSpeed, 10)
+        enableInfiniteJump(targetSpeed, 30)
         
         local noclipLoop = RunService.Stepped:Connect(function()
             if char then
@@ -607,7 +607,7 @@ local function applyAlienPowers(alienName)
 
     elseif alienName == "Insectoide" then
         isCustomSpeedLoop = true
-        targetSpeed = 35
+        targetSpeed = 20
         targetJump = 30
         workspace.Gravity = originalGravity / 1.5
         
