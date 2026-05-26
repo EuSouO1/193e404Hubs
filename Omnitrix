@@ -59,6 +59,10 @@ local masterControlActive = false
 local comboHistory = ""
 local lastComboClickTime = 0
 
+-- Sistema de Ativação / Modo Aleatório por Cliques Insanos
+local isTransformingQueue = false
+local transformClicksDuringDelay = 0
+
 -- Configurações salvas em memória
 local gritoAtivo = true
 
@@ -900,53 +904,106 @@ end
 local function transform(alienName)
     if omnitrixCooldown or (isTransformed and not masterControlActive) then return end
     
-    isTransformed = true
-    currentAlienActive = alienName
-    
-    -- Se o Controle Mestre estiver ativo, o painel de seleção continua visível/usável
-    if not masterControlActive then
-        SelectionPanel.Visible = false
-        OmnitrixBtn.Visible = true
-        MainPanel.BackgroundColor3 = CORES_PAINEL.Transformado
-    else
-        MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Verde brilhante para o Controle Mestre
+    -- Se o Controle Mestre estiver ativado, ignora o delay e transforma direto (perfeito)
+    if masterControlActive then
+        isTransformed = true
+        currentAlienActive = alienName
+        MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        pcall(function() playSound(IDS.Sons.Transformar) end)
+        shoutInChat(alienName)
+        applyAlienPowers(alienName)
+        
+        task.spawn(function()
+            local tempoPassado = 0
+            while tempoPassado < 955 and isTransformed and currentAlienActive == alienName do
+                task.wait(1)
+                tempoPassado = tempoPassado + 1
+            end
+            if isTransformed and currentAlienActive == alienName then
+                pcall(function() playSound(IDS.Sons.Descarregando) end)
+                for i = 1, 20 do
+                    if not isTransformed or currentAlienActive ~= alienName then break end
+                    MainPanel.BackgroundColor3 = (MainPanel.BackgroundColor3 == Color3.fromRGB(0, 255, 0)) and CORES_PAINEL.Descarregaged or Color3.fromRGB(0, 255, 0)
+                    task.wait(0.25)
+                end
+                if isTransformed and currentAlienActive == alienName then
+                    isTransformed = false
+                    currentAlienActive = ""
+                    resetPlayerPhysics()
+                    omnitrixCooldown = true
+                    MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
+                    task.wait(480)
+                    omnitrixCooldown = false
+                    MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
+                    pcall(function() playSound(IDS.Sons.Recarregar) end)
+                end
+            end
+        end)
+        return
     end
+
+    -- [PROTÓTIPO MODO] - Sistema com delay de 0.5 segundos e risco de falha
+    if isTransformingQueue then 
+        -- Se já estiver na janela de delay, acumula cliques extras
+        transformClicksDuringDelay = transformClicksDuringDelay + 1
+        return 
+    end
+    
+    isTransformingQueue = true
+    transformClicksDuringDelay = 1 -- Conta o primeiro clique da ativação
+    
+    task.wait(0.5) -- Delay exigido de meio segundo
+    
+    isTransformingQueue = false
+    
+    -- Se o player deu mais de 3 cliques totais no intervalo, escolhe um alien aleatório
+    local finalAlien = alienName
+    if transformClicksDuringDelay > 3 then
+        local randomIndex = math.random(1, #IDS.Silhuetas)
+        finalAlien = IDS.Silhuetas[randomIndex].Nome
+    end
+    transformClicksDuringDelay = 0
+    
+    isTransformed = true
+    currentAlienActive = finalAlien
+    SelectionPanel.Visible = false
+    OmnitrixBtn.Visible = true
+    MainPanel.BackgroundColor3 = CORES_PAINEL.Transformado
     
     pcall(function() playSound(IDS.Sons.Transformar) end)
     
-    if alienName == "Besta" then
+    if finalAlien == "Besta" then
         shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH")
     else
-        shoutInChat(alienName)
+        shoutInChat(finalAlien)
     end
     
-    applyAlienPowers(alienName)
+    applyAlienPowers(finalAlien)
     
     task.spawn(function()
-        -- Se o Controle Mestre estiver ativo, o tempo fica travado em 16 minutos (960 segundos)
-        local timeActive = masterControlActive and 960 or math.random(120, 360) 
+        local timeActive = math.random(120, 360) 
         local tempoEsperaPrincipal = timeActive - 5
         local tempoPassado = 0
         
-        while tempoPassado < tempoEsperaPrincipal and isTransformed and currentAlienActive == alienName do
+        while tempoPassado < tempoEsperaPrincipal and isTransformed and currentAlienActive == finalAlien do
             task.wait(1)
             tempoPassado = tempoPassado + 1
         end
         
-        if isTransformed and currentAlienActive == alienName then
+        if isTransformed and currentAlienActive == finalAlien then
             pcall(function() playSound(IDS.Sons.Descarregando) end)
             
             for i = 1, 20 do
-                if not isTransformed or currentAlienActive ~= alienName then break end
-                if MainPanel.BackgroundColor3 == CORES_PAINEL.Transformado or MainPanel.BackgroundColor3 == CORES_PAINEL.Carregado or masterControlActive then
+                if not isTransformed or currentAlienActive ~= finalAlien then break end
+                if MainPanel.BackgroundColor3 == CORES_PAINEL.Transformado or MainPanel.BackgroundColor3 == CORES_PAINEL.Carregado then
                     MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
                 else
-                    MainPanel.BackgroundColor3 = masterControlActive and Color3.fromRGB(0, 255, 0) or CORES_PAINEL.Carregado
+                    MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
                 end
                 task.wait(0.25)
             end
             
-            if isTransformed and currentAlienActive == alienName then
+            if isTransformed and currentAlienActive == finalAlien then
                 isTransformed = false
                 currentAlienActive = ""
                 
@@ -987,7 +1044,7 @@ local function registerComboClick(arrow)
     end
     
     -- Checa se fez a combinação do Controle Mestre
-    if comboHistory == "><>><" then
+    if comboHistory == "><>><<<>>><<<<>>><><>><<<>>><<<" then
         comboHistory = "" -- Reinicia o histórico imediatamente
         masterControlActive = true
         MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
@@ -1002,6 +1059,12 @@ local function registerComboClick(arrow)
 end
 
 OmnitrixBtn.MouseButton1Click:Connect(function()
+    -- Se estiver na fila de transformação do protótipo, computa cliques insanos
+    if isTransformingQueue then
+        transformClicksDuringDelay = transformClicksDuringDelay + 1
+        return
+    end
+
     -- Se o controle mestre estiver ativo, pode abrir o menu de boas mesmo transformado
     if (omnitrixCooldown or ConfigsMenu.Visible) or (isTransformed and not masterControlActive) then return end
     
@@ -1051,8 +1114,13 @@ PrevBtn.MouseButton1Click:Connect(function()
 end)
 
 SilhouetteImg.MouseButton1Click:Connect(function()
+    -- Se estiver na fila de transformação do protótipo, também computa cliques extras aqui
+    if isTransformingQueue then
+        transformClicksDuringDelay = transformClicksDuringDelay + 1
+        return
+    end
+
     if not isOmnitrixOn or ConfigsMenu.Visible then return end
-    -- Se já estiver transformado com Master Control, ele simplesmente muda o alien ativo direto
     local chosenAlien = IDS.Silhuetas[currentAlienIndex].Nome
     transform(chosenAlien)
 end)
