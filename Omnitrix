@@ -8,9 +8,6 @@ local Lighting = game:GetService("Lighting")
 
 local lplayer = Players.LocalPlayer
 
--- === MODO TESTE (LIBERA OS ALIENS DESBLOQUEÁVEIS PELO MODO TEST) ===
-local modoTest = true -- Defina como false se quiser desativar
-
 -- === CONFIGURAÇÃO DE EMOJIS E SONS ===
 local IDS = {
     OmnitrixEmoji = "⌚",
@@ -25,7 +22,7 @@ local IDS = {
     Silhuetas = {
         [1] = {Nome = "Chama", Emoji = "🔥"},
         [2] = {Nome = "Quatro Braços", Emoji = "💪"},
-        [3] = {Nome = "XLR8", Emoji = "🏃\u{200d}♂️"},
+        [3] = {Nome = "XLR8", Emoji = "🏃‍♂️"},
         [4] = {Nome = "Bala de Canhão", Emoji = "⚫"},
         [5] = {Nome = "Ultra T", Emoji = "🧬"},
         [6] = {Nome = "Diamante", Emoji = "💎"},
@@ -37,15 +34,6 @@ local IDS = {
     }
 }
 
--- Se o modo test estiver ativado, adiciona os aliens desbloqueáveis/secretos na lista
-if modoTest then
-    table.insert(IDS.Silhuetas, {Nome = "Feedback", Emoji = "🔌"})
-    table.insert(IDS.Silhuetas, {Nome = "Rath", Emoji = "🐯"})
-    table.insert(IDS.Silhuetas, {Nome = "Friagem", Emoji = "🦋❄️"})
-    table.insert(IDS.Silhuetas, {Nome = "Enormossauro", Emoji = "🦖"})
-    table.insert(IDS.Silhuetas, {Nome = "Alien X", Emoji = "🌌"})
-end
-
 -- === CONFIGURAÇÃO DE CORES DO FRAME ===
 local CORES_PAINEL = {
     Carregado = Color3.fromRGB(0, 180, 0),        -- Verde
@@ -55,7 +43,7 @@ local CORES_PAINEL = {
     DnaDetec = Color3.fromRGB(255, 215, 0)          -- Amarelo para uso futuro
 }
 
--- === VARIÁVEIS DE CONTROLE LOCAL ===
+-- === VARIÁVEIS DE CONTROLE ===
 local currentAlienIndex = 1
 local isOmnitrixOn = false
 local isTransformed = false
@@ -250,6 +238,7 @@ ConfigsBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+
 -- === SISTEMA DE ARRASTAR O PAINEL ===
 local dragging, dragInput, dragStart, startPos
 
@@ -284,6 +273,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
+
 -- === SISTEMA DE CHAT (GRITO) ===
 local function shoutInChat(text)
     if not gritoAtivo then return end
@@ -313,9 +303,12 @@ local function resetPlayerPhysics()
         if hrp then
             if hrp:FindFirstChild("InvisAntiVoid") then
                 hrp.InvisAntiVoid:Destroy()
+                
+                -- CONSERTO: Força ficar 100% em pé antes de subir para a superfície
                 local _, camY, _ = hrp.CFrame:ToOrientation()
                 hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 22, hrp.Position.Z) * CFrame.fromOrientation(0, camY, 0)
             else
+                -- CONSERTO: Se descarregar sem estar invisível, também garante que endireita na hora
                 local _, camY, _ = hrp.CFrame:ToOrientation()
                 hrp.CFrame = CFrame.new(hrp.Position) * CFrame.fromOrientation(0, camY, 0)
             end
@@ -479,7 +472,6 @@ local function applyAlienPowers(alienName)
         BallToggle.Text = "Modo Bola: OFF"
         BallToggle.BackgroundColor3 = Color3.fromRGB(85, 170, 0)
         BallToggle.ZIndex = 6
-        
         local modeOn = false
         BallToggle.MouseButton1Click:Connect(function()
             modeOn = not modeOn
@@ -591,6 +583,8 @@ local function applyAlienPowers(alienName)
                 end
                 
                 hum.CameraOffset = Vector3.new(0, 0, 0)
+                
+                -- CONSERTO: Força ficar 100% em pé e estável logo antes de subir ao chão
                 local _, camY, _ = hrp.CFrame:ToOrientation()
                 hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 20, hrp.Position.Z) * CFrame.fromOrientation(0, camY, 0)
             end
@@ -602,6 +596,8 @@ local function applyAlienPowers(alienName)
             if hrp then
                 if hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
                 if hrp:FindFirstChild("FantasmaticoGyro") then hrp.FantasmaticoGyro:Destroy() end
+                
+                -- CONSERTO EXTRA: Garante boneco reto se for destransformado abruptamente
                 local _, camY, _ = hrp.CFrame:ToOrientation()
                 hrp.CFrame = CFrame.new(hrp.Position) * CFrame.fromOrientation(0, camY, 0)
             end
@@ -658,7 +654,7 @@ local function applyAlienPowers(alienName)
         Display.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
         Display.Text = "0"
         Display.TextColor3 = Color3.new(1, 1, 1)
-        Display.TextScaled = true
+        Display.TextScaled = true 
         Display.TextXAlignment = Enum.TextXAlignment.Right
         Display.ZIndex = 7
         Instance.new("UICorner", Display).CornerRadius = UDim.new(0, 4)
@@ -668,26 +664,38 @@ local function applyAlienPowers(alienName)
         ButtonContainer.Position = UDim2.new(0, 10, 0, 60)
         ButtonContainer.BackgroundTransparency = 1
         ButtonContainer.ZIndex = 7
-        
+
         local UIGridLayout = Instance.new("UIGridLayout", ButtonContainer)
-        UIGridLayout.CellSize = UDim2.new(0, 45, 0, 45)
+        UIGridLayout.CellSize = UDim2.new(0, 45, 0, 42)
         UIGridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
         
-        local botoes = {"7", "8", "9", "/", "4", "5", "6", "*", "1", "2", "3", "-", "C", "0", "=", "+"}
+        local botoes = {
+            "7", "8", "9", "/",
+            "4", "5", "6", "*",
+            "1", "2", "3", "-",
+            "C", "0", "=", "+"
+        }
+        
         local expressao = ""
         
         for _, caractere in ipairs(botoes) do
             local Btn = Instance.new("TextButton", ButtonContainer)
             Btn.Text = caractere
-            Btn.TextSize = 18
+            Btn.TextSize = 20
             Btn.TextColor3 = Color3.new(1, 1, 1)
-            Btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             Btn.ZIndex = 8
-            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
             
-            if caractere == "=" then Btn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-            elseif caractere == "C" then Btn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-            elseif string.match(caractere, "[%+%-%*/]") then Btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70) end
+            if caractere == "C" then
+                Btn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+            elseif caractere == "=" then
+                Btn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+            elseif tonumber(caractere) then
+                Btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            else
+                Btn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+            end
+            
+            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
             
             Btn.MouseButton1Click:Connect(function()
                 if caractere == "C" then
@@ -697,7 +705,7 @@ local function applyAlienPowers(alienName)
                     if expressao ~= "" then
                         local resultado = calcularSeguro(expressao)
                         Display.Text = tostring(resultado)
-                        expressao = resultado == "Erro" and "" or tostring(resultado)
+                        expressao = (resultado == "Erro") and "" or tostring(resultado)
                     end
                 else
                     if Display.Text == "0" or Display.Text == "Erro" then
@@ -708,6 +716,7 @@ local function applyAlienPowers(alienName)
                 end
             end)
         end
+        
         table.insert(activeLoops, {Disconnect = function() CalcFrame:Destroy() end})
         
     elseif alienName == "Besta" then
@@ -717,10 +726,10 @@ local function applyAlienPowers(alienName)
         
         local CC = Instance.new("ColorCorrectionEffect")
         CC.Name = "BestaColorCorrection"
-        CC.Brightness = -0.7
-        CC.Contrast = 0.4
-        CC.Saturation = -0.8
-        CC.TintColor = Color3.fromRGB(30, 20, 10)
+        CC.Brightness = -0.7   
+        CC.Contrast = 0.4      
+        CC.Saturation = -0.8   
+        CC.TintColor = Color3.fromRGB(30, 20, 10) 
         CC.Parent = Lighting
         
         local bestaLoop = RunService.Heartbeat:Connect(function()
@@ -729,15 +738,18 @@ local function applyAlienPowers(alienName)
                 if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
                 if not hum.UseJumpPower then hum.UseJumpPower = true end
             end
+            
             if CC and CC.Parent == Lighting then
-                if CC.Brightness ~= -0.7 and CC.Brightness ~= -0.4 then CC.Brightness = -0.7 end
+                if CC.Brightness ~= -0.7 and CC.Brightness ~= -0.4 then
+                    CC.Brightness = -0.7
+                end
             elseif not Lighting:FindFirstChild("BestaColorCorrection") and isTransformed and currentAlienActive == "Besta" then
                 CC = Instance.new("ColorCorrectionEffect")
                 CC.Name = "BestaColorCorrection"
-                CC.Brightness = -0.7
-                CC.Contrast = 0.4
-                CC.Saturation = -0.8
-                CC.TintColor = Color3.fromRGB(30, 20, 10)
+                CC.Brightness = -0.7   
+                CC.Contrast = 0.4      
+                CC.Saturation = -0.8   
+                CC.TintColor = Color3.fromRGB(30, 20, 10) 
                 CC.Parent = Lighting
             end
         end)
@@ -748,12 +760,13 @@ local function applyAlienPowers(alienName)
             while bestaVisionActive do
                 task.wait(math.random(4, 8))
                 if not bestaVisionActive or not CC then break end
-                CC.Brightness = -0.4
+                CC.Brightness = -0.4 
                 task.wait(0.2)
                 if not bestaVisionActive or not CC then break end
-                CC.Brightness = -0.7
+                CC.Brightness = -0.7 
             end
         end)
+        
         table.insert(activeLoops, {Disconnect = function() 
             bestaVisionActive = false 
             task.cancel(visionLoop) 
@@ -761,7 +774,6 @@ local function applyAlienPowers(alienName)
         end})
         
         local bestaESPLoopActive = true
-        local overlapParams = OverlapParams.new()
         local bestaESPThread = task.spawn(function()
             while bestaESPLoopActive do
                 if char and char:FindFirstChild("HumanoidRootPart") then
@@ -771,14 +783,11 @@ local function applyAlienPowers(alienName)
                             local dist = (char.HumanoidRootPart.Position - targetHRP.Position).Magnitude
                             if dist <= 100 then
                                 if not p.Parent:FindFirstChild("BestaESP") then
-                                    local hl = Instance.new("Highlight")
+                                    local hl = Instance.new("Highlight", p.Parent)
                                     hl.Name = "BestaESP"
-                                    hl.FillColor = Color3.fromRGB(255, 100, 0)
-                                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                    hl.FillTransparency = 0.4
-                                    hl.OutlineTransparency = 0
-                                    hl.Adornee = p.Parent
-                                    hl.Parent = p.Parent
+                                    hl.FillColor = Color3.new(1, 0, 0)
+                                    hl.OutlineColor = Color3.new(1, 0, 0)
+                                    hl.FillTransparency = 0.2
                                 end
                             else
                                 if p.Parent:FindFirstChild("BestaESP") then p.Parent.BestaESP:Destroy() end
@@ -786,24 +795,23 @@ local function applyAlienPowers(alienName)
                         end
                     end
                 end
-                task.wait(0.5)
+                task.wait(1) 
             end
         end)
-        table.insert(activeLoops, {Disconnect = function() 
-            bestaESPLoopActive = false 
-            task.cancel(bestaESPThread) 
-        end})
-
+        table.insert(activeLoops, {Disconnect = function() bestaESPLoopActive = false; task.cancel(bestaESPThread) end})
+        
     elseif alienName == "Aquatico" then
         isCustomSpeedLoop = true
-        targetSpeed = 15
         targetJump = 55
-        
         local timerForaDaAgua = 0
+        
         local overlapParams = OverlapParams.new()
+        overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+        overlapParams.FilterDescendantsInstances = {char}
+        
         local azulPuro = Color3.fromRGB(0, 0, 255)
         local cianoPuro = Color3.fromRGB(0, 255, 255)
-        local nomesAgua = {"water", "agua", "ocean", "sea", "agua", "rio", "lake"}
+        local nomesAgua = {"water", "ocean", "sea", "agua", "rio", "lake"}
         
         local aquaticoLoop = RunService.Heartbeat:Connect(function()
             if not char:FindFirstChild("HumanoidRootPart") then return end
@@ -812,104 +820,107 @@ local function applyAlienPowers(alienName)
             
             if game.PlaceId == 4924922222 then
                 local alturaY = hrp.Position.Y
-                if alturaY >= -6 and alturaY <= -3 then naAgua = true end
+                if alturaY >= -6 and alturaY <= -3 then
+                    naAgua = true
+                end
             end
             
             if not naAgua then
                 local parts = workspace:GetPartsInPart(hrp, overlapParams)
                 for _, part in pairs(parts) do
-                    if part.Parent:FindFirstChildOfClass("Humanoid") or (part.Parent.Parent and part.Parent.Parent:FindFirstChildOfClass("Humanoid")) then continue end
+                    if part.Parent:FindFirstChildOfClass("Humanoid") or (part.Parent.Parent and part.Parent.Parent:FindFirstChildOfClass("Humanoid")) then
+                        continue
+                    end
+                    
                     local nomeMinusculo = string.lower(part.Name)
                     local achouNome = false
                     for _, palavra in ipairs(nomesAgua) do
-                        if string.find(nomeMinusculo, palavra) then achouNome = true break end
+                        if string.find(nomeMinusculo, palavra) then
+                            achouNome = true
+                            break
+                        end
                     end
-                    if achouNome then naAgua = true break end
+                    
+                    if achouNome then
+                        naAgua = true
+                        break
+                    end
                     
                     local r, g, b = part.Color.R, part.Color.G, part.Color.B
                     local distAzul = math.sqrt((r - azulPuro.R)^2 + (g - azulPuro.G)^2 + (b - azulPuro.B)^2)
                     local distCiano = math.sqrt((r - cianoPuro.R)^2 + (g - cianoPuro.G)^2 + (b - cianoPuro.B)^2)
-                    if (distAzul < 0.85 or distCiano < 0.85) and (b > r or g > r) then naAgua = true break end
+                    
+                    if (distAzul < 0.85 or distCiano < 0.85) and (b > r or g > r) then
+                        naAgua = true
+                        break
+                    end
                 end
             end
             
             if naAgua then
                 hum.WalkSpeed = 100
                 hum.JumpPower = 110
-                timerForaDaAgua = 0
+                timerForaDaAgua = 0 
                 targetJump = 110
             else
                 timerForaDaAgua = timerForaDaAgua + task.wait()
                 targetJump = 55
+                
                 if timerForaDaAgua >= 120 then
                     hum.WalkSpeed = 0
                     hum.JumpPower = 0
                     targetJump = 0
                 else
-                    hum.WalkSpeed = math.max(0, 15 - (timerForaDaAgua * 0.12)) end
+                    hum.WalkSpeed = math.max(0, 15 - (timerForaDaAgua * 0.12))
+                end
             end
-            if hum.JumpPower ~= targetJump and timerForaDaAgua < 120 then hum.JumpPower = targetJump end
+            
+            if hum.JumpPower ~= targetJump and timerForaDaAgua < 120 then 
+                hum.JumpPower = targetJump 
+            end
         end)
         table.insert(activeLoops, aquaticoLoop)
-        
-    -- === SESSÃO DOS NOVOS ALIENS LIBERADOS PELO MODO TEST ===
-    elseif alienName == "Feedback" then
-        targetSpeed = 28
-        targetJump = 65
-        -- Se quiser criar mecânicas para os novos depois, pode colocar aqui!
-    elseif alienName == "Rath" then
-        targetSpeed = 35
-        targetJump = 80
-    elseif alienName == "Friagem" then
-        targetSpeed = 24
-        targetJump = 30
-        workspace.Gravity = originalGravity / 2.5
-        enableInfiniteJump(targetSpeed, 15)
-    elseif alienName == "Enormossauro" then
-        targetSpeed = 22
-        targetJump = 50
-    elseif alienName == "Alien X" then
-        targetSpeed = 150
-        targetJump = 200
-        workspace.Gravity = 0
-        enableInfiniteJump(targetSpeed, 50)
     end
     
     if not isCustomSpeedLoop then
         local attributeProtector = RunService.Heartbeat:Connect(function()
             if hum and hum.Parent then
-                if hum.WalkSpeed ~= targetSpeed then hum.WalkSpeed = targetSpeed end
-                if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
-                if hum.UseJumpPower == false then hum.UseJumpPower = true end
+                if hum.WalkSpeed ~= targetSpeed then
+                    hum.WalkSpeed = targetSpeed
+                end
+                if hum.JumpPower ~= targetJump then
+                    hum.JumpPower = targetJump
+                end
+                if hum.UseJumpPower == false then
+                    hum.UseJumpPower = true
+                end
             end
         end)
         table.insert(activeLoops, attributeProtector)
     end
 end
 
--- === ATUALIZAR INTERFACE DA SILHUETA ===
-local function updateSilhouette()
-    SilhouetteImg.Text = IDS.Silhuetas[currentAlienIndex].Emoji
-end
-
--- === FUNÇÃO DE TRANSFORMAÇÃO ===
+-- === LÓGICA DE TRANSFORMAÇÃO ===
 local function transform(alienName)
+    if omnitrixCooldown or (isTransformed and not masterControlActive) then return end
+    
+    -- Se o Controle Mestre estiver ativado, ignora o delay e transforma direto (perfeito)
     if masterControlActive then
         isTransformed = true
         currentAlienActive = alienName
-        SelectionPanel.Visible = true
-        OmnitrixBtn.Visible = false
         MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
         pcall(function() playSound(IDS.Sons.Transformar) end)
-        if alienName == "Besta" then shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH") else shoutInChat(alienName) end
+        shoutInChat(alienName)
         applyAlienPowers(alienName)
         
         task.spawn(function()
-            local currentAlienCheck = alienName
-            while masterControlActive and isTransformed and currentAlienActive == currentAlienCheck do
-                task.wait(0.5)
+            local tempoPassado = 0
+            while tempoPassado < 955 and isTransformed and currentAlienActive == alienName do
+                task.wait(1)
+                tempoPassado = tempoPassado + 1
             end
-            if not masterControlActive and isTransformed and currentAlienActive == currentAlienCheck then
+            if isTransformed and currentAlienActive == alienName then
+                pcall(function() playSound(IDS.Sons.Descarregando) end)
                 for i = 1, 20 do
                     if not isTransformed or currentAlienActive ~= alienName then break end
                     MainPanel.BackgroundColor3 = (MainPanel.BackgroundColor3 == Color3.fromRGB(0, 255, 0)) and CORES_PAINEL.Descarregaged or Color3.fromRGB(0, 255, 0)
@@ -930,43 +941,58 @@ local function transform(alienName)
         end)
         return
     end
-    
-    if isTransformingQueue then
+
+    -- [PROTÓTIPO MODO] - Sistema com delay de 0.5 segundos e risco de falha
+    if isTransformingQueue then 
+        -- Se já estiver na janela de delay, acumula cliques extras
         transformClicksDuringDelay = transformClicksDuringDelay + 1
-        return
+        return 
     end
     
     isTransformingQueue = true
-    transformClicksDuringDelay = 1
-    task.wait(0.5)
+    transformClicksDuringDelay = 1 -- Conta o primeiro clique da ativação
+    
+    task.wait(0.5) -- Delay exigido de meio segundo
+    
     isTransformingQueue = false
     
+    -- Se o player deu mais de 3 cliques totais no intervalo, escolhe um alien aleatório
     local finalAlien = alienName
     if transformClicksDuringDelay > 3 then
         local randomIndex = math.random(1, #IDS.Silhuetas)
         finalAlien = IDS.Silhuetas[randomIndex].Nome
     end
-    
     transformClicksDuringDelay = 0
+    
     isTransformed = true
     currentAlienActive = finalAlien
     SelectionPanel.Visible = false
     OmnitrixBtn.Visible = true
     MainPanel.BackgroundColor3 = CORES_PAINEL.Transformado
+    
     pcall(function() playSound(IDS.Sons.Transformar) end)
-    if finalAlien == "Besta" then shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH") else shoutInChat(finalAlien) end
+    
+    if finalAlien == "Besta" then
+        shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH")
+    else
+        shoutInChat(finalAlien)
+    end
+    
     applyAlienPowers(finalAlien)
     
     task.spawn(function()
-        local timeActive = math.random(120, 360)
+        local timeActive = math.random(120, 360) 
         local tempoEsperaPrincipal = timeActive - 5
         local tempoPassado = 0
+        
         while tempoPassado < tempoEsperaPrincipal and isTransformed and currentAlienActive == finalAlien do
             task.wait(1)
             tempoPassado = tempoPassado + 1
         end
+        
         if isTransformed and currentAlienActive == finalAlien then
             pcall(function() playSound(IDS.Sons.Descarregando) end)
+            
             for i = 1, 20 do
                 if not isTransformed or currentAlienActive ~= finalAlien then break end
                 if MainPanel.BackgroundColor3 == CORES_PAINEL.Transformado or MainPanel.BackgroundColor3 == CORES_PAINEL.Carregado then
@@ -976,13 +1002,17 @@ local function transform(alienName)
                 end
                 task.wait(0.25)
             end
+            
             if isTransformed and currentAlienActive == finalAlien then
                 isTransformed = false
                 currentAlienActive = ""
+                
                 resetPlayerPhysics()
                 omnitrixCooldown = true
                 MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
+                
                 task.wait(480)
+                
                 omnitrixCooldown = false
                 MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
                 pcall(function() playSound(IDS.Sons.Recarregar) end)
@@ -991,18 +1021,36 @@ local function transform(alienName)
     end)
 end
 
--- === SISTEMA DE EVENTOS DO RELÓGIO ===
-local function registerArrowClick(arrow)
+-- === MENU DE SELEÇÃO ===
+local function updateSilhouette()
+    SilhouetteImg.Text = IDS.Silhuetas[currentAlienIndex].Emoji
+end
+
+-- Função para registrar os cliques do combo
+local function registerComboClick(arrow)
     local now = os.clock()
-    if now - lastComboClickTime > 2.5 then comboHistory = "" end
-    lastComboClickTime = now
-    comboHistory = comboHistory .. arrow
-    if string.len(comboHistory) > 30 then comboHistory = string.sub(comboHistory, -30) end
-    if comboHistory == "><>" then
+    
+    -- Se passar de 5 segundos desde o último clique, reseta o histórico
+    if now - lastComboClickTime > 5 then
         comboHistory = ""
+    end
+    lastComboClickTime = now
+    
+    comboHistory = comboHistory .. arrow
+    
+    -- Mantém apenas os últimos 30 caracteres salvos
+    if string.len(comboHistory) > 30 then
+        comboHistory = string.sub(comboHistory, -30)
+    end
+    
+    -- Checa se fez a combinação do Controle Mestre
+    if comboHistory == "><>><<<>>><<<<>>><><>><<<>>><<<" then
+        comboHistory = "" -- Reinicia o histórico imediatamente
         masterControlActive = true
         MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
         pcall(function() playSound(IDS.Sons.Carregado) end)
+        
+        -- Com o Controle Mestre ativado, liberamos a interface mesmo se já estiver transformado
         if isTransformed then
             SelectionPanel.Visible = true
             OmnitrixBtn.Visible = false
@@ -1010,17 +1058,15 @@ local function registerArrowClick(arrow)
     end
 end
 
--- === FIX CLIQUE DO RELÓGIO (SÓ ABRE SE NÃO ESTIVER TRANSFORMADO OU SE ESTIVER COM MASTER CONTROL ATIVO) ===
 OmnitrixBtn.MouseButton1Click:Connect(function()
+    -- Se estiver na fila de transformação do protótipo, computa cliques insanos
     if isTransformingQueue then
         transformClicksDuringDelay = transformClicksDuringDelay + 1
         return
     end
-    
-    -- CONSERTO: Se estiver transformado e sem Controle Mestre ativo, o clique é completamente ignorado (não descarrega!)
-    if (omnitrixCooldown or ConfigsMenu.Visible) or (isTransformed and not masterControlActive) then 
-        return 
-    end
+
+    -- Se o controle mestre estiver ativo, pode abrir o menu de boas mesmo transformado
+    if (omnitrixCooldown or ConfigsMenu.Visible) or (isTransformed and not masterControlActive) then return end
     
     local now = os.clock()
     if now - lastClickTime < 0.4 then
@@ -1050,76 +1096,94 @@ OmnitrixBtn.MouseButton1Click:Connect(function()
 end)
 
 NextBtn.MouseButton1Click:Connect(function()
-    registerArrowClick(">")
+    if not isOmnitrixOn or ConfigsMenu.Visible then return end
+    registerComboClick(">")
     pcall(function() playSound(IDS.Sons.Trocar) end)
     currentAlienIndex = currentAlienIndex + 1
     if currentAlienIndex > #IDS.Silhuetas then currentAlienIndex = 1 end
     updateSilhouette()
-    if masterControlActive and isTransformed then
-        transform(IDS.Silhuetas[currentAlienIndex].Nome)
-    end
 end)
 
 PrevBtn.MouseButton1Click:Connect(function()
-    registerArrowClick("<")
+    if not isOmnitrixOn or ConfigsMenu.Visible then return end
+    registerComboClick("<")
     pcall(function() playSound(IDS.Sons.Trocar) end)
     currentAlienIndex = currentAlienIndex - 1
     if currentAlienIndex < 1 then currentAlienIndex = #IDS.Silhuetas end
     updateSilhouette()
-    if masterControlActive and isTransformed then
-        transform(IDS.Silhuetas[currentAlienIndex].Nome)
-    end
 end)
 
 SilhouetteImg.MouseButton1Click:Connect(function()
-    if omnitrixCooldown then return end
-    local selectedAlien = IDS.Silhuetas[currentAlienIndex].Nome
-    transform(selectedAlien)
+    -- Se estiver na fila de transformação do protótipo, também computa cliques extras aqui
+    if isTransformingQueue then
+        transformClicksDuringDelay = transformClicksDuringDelay + 1
+        return
+    end
+
+    if not isOmnitrixOn or ConfigsMenu.Visible then return end
+    local chosenAlien = IDS.Silhuetas[currentAlienIndex].Nome
+    transform(chosenAlien)
 end)
 
--- === SISTEMA DE AUTO-DESTRUIÇÃO INTERNA ===
-local function iniciarAutoDestruicao()
-    if omnitrixCooldown then return end
-    masterControlActive = false 
-    
-    MainPanel.BackgroundColor3 = CORES_PAINEL.AutoDestruicao
-    
-    local TimerLbl = Instance.new("TextLabel", ScreenGui)
-    TimerLbl.Size = UDim2.new(0, 300, 0, 50)
-    TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
-    TimerLbl.TextColor3 = Color3.new(1,0,0)
-    TimerLbl.TextSize = 40
-    TimerLbl.ZIndex = 6
-    TimerLbl.BackgroundTransparency = 1
-    
-    for i = 20, 1, -1 do
-        TimerLbl.Text = "AUTO-DESTRUIÇÃO: " .. i
-        pcall(function() playSound(IDS.Sons.Descarregando) end)
-        task.wait(1)
+lplayer.CharacterAdded:Connect(function(newChar)
+    task.wait(1)
+    if ScreenGui and ScreenGui.Parent then
+        ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
     end
-    
-    TimerLbl:Destroy()
     resetPlayerPhysics()
-    ScreenGui:Destroy()
-    
-    local char = lplayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        local randomDirection = Vector3.new(
-            math.random(-100, 100),
-            math.random(10, 100), 
-            math.random(-100, 100)
-        ).Unit
+end)
+
+-- === AUTO-DESTRUIÇÃO ===
+lplayer.Chatted:Connect(function(msg)
+    if string.lower(msg) == "ativar modo de auto-destruição" then
+        if omnitrixCooldown then return end
         
-        local att = Instance.new("Attachment", hrp)
-        local linVel = Instance.new("LinearVelocity")
-        linVel.Attachment0 = att
-        linVel.MaxForce = 9999999
-        linVel.VectorVelocity = randomDirection * 350
-        linVel.Parent = hrp
+        isOmnitrixOn = false
+        SelectionPanel.Visible = false
+        OmnitrixBtn.Visible = true
+        omnitrixCooldown = true
+        masterControlActive = false -- Desliga o Master Control na auto-destruição
         
-        task.wait(0.5)
-        linVel:Destroy()
-        att:Destroy()
+        MainPanel.BackgroundColor3 = CORES_PAINEL.AutoDestruicao
+        
+        local TimerLbl = Instance.new("TextLabel", ScreenGui)
+        TimerLbl.Size = UDim2.new(0, 300, 0, 50)
+        TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
+        TimerLbl.TextColor3 = Color3.new(1,0,0); TimerLbl.TextSize = 40;
+        TimerLbl.ZIndex = 6
+        TimerLbl.BackgroundTransparency = 1
+        
+        for i = 20, 1, -1 do
+            TimerLbl.Text = "AUTO-DESTRUIÇÃO: " .. i
+            pcall(function() playSound(IDS.Sons.Descarregando) end)
+            task.wait(1)
+        end
+        
+        TimerLbl:Destroy()
+        resetPlayerPhysics()
+        ScreenGui:Destroy()
+        
+        local char = lplayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local randomDirection = Vector3.new(
+                math.random(-100, 100),
+                math.random(10, 100), 
+                math.random(-100, 100)
+            ).Unit
+            
+            local att = Instance.new("Attachment", hrp)
+            
+            local linVel = Instance.new("LinearVelocity")
+            linVel.Attachment0 = att
+            linVel.MaxForce = math.huge 
+            linVel.VectorVelocity = randomDirection * 250
+            linVel.Parent = hrp
+            
+            task.wait(0.1)
+            
+            linVel:Destroy()
+            att:Destroy()
+        end
     end
-end
+end)
