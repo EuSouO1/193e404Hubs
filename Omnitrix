@@ -987,7 +987,7 @@ local function registerComboClick(arrow)
     end
     
     -- Checa se fez a combinação do Controle Mestre
-    if comboHistory == "><>><<<>>><<<<>>><><>><<<>>><<<" then
+    if comboHistory == "><>><" then
         comboHistory = "" -- Reinicia o histórico imediatamente
         masterControlActive = true
         MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
