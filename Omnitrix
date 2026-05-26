@@ -13,10 +13,10 @@ local TEST_SHOW_UNLOCKED_ALIENS = false -- MUDADO PARA FALSE!
 local isSecondarySelected = false -- Controla se estamos navegando na lista secundária
 local AliensSecundarios = {
 	[1] = {Nome = "Cipó Selvagem", Emoji = "🌱"},
-	[2] = {Nome = "Glutão", Emoji = "🍲"},
+	[2] = {Nome = "Glutão", Emoji = "🍽️"},
 	[3] = {Nome = "A Múmia", Emoji = "🧻"},
 	[4] = {Nome = "BlitzWolfer", Emoji = "🐺"},
-	[5] = {Nome = "Gigante", Emoji = "👽"}
+	[5] = {Nome = "Gigante", Emoji = "👤"}
 }
 
 -- Tabela que guarda quais aliens o jogador já desbloqueou fazendo a combinação
@@ -936,23 +936,50 @@ local function applyAlienPowers(alienName)
 			local hrp = char:FindFirstChild("HumanoidRootPart")
 			if hrp and not cdMortal then
 				cdMortal = true
+
+				-- Impulso Inicial
 				local bv = Instance.new("BodyVelocity")
 				bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
 				bv.Velocity = (hrp.CFrame.LookVector * forcaMortal) + Vector3.new(0, forcaMortal * 0.8, 0)
 				bv.Parent = hrp
+
+				-- Giro do Mortal
 				local bg = Instance.new("BodyGyro")
 				bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
 				bg.P = 30000
 				bg.CFrame = hrp.CFrame
 				bg.Parent = hrp
+
+				-- Limpeza do Impulso (0.1 segundos)
+				task.delay(0.1, function()
+					if bv then bv:Destroy() end
+				end)
+
+				-- Controle do Giro e Finalização (1.5 segundos)
 				task.spawn(function()
-					for i = 1, 10 do
-						bg.CFrame = bg.CFrame * CFrame.Angles(math.rad(36), 0, 0)
+					local tempoInicio = os.clock()
+
+					-- Loop de giro enquanto estiver no ar (até 0.5s)
+					while os.clock() - tempoInicio < 0.5 do
+						if bg then
+							bg.CFrame = bg.CFrame * CFrame.Angles(math.rad(36), 0, 0)
+						else
+							break
+						end
 						task.wait(0.03)
 					end
-					bv:Destroy()
-					bg:Destroy()
+
+					-- Remove o giro e força o boneco a ficar em pé
+					if bg then bg:Destroy() end
+
+					if hrp then
+						-- Reseta a rotação para ficar de pé (mantendo a direção)
+						local pos = hrp.Position
+						local look = hrp.CFrame.LookVector
+						hrp.CFrame = CFrame.new(pos, pos + Vector3.new(look.X, 0, look.Z))
+					end
 				end)
+
 				task.wait(2)
 				cdMortal = false
 			end
@@ -990,6 +1017,8 @@ local function applyAlienPowers(alienName)
 	elseif alienName == "Glutão" then
 		targetSpeed = 20
 		targetJump = 60
+		local partsEngolidas = {} -- Lista para guardar as parts que ele comer
+
 		local EatBtn = Instance.new("TextButton", ScreenGui)
 		EatBtn.Size = UDim2.new(0, 130, 0, 40)
 		EatBtn.Position = UDim2.new(0.85, -20, 0.35, 0)
@@ -1001,17 +1030,30 @@ local function applyAlienPowers(alienName)
 
 		EatBtn.MouseButton1Click:Connect(function()
 			local hrp = char:FindFirstChild("HumanoidRootPart")
-			if hrp then
-				local raio = 5
-				local partAlvo = nil
-				for _, p in pairs(workspace:GetPartBoundsInBox(hrp.CFrame * CFrame.new(0, 0, -raio/2), Vector3.new(raio, raio, raio))) do
-					if p and p.Anchored == false and not p:IsDescendantOf(char) and p:IsA("BasePart") then
+			if not hrp then return end
+
+			local raio = 10
+			local partAlvo = nil
+
+			-- Procura parts ao redor
+			for _, p in pairs(workspace:GetPartBoundsInBox(hrp.CFrame * CFrame.new(0, 0, -raio/2), Vector3.new(raio, raio, raio))) do
+				-- Verifica se é basepart, não é do player, não é child de player e está no limite de 15 studs
+				if p:IsA("BasePart") and not p:IsDescendantOf(char) and not p:FindFirstAncestorOfClass("Model"):FindFirstChildOfClass("Humanoid") then
+					if p.Size.X <= 15 and p.Size.Y <= 15 and p.Size.Z <= 15 then
 						partAlvo = p
 						break
 					end
 				end
-				if partAlvo then
-					partAlvo:Destroy()
+			end
+
+			if partAlvo then
+				-- Salva a part antes de deletar (se quiser restaurar o estado dela, salve cframe, size, etc)
+				table.insert(partsEngolidas, {Parent = partAlvo.Parent, CFrame = partAlvo.CFrame, Size = partAlvo.Size, Name = partAlvo.Name, Material = partAlvo.Material, Color = partAlvo.Color})
+
+				partAlvo:Destroy()
+
+				-- A cada 5 partes, ganha +1 de status
+				if #partsEngolidas % 5 == 0 then
 					targetSpeed = targetSpeed + 1
 					targetJump = targetJump + 1
 					hum.WalkSpeed = targetSpeed
@@ -1019,39 +1061,83 @@ local function applyAlienPowers(alienName)
 				end
 			end
 		end)
-		table.insert(activeLoops, {Disconnect = function() EatBtn:Destroy() end})
+
+		table.insert(activeLoops, {Disconnect = function() 
+			EatBtn:Destroy() 
+			-- Restaura as parts ao destransformar
+			for _, dados in pairs(partsEngolidas) do
+				local novaPart = Instance.new("Part")
+				novaPart.Name = dados.Name
+				novaPart.Size = dados.Size
+				novaPart.CFrame = dados.CFrame
+				novaPart.Material = dados.Material
+				novaPart.Color = dados.Color
+				novaPart.Parent = dados.Parent
+			end
+			partsEngolidas = {}
+		end})
 
 	elseif alienName == "BlitzWolfer" then
+		isCustomSpeedLoop = true
 		targetSpeed = 30
 		targetJump = 85
-		local function criarEspVerde(v)
-			if v ~= lplayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-				if not v.Character:FindFirstChild("BlitzWolferESP") then
-					local h = Instance.new("Highlight")
-					h.Name = "BlitzWolferESP"
-					h.FillColor = Color3.new(0, 1, 0)
-					h.OutlineColor = Color3.new(1, 1, 1)
-					h.FillTransparency = 0.4
-					h.Adornee = v.Character
-					h.Parent = v.Character
-				end
+
+		-- === AJUSTE DE ATMOSFERA (DENSIDADE -10%) ===
+		local oldDensities = {} -- Guardamos o valor original para restaurar depois
+		for _, child in pairs(Lighting:GetChildren()) do
+			if child:IsA("Atmosphere") then
+				oldDensities[child] = child.Density
+				child.Density = child.Density * 0.90 -- Diminui 10%
 			end
 		end
-		for _, v in pairs(Players:GetPlayers()) do criarEspVerde(v) end
-		local pAddedWolfer = Players.PlayerAdded:Connect(function(v)
-			v.CharacterAdded:Connect(function()
-				if currentAlienActive == "BlitzWolfer" then task.wait(0.5) criarEspVerde(v) end
-			end)
-		end)
-		table.insert(activeLoops, pAddedWolfer)
 
-		local oldFogEnd = Lighting.FogEnd
-		local oldFogStart = Lighting.FogStart
-		Lighting.FogEnd = oldFogEnd * 1.35
-		Lighting.FogStart = oldFogStart * 1.35
+		-- LOOP DE ESP VERDE
+		local blitzESPLoopActive = true
+		local blitzESPThread = task.spawn(function()
+			while blitzESPLoopActive do
+				if char and char:FindFirstChild("HumanoidRootPart") then
+					for _, p in pairs(workspace:GetDescendants()) do
+						if p:IsA("Humanoid") and p.Parent ~= char and p.Parent:FindFirstChild("HumanoidRootPart") then
+							local targetHRP = p.Parent.HumanoidRootPart
+							local dist = (char.HumanoidRootPart.Position - targetHRP.Position).Magnitude
+
+							if dist <= 150 then
+								if not p.Parent:FindFirstChild("BlitzWolferESP") then
+									local hl = Instance.new("Highlight", p.Parent)
+									hl.Name = "BlitzWolferESP"
+									hl.FillColor = Color3.new(0, 1, 0)
+									hl.OutlineColor = Color3.new(1, 1, 1)
+									hl.FillTransparency = 0.4
+								end
+							else
+								if p.Parent:FindFirstChild("BlitzWolferESP") then 
+									p.Parent.BlitzWolferESP:Destroy() 
+								end
+							end
+						end
+					end
+				end
+				task.wait(1) 
+			end
+		end)
+
+		local speedLoop = RunService.Heartbeat:Connect(function()
+			if hum and hum.Parent then
+				if hum.WalkSpeed ~= targetSpeed then hum.WalkSpeed = targetSpeed end
+				if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
+			end
+		end)
+
+		table.insert(activeLoops, speedLoop)
 		table.insert(activeLoops, {Disconnect = function() 
-			Lighting.FogEnd = oldFogEnd
-			Lighting.FogStart = oldFogStart
+			blitzESPLoopActive = false
+			task.cancel(blitzESPThread)
+
+			-- === RESTAURA A DENSIDADE ORIGINAL ===
+			for atmosphere, originalDensity in pairs(oldDensities) do
+				if atmosphere then atmosphere.Density = originalDensity end
+			end
+
 			for _, p in pairs(workspace:GetDescendants()) do
 				if p:IsA("Highlight") and p.Name == "BlitzWolferESP" then p:Destroy() end
 			end
@@ -1078,6 +1164,20 @@ local function applyAlienPowers(alienName)
 		end)
 		table.insert(activeLoops, attributeProtector)
 	end
+end
+
+local function getAliensDisponiveis()
+	local lista = {}
+	-- Adiciona todos os primários
+	for _, v in ipairs(IDS.Silhuetas) do table.insert(lista, v) end
+
+	-- Adiciona os secundários APENAS se estiverem desbloqueados
+	for _, v in ipairs(AliensSecundarios) do
+		if AliensDesbloqueadosPeloJogador[v.Nome] then
+			table.insert(lista, v)
+		end
+	end
+	return lista
 end
 
 -- === LÓGICA DE TRANSFORMAÇÃO ===
@@ -1296,84 +1396,47 @@ OmnitrixBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
-local function atualizarExibicaoSilhueta()
-	if isSecondarySelected then
-		local data = AliensSecundarios[currentAlienIndex]
-		SilhouetteImg.Text = data.Emoji
-	else
-		local data = IDS.Silhuetas[currentAlienIndex]
-		SilhouetteImg.Text = data.Emoji
-	end
-end
-
 NextBtn.MouseButton1Click:Connect(function()
 	if omnitrixCooldown then return end
-
-	-- REGISTRA O CLICK NO HISTÓRICO
 	registerComboClick(">")
-
 	pcall(function() playSound(IDS.Sons.Trocar) end)
 
-	local limiteMax = #IDS.Silhuetas
-	if TEST_SHOW_UNLOCKED_ALIENS and isSecondarySelected == false and currentAlienIndex == limiteMax then
-		isSecondarySelected = true
+	local lista = getAliensDisponiveis()
+	currentAlienIndex = currentAlienIndex + 1
+	if currentAlienIndex > #lista then
 		currentAlienIndex = 1
-	elseif TEST_SHOW_UNLOCKED_ALIENS and isSecondarySelected == true and currentAlienIndex == #AliensSecundarios then
-		isSecondarySelected = false
-		currentAlienIndex = 1
-	else
-		local maxAtual = isSecondarySelected and #AliensSecundarios or #IDS.Silhuetas
-		if currentAlienIndex < maxAtual then
-			currentAlienIndex = currentAlienIndex + 1
-		else
-			currentAlienIndex = 1
-		end
 	end
-	atualizarExibicaoSilhueta()
+
+	-- Atualiza a silhueta baseada na lista filtrada
+	SilhouetteImg.Text = lista[currentAlienIndex].Emoji
 end)
 
 PrevBtn.MouseButton1Click:Connect(function()
 	if omnitrixCooldown then return end
-	
-	-- REGISTRA O CLICK NO HISTÓRICO
 	registerComboClick("<")
-	
 	pcall(function() playSound(IDS.Sons.Trocar) end)
 
-	if TEST_SHOW_UNLOCKED_ALIENS and isSecondarySelected == false and currentAlienIndex == 1 then
-		isSecondarySelected = true
-		currentAlienIndex = #AliensSecundarios
-	elseif TEST_SHOW_UNLOCKED_ALIENS and isSecondarySelected == true and currentAlienIndex == 1 then
-		isSecondarySelected = false
-		currentAlienIndex = #IDS.Silhuetas
-	else
-		if currentAlienIndex > 1 then
-			currentAlienIndex = currentAlienIndex - 1
-		else
-			currentAlienIndex = isSecondarySelected and #AliensSecundarios or #IDS.Silhuetas
-		end
+	local lista = getAliensDisponiveis()
+	currentAlienIndex = currentAlienIndex - 1
+	if currentAlienIndex < 1 then
+		currentAlienIndex = #lista
 	end
-	atualizarExibicaoSilhueta()
+
+	SilhouetteImg.Text = lista[currentAlienIndex].Emoji
 end)
 
 SilhouetteImg.MouseButton1Click:Connect(function()
-	-- Se estiver na fila de transformação do protótipo, também computa cliques extras aqui
-	if isTransformingQueue then
+	if isTransformingQueue then 
 		transformClicksDuringDelay = transformClicksDuringDelay + 1
-		return
+		return 
 	end
-
 	if not isOmnitrixOn or ConfigsMenu.Visible then return end
 
-	-- ISSO RESOLVE: Verifica qual tabela está ativa no momento do clique
-	local chosenAlien
-	if isSecondarySelected then
-		chosenAlien = AliensSecundarios[currentAlienIndex].Nome
-	else
-		chosenAlien = IDS.Silhuetas[currentAlienIndex].Nome
-	end
+	-- Pega a lista atualizada com os desbloqueados
+	local lista = getAliensDisponiveis()
+	local alienSelecionado = lista[currentAlienIndex].Nome
 
-	transform(chosenAlien)
+	transform(alienSelecionado)
 end)
 
 lplayer.CharacterAdded:Connect(function(newChar)
