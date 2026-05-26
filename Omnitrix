@@ -9,7 +9,7 @@ local Lighting = game:GetService("Lighting")
 local lplayer = Players.LocalPlayer
 
 -- === VARIÁVEL DE TESTE PARA ALIENS SECUNDÁRIOS ===
-local TEST_SHOW_UNLOCKED_ALIENS = true
+local TEST_SHOW_UNLOCKED_ALIENS = false -- MUDADO PARA FALSE!
 local isSecondarySelected = false -- Controla se estamos navegando na lista secundária
 local AliensSecundarios = {
 	[1] = {Nome = "Cipó Selvagem", Emoji = "🌱"},
@@ -17,6 +17,18 @@ local AliensSecundarios = {
 	[3] = {Nome = "A Múmia", Emoji = "🧻"},
 	[4] = {Nome = "BlitzWolfer", Emoji = "🐺"},
 	[5] = {Nome = "Gigante", Emoji = "👽"}
+}
+
+-- Tabela que guarda quais aliens o jogador já desbloqueou fazendo a combinação
+local AliensDesbloqueadosPeloJogador = {}
+
+-- Tabela oficial com as combinações de setas para cada alien
+local COMBINACOES_ALIENS = {
+	["Cipó Selvagem"] = ">>><><><",
+	["Glutão"] = "><><>><<",
+	["A Múmia"] = "<<<>>>><<",
+	["BlitzWolfer"] = ">>><<<><><",
+	["Gigante"] = ">>>><<<<>><<"
 }
 
 -- === CONFIGURAÇÃO DE EMOJIS E SONS ===
@@ -1198,7 +1210,7 @@ end
 local function registerComboClick(arrow)
 	local now = os.clock()
 
-	-- Se passar de 5 segundos desde o último clique, reseta o histórico
+	-- Reseta se ficar parado 5 segundos
 	if now - lastComboClickTime > 5 then
 		comboHistory = ""
 	end
@@ -1206,19 +1218,40 @@ local function registerComboClick(arrow)
 
 	comboHistory = comboHistory .. arrow
 
-	-- Mantém apenas os últimos 30 caracteres salvos
 	if string.len(comboHistory) > 30 then
 		comboHistory = string.sub(comboHistory, -30)
 	end
 
-	-- Checa se fez a combinação do Controle Mestre
-	if comboHistory == "><>><<<>>><<<<>>><><>><<<>>><<<" then
-		comboHistory = "" -- Reinicia o histórico imediatamente
+	-- 1. VERIFICAÇÃO DE DESBLOQUEIO (Prioridade)
+	for nome, codigo in pairs(COMBINACOES_ALIENS) do
+		-- Verifica se o final do histórico é exatamente o código
+		if string.sub(comboHistory, -string.len(codigo)) == codigo then
+			if not AliensDesbloqueadosPeloJogador[nome] then
+				AliensDesbloqueadosPeloJogador[nome] = true
+				comboHistory = "" -- Zera para não ativar duas vezes
+
+				shoutInChat("DNA de " .. nome .. " Desbloqueado")
+
+				-- Efeito Visual
+				local corAntiga = MainPanel.BackgroundColor3
+				MainPanel.BackgroundColor3 = CORES_PAINEL.DnaDetec
+
+				task.spawn(function()
+					task.wait(1)
+					MainPanel.BackgroundColor3 = corAntiga
+					pcall(function() playSound(IDS.Sons.Recarregar) end)
+				end)
+				return -- Sai da função pois o alien foi desbloqueado
+			end
+		end
+	end
+
+	-- 2. CHECA CONTROLE MESTRE (Só se não desbloqueou nada)
+	if comboHistory:sub(-30) == "><>><<<>>><<<<>>><><>><<<>>><<<" then
+		comboHistory = ""
 		masterControlActive = true
 		MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
 		pcall(function() playSound(IDS.Sons.Carregado) end)
-
-		-- Com o Controle Mestre ativado, liberamos a interface mesmo se já estiver transformado
 		if isTransformed then
 			SelectionPanel.Visible = true
 			OmnitrixBtn.Visible = false
@@ -1275,6 +1308,10 @@ end
 
 NextBtn.MouseButton1Click:Connect(function()
 	if omnitrixCooldown then return end
+
+	-- REGISTRA O CLICK NO HISTÓRICO
+	registerComboClick(">")
+
 	pcall(function() playSound(IDS.Sons.Trocar) end)
 
 	local limiteMax = #IDS.Silhuetas
@@ -1297,6 +1334,10 @@ end)
 
 PrevBtn.MouseButton1Click:Connect(function()
 	if omnitrixCooldown then return end
+	
+	-- REGISTRA O CLICK NO HISTÓRICO
+	registerComboClick("<")
+	
 	pcall(function() playSound(IDS.Sons.Trocar) end)
 
 	if TEST_SHOW_UNLOCKED_ALIENS and isSecondarySelected == false and currentAlienIndex == 1 then
