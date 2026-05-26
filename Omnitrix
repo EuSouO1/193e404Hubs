@@ -54,6 +54,11 @@ local lastClickTime = 0
 local activeLoops = {}
 local originalGravity = workspace.Gravity
 
+-- Controle Mestre e Histórico de Setas
+local masterControlActive = false
+local comboHistory = ""
+local lastComboClickTime = 0
+
 -- Configurações salvas em memória
 local gritoAtivo = true
 
@@ -219,7 +224,7 @@ ConfigsBtn.MouseButton1Click:Connect(function()
         ConfigsBtn.Text = "❌"
     else
         ConfigsBtn.Text = "⚙️"
-        if isTransformed then
+        if isTransformed and not masterControlActive then
             OmnitrixBtn.Visible = true
         elseif isOmnitrixOn then
             SelectionPanel.Visible = true
@@ -492,7 +497,7 @@ local function applyAlienPowers(alienName)
         targetSpeed = 26
         targetJump = 30 
         workspace.Gravity = originalGravity / 2
-        enableInfiniteJump(targetSpeed, 30)
+        enableInfiniteJump(targetSpeed, 10)
         
         local noclipLoop = RunService.Stepped:Connect(function()
             if char then
@@ -607,7 +612,7 @@ local function applyAlienPowers(alienName)
 
     elseif alienName == "Insectoide" then
         isCustomSpeedLoop = true
-        targetSpeed = 20
+        targetSpeed = 35
         targetJump = 30
         workspace.Gravity = originalGravity / 1.5
         
@@ -893,14 +898,19 @@ end
 
 -- === LÓGICA DE TRANSFORMAÇÃO ===
 local function transform(alienName)
-    if omnitrixCooldown or isTransformed then return end
+    if omnitrixCooldown or (isTransformed and not masterControlActive) then return end
     
     isTransformed = true
     currentAlienActive = alienName
-    SelectionPanel.Visible = false
-    OmnitrixBtn.Visible = true
     
-    MainPanel.BackgroundColor3 = CORES_PAINEL.Transformado
+    -- Se o Controle Mestre estiver ativo, o painel de seleção continua visível/usável
+    if not masterControlActive then
+        SelectionPanel.Visible = false
+        OmnitrixBtn.Visible = true
+        MainPanel.BackgroundColor3 = CORES_PAINEL.Transformado
+    else
+        MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Verde brilhante para o Controle Mestre
+    end
     
     pcall(function() playSound(IDS.Sons.Transformar) end)
     
@@ -913,7 +923,8 @@ local function transform(alienName)
     applyAlienPowers(alienName)
     
     task.spawn(function()
-        local timeActive = math.random(120, 360) 
+        -- Se o Controle Mestre estiver ativo, o tempo fica travado em 16 minutos (960 segundos)
+        local timeActive = masterControlActive and 960 or math.random(120, 360) 
         local tempoEsperaPrincipal = timeActive - 5
         local tempoPassado = 0
         
@@ -927,10 +938,10 @@ local function transform(alienName)
             
             for i = 1, 20 do
                 if not isTransformed or currentAlienActive ~= alienName then break end
-                if MainPanel.BackgroundColor3 == CORES_PAINEL.Transformado or MainPanel.BackgroundColor3 == CORES_PAINEL.Carregado then
+                if MainPanel.BackgroundColor3 == CORES_PAINEL.Transformado or MainPanel.BackgroundColor3 == CORES_PAINEL.Carregado or masterControlActive then
                     MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
                 else
-                    MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
+                    MainPanel.BackgroundColor3 = masterControlActive and Color3.fromRGB(0, 255, 0) or CORES_PAINEL.Carregado
                 end
                 task.wait(0.25)
             end
@@ -958,8 +969,41 @@ local function updateSilhouette()
     SilhouetteImg.Text = IDS.Silhuetas[currentAlienIndex].Emoji
 end
 
+-- Função para registrar os cliques do combo
+local function registerComboClick(arrow)
+    local now = os.clock()
+    
+    -- Se passar de 5 segundos desde o último clique, reseta o histórico
+    if now - lastComboClickTime > 5 then
+        comboHistory = ""
+    end
+    lastComboClickTime = now
+    
+    comboHistory = comboHistory .. arrow
+    
+    -- Mantém apenas os últimos 30 caracteres salvos
+    if string.len(comboHistory) > 30 then
+        comboHistory = string.sub(comboHistory, -30)
+    end
+    
+    -- Checa se fez a combinação do Controle Mestre
+    if comboHistory == "><>><<<>>><<<<>>><><>><<<>>><<<" then
+        comboHistory = "" -- Reinicia o histórico imediatamente
+        masterControlActive = true
+        MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        pcall(function() playSound(IDS.Sons.Carregado) end)
+        
+        -- Com o Controle Mestre ativado, liberamos a interface mesmo se já estiver transformado
+        if isTransformed then
+            SelectionPanel.Visible = true
+            OmnitrixBtn.Visible = false
+        end
+    end
+end
+
 OmnitrixBtn.MouseButton1Click:Connect(function()
-    if omnitrixCooldown or isTransformed or ConfigsMenu.Visible then return end
+    -- Se o controle mestre estiver ativo, pode abrir o menu de boas mesmo transformado
+    if (omnitrixCooldown or ConfigsMenu.Visible) or (isTransformed and not masterControlActive) then return end
     
     local now = os.clock()
     if now - lastClickTime < 0.4 then
@@ -969,7 +1013,7 @@ OmnitrixBtn.MouseButton1Click:Connect(function()
     end
     lastClickTime = now
     
-    if clickCount >= 4 then
+    if clickCount >= 4 and not isTransformed then
         local randomAlien = IDS.Silhuetas[math.random(1, #IDS.Silhuetas)].Nome
         transform(randomAlien)
         clickCount = 0
@@ -990,6 +1034,7 @@ end)
 
 NextBtn.MouseButton1Click:Connect(function()
     if not isOmnitrixOn or ConfigsMenu.Visible then return end
+    registerComboClick(">")
     pcall(function() playSound(IDS.Sons.Trocar) end)
     currentAlienIndex = currentAlienIndex + 1
     if currentAlienIndex > #IDS.Silhuetas then currentAlienIndex = 1 end
@@ -998,6 +1043,7 @@ end)
 
 PrevBtn.MouseButton1Click:Connect(function()
     if not isOmnitrixOn or ConfigsMenu.Visible then return end
+    registerComboClick("<")
     pcall(function() playSound(IDS.Sons.Trocar) end)
     currentAlienIndex = currentAlienIndex - 1
     if currentAlienIndex < 1 then currentAlienIndex = #IDS.Silhuetas end
@@ -1005,7 +1051,8 @@ PrevBtn.MouseButton1Click:Connect(function()
 end)
 
 SilhouetteImg.MouseButton1Click:Connect(function()
-    if not isOmnitrixOn or isTransformed or ConfigsMenu.Visible then return end
+    if not isOmnitrixOn or ConfigsMenu.Visible then return end
+    -- Se já estiver transformado com Master Control, ele simplesmente muda o alien ativo direto
     local chosenAlien = IDS.Silhuetas[currentAlienIndex].Nome
     transform(chosenAlien)
 end)
@@ -1027,6 +1074,7 @@ lplayer.Chatted:Connect(function(msg)
         SelectionPanel.Visible = false
         OmnitrixBtn.Visible = true
         omnitrixCooldown = true
+        masterControlActive = false -- Desliga o Master Control na auto-destruição
         
         MainPanel.BackgroundColor3 = CORES_PAINEL.AutoDestruicao
         
