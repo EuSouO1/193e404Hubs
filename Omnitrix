@@ -1418,7 +1418,7 @@ local function registerComboClick(arrow)
 	end
 
 	-- 2. CHECA CONTROLE MESTRE (Só se não desbloqueou nada)
-	if comboHistory:sub(-30) == "><>><<<>>><<<<>>><><>><<<>>><<<" then
+	if comboHistory:sub(-30) == ">><<>>" then
 		comboHistory = ""
 		masterControlActive = true
 		MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
