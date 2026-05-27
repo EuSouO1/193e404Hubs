@@ -489,26 +489,75 @@ local function applyAlienPowers(alienName)
 	elseif alienName == "Bala de Canhão" then
 		targetSpeed = 10
 		targetJump = 60
+
 		local BallToggle = Instance.new("TextButton", ScreenGui)
-		BallToggle.Size = UDim2.new(0, 120, 0, 40)
-		BallToggle.Position = UDim2.new(0.85, 0, 0.35, 0)
+		BallToggle.Size = UDim2.new(0, 140, 0, 40)
+		BallToggle.Position = UDim2.new(0.85, -20, 0.35, 0)
 		BallToggle.Text = "Modo Bola: OFF"
-		BallToggle.BackgroundColor3 = Color3.fromRGB(85, 170, 0)
+		BallToggle.BackgroundColor3 = Color3.fromRGB(222, 222, 23)
+		BallToggle.TextColor3 = Color3.new(1, 1, 1)
 		BallToggle.ZIndex = 6
+		Instance.new("UICorner", BallToggle).CornerRadius = UDim.new(0, 6)
+
 		local modeOn = false
+		local bv = nil
+
 		BallToggle.MouseButton1Click:Connect(function()
+			local hrp = char and char:FindFirstChild("HumanoidRootPart")
+			if not hrp then return end
+
 			modeOn = not modeOn
+
 			if modeOn then
 				BallToggle.Text = "Modo Bola: ON"
-				targetSpeed = 60
+				targetSpeed = 0
 				targetJump = 0
+
+				bv = Instance.new("BodyVelocity")
+				bv.MaxForce = Vector3.new(math.huge, 0, math.huge)
+				bv.Velocity = hrp.CFrame.LookVector * 50
+				bv.Parent = hrp
+
+				task.spawn(function()
+					local tempoInicio = os.clock()
+					local velAtual = 50
+
+					while modeOn and bv and hrp do
+						local look = hrp.CFrame.LookVector
+						local dirAtual = bv.Velocity.Unit
+
+						-- Verifica o quanto o player está virando (Dot Product)
+						-- Se o valor for próximo de 1, está reto. Se for menor, está fazendo curva.
+						local alinhamento = look:Dot(dirAtual)
+
+						if alinhamento < 0.95 then
+							-- Faz curva: perde velocidade rápido
+							velAtual = math.max(50, velAtual - 5)
+						else
+							-- Anda reto: acelera gradualmente até o limite de 200
+							local tempoDecorrido = math.min(os.clock() - tempoInicio, 3)
+							local targetVel = 50 + (tempoDecorrido / 3) * 150
+							if velAtual < targetVel then
+								velAtual = math.min(velAtual + 2, targetVel)
+							end
+						end
+
+						bv.Velocity = Vector3.new(look.X * velAtual, 0, look.Z * velAtual)
+						task.wait(0.05)
+					end
+				end)
 			else
 				BallToggle.Text = "Modo Bola: OFF"
 				targetSpeed = 10
 				targetJump = 60
+				if bv then bv:Destroy() end
 			end
 		end)
-		table.insert(activeLoops, {Disconnect = function() BallToggle:Destroy() end})
+
+		table.insert(activeLoops, {Disconnect = function() 
+			BallToggle:Destroy() 
+			if bv then bv:Destroy() end
+		end})
 
 	elseif alienName == "Ultra T" then
 		targetSpeed = 20
@@ -541,13 +590,15 @@ local function applyAlienPowers(alienName)
 		InvisToggle.Text = "Modo Invisivel: OFF"
 		InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150)
 		InvisToggle.TextColor3 = Color3.new(1, 1, 1)
+		InvisToggle.TextSize = 16
+		InvisToggle.TextScaled = true 
 		InvisToggle.ZIndex = 6
 		Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6)
 
 		local isInvis = false
 		local cameraOffsetLoop = nil
 		local hrp = char:FindFirstChild("HumanoidRootPart")
-		local standingGyro = nil -- O Gyro que mantém em pé
+		local standingGyro = nil 
 
 		InvisToggle.MouseButton1Click:Connect(function()
 			if not char or not hum or not hrp then return end
@@ -579,7 +630,7 @@ local function applyAlienPowers(alienName)
 							hrp.Position = Vector3.new(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
 							hum.CameraOffset = Vector3.new(0, 20, 0)
 
-							-- Atualiza o Gyro para olhar pra frente mas reto (em pé)
+							-- Atualiza o Gyro para olhar para frente mas reto (em pé)
 							local _, camY, _ = workspace.CurrentCamera.CFrame:ToOrientation()
 							standingGyro.CFrame = CFrame.fromOrientation(0, camY, 0)
 						end
@@ -597,7 +648,7 @@ local function applyAlienPowers(alienName)
 
 				if hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
 
-				-- Delay de 1 segundo para destruir o Gyro
+				-- Delay de 1 segundo para destruir o Gyro e garantir estabilidade
 				task.delay(1, function()
 					if standingGyro then standingGyro:Destroy() end
 				end)
@@ -606,6 +657,24 @@ local function applyAlienPowers(alienName)
 				hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 20, hrp.Position.Z)
 			end
 		end)
+
+		table.insert(activeLoops, {Disconnect = function() 
+			InvisToggle:Destroy()
+			if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end
+			if standingGyro then standingGyro:Destroy() end
+			if hrp and hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
+			if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end
+		end})
+
+		local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function()
+			if hum and hum.Parent then
+				local currentMax = isInvis and 100 or (hum.FloorMaterial == Enum.Material.Air and (targetSpeed * 5) or targetSpeed)
+				if hum.WalkSpeed ~= currentMax then hum.WalkSpeed = currentMax end
+				if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
+				if not hum.UseJumpPower then hum.UseJumpPower = true end
+			end
+		end)
+		table.insert(activeLoops, fantasmaticoSpeedConn)
 
 	elseif alienName == "Insectoide" then
 		isCustomSpeedLoop = true
