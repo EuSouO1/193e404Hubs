@@ -47,7 +47,7 @@ local IDS = {
 		[2] = {Nome = "Quatro Braços", Emoji = "💪"},
 		[3] = {Nome = "XLR8", Emoji = "🏃‍♂️"},
 		[4] = {Nome = "Bala de Canhão", Emoji = "⚫"},
-		[5] = {Nome = "Ultra T", Emoji = "🧬"},
+		[5] = {Nome = "Ultra T", Emoji = "💻"},
 		[6] = {Nome = "Diamante", Emoji = "💎"},
 		[7] = {Nome = "Fantasmatico", Emoji = "👻"},
 		[8] = {Nome = "Insectoide", Emoji = "🦋"}, 
@@ -541,15 +541,13 @@ local function applyAlienPowers(alienName)
 		InvisToggle.Text = "Modo Invisivel: OFF"
 		InvisToggle.BackgroundColor3 = Color3.fromRGB(110, 50, 150)
 		InvisToggle.TextColor3 = Color3.new(1, 1, 1)
-		InvisToggle.TextSize = 16
-		InvisToggle.TextScaled = true 
 		InvisToggle.ZIndex = 6
 		Instance.new("UICorner", InvisToggle).CornerRadius = UDim.new(0, 6)
 
 		local isInvis = false
-		local targetYHeight = 0
 		local cameraOffsetLoop = nil
 		local hrp = char:FindFirstChild("HumanoidRootPart")
+		local standingGyro = nil -- O Gyro que mantém em pé
 
 		InvisToggle.MouseButton1Click:Connect(function()
 			if not char or not hum or not hrp then return end
@@ -560,15 +558,15 @@ local function applyAlienPowers(alienName)
 					InvisToggle.Text = "Modo Invisivel: ON"
 					targetSpeed = 100 
 
-					targetYHeight = hrp.Position.Y - 20
-					hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0)
+					-- Cria Gyro para manter em pé sempre
+					standingGyro = Instance.new("BodyGyro")
+					standingGyro.Name = "FantasmaticoStandingGyro"
+					standingGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+					standingGyro.P = 50000
+					standingGyro.CFrame = hrp.CFrame
+					standingGyro.Parent = hrp
 
-					local bg = Instance.new("BodyGyro")
-					bg.Name = "FantasmaticoGyro"
-					bg.MaxTorque = Vector3.new(math.huge, 0, math.huge) 
-					bg.P = 50000 
-					bg.CFrame = CFrame.new()
-					bg.Parent = hrp
+					hrp.CFrame = hrp.CFrame * CFrame.new(0, -20, 0)
 
 					local bv = Instance.new("BodyVelocity")
 					bv.Name = "InvisAntiVoid"
@@ -578,13 +576,12 @@ local function applyAlienPowers(alienName)
 
 					cameraOffsetLoop = RunService.RenderStepped:Connect(function()
 						if hrp and hum then
-							hrp.Position = Vector3.new(hrp.Position.X, targetYHeight, hrp.Position.Z)
+							hrp.Position = Vector3.new(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
 							hum.CameraOffset = Vector3.new(0, 20, 0)
 
-							if bg and workspace.CurrentCamera then
-								local _, camY, _ = workspace.CurrentCamera.CFrame:ToOrientation()
-								bg.CFrame = CFrame.fromOrientation(0, camY, 0)
-							end
+							-- Atualiza o Gyro para olhar pra frente mas reto (em pé)
+							local _, camY, _ = workspace.CurrentCamera.CFrame:ToOrientation()
+							standingGyro.CFrame = CFrame.fromOrientation(0, camY, 0)
 						end
 					end)
 				end
@@ -598,44 +595,17 @@ local function applyAlienPowers(alienName)
 					cameraOffsetLoop = nil
 				end
 
-				if hrp:FindFirstChild("InvisAntiVoid") then
-					hrp.InvisAntiVoid:Destroy()
-				end
-				if hrp:FindFirstChild("FantasmaticoGyro") then
-					hrp.FantasmaticoGyro:Destroy()
-				end
+				if hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
+
+				-- Delay de 1 segundo para destruir o Gyro
+				task.delay(1, function()
+					if standingGyro then standingGyro:Destroy() end
+				end)
 
 				hum.CameraOffset = Vector3.new(0, 0, 0)
-
-				-- CONSERTO: Força ficar 100% em pé e estável logo antes de subir ao chão
-				local _, camY, _ = hrp.CFrame:ToOrientation()
-				hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 20, hrp.Position.Z) * CFrame.fromOrientation(0, camY, 0)
+				hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 20, hrp.Position.Z)
 			end
 		end)
-
-		table.insert(activeLoops, {Disconnect = function() 
-			if cameraOffsetLoop then cameraOffsetLoop:Disconnect() end
-			if hum then hum.CameraOffset = Vector3.new(0, 0, 0) end
-			if hrp then
-				if hrp:FindFirstChild("InvisAntiVoid") then hrp.InvisAntiVoid:Destroy() end
-				if hrp:FindFirstChild("FantasmaticoGyro") then hrp.FantasmaticoGyro:Destroy() end
-
-				-- CONSERTO EXTRA: Garante boneco reto se for destransformado abruptamente
-				local _, camY, _ = hrp.CFrame:ToOrientation()
-				hrp.CFrame = CFrame.new(hrp.Position) * CFrame.fromOrientation(0, camY, 0)
-			end
-			InvisToggle:Destroy() 
-		end})
-
-		local fantasmaticoSpeedConn = RunService.Heartbeat:Connect(function()
-			if hum and hum.Parent then
-				local currentMax = isInvis and 100 or (hum.FloorMaterial == Enum.Material.Air and (targetSpeed * 5) or targetSpeed)
-				if hum.WalkSpeed ~= currentMax then hum.WalkSpeed = currentMax end
-				if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
-				if not hum.UseJumpPower then hum.UseJumpPower = true end
-			end
-		end)
-		table.insert(activeLoops, fantasmaticoSpeedConn)
 
 	elseif alienName == "Insectoide" then
 		isCustomSpeedLoop = true
@@ -908,8 +878,8 @@ local function applyAlienPowers(alienName)
 		-- MECÂNICAS DOS ALIENS SECUNDÁRIOS DESBLOQUEÁVEIS
 		-- =====================================================================================
 	elseif alienName == "Cipó Selvagem" or alienName == "A Múmia" then
-		local forcaMortal = (alienName == "Cipó Selvagem") and 100 or 75
-		local rangeGancho = (alienName == "Cipó Selvagem") and 100 or 80
+		local forcaMortal = (alienName == "Cipó Selvagem") and 100 or 50
+		local rangeGancho = (alienName == "Cipó Selvagem") and 100 or 50
 		targetSpeed = (alienName == "Cipó Selvagem") and 26 or 22
 		targetJump = 70
 
@@ -937,50 +907,48 @@ local function applyAlienPowers(alienName)
 			if hrp and not cdMortal then
 				cdMortal = true
 
-				-- Impulso Inicial
+				-- 1. Impulso Inicial
 				local bv = Instance.new("BodyVelocity")
 				bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
 				bv.Velocity = (hrp.CFrame.LookVector * forcaMortal) + Vector3.new(0, forcaMortal * 0.8, 0)
 				bv.Parent = hrp
 
-				-- Giro do Mortal
+				-- 2. Giro Inicial
 				local bg = Instance.new("BodyGyro")
 				bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
 				bg.P = 30000
 				bg.CFrame = hrp.CFrame
 				bg.Parent = hrp
 
-				-- Limpeza do Impulso (0.1 segundos)
-				task.delay(0.1, function()
-					if bv then bv:Destroy() end
-				end)
+				-- Destroi o impulso após 0.1s
+				task.delay(0.1, function() if bv then bv:Destroy() end end)
 
-				-- Controle do Giro e Finalização (1.5 segundos)
+				-- Controle de tempo: 0.5s de mortal, depois trava em pé
 				task.spawn(function()
 					local tempoInicio = os.clock()
 
-					-- Loop de giro enquanto estiver no ar (até 0.5s)
+					-- Enquanto não der 0.5 segundos, ele continua girando
 					while os.clock() - tempoInicio < 0.5 do
 						if bg then
 							bg.CFrame = bg.CFrame * CFrame.Angles(math.rad(36), 0, 0)
-						else
-							break
 						end
 						task.wait(0.03)
 					end
 
-					-- Remove o giro e força o boneco a ficar em pé
-					if bg then bg:Destroy() end
-
-					if hrp then
-						-- Reseta a rotação para ficar de pé (mantendo a direção)
+					-- 3. Aos 0.5 segundos: Força o player a ficar em pé
+					if hrp and bg then
 						local pos = hrp.Position
 						local look = hrp.CFrame.LookVector
-						hrp.CFrame = CFrame.new(pos, pos + Vector3.new(look.X, 0, look.Z))
+						-- Trava a rotação: olha pra frente, mas sem inclinação (em pé)
+						bg.CFrame = CFrame.new(pos, pos + Vector3.new(look.X, 0, look.Z))
 					end
+
+					-- 4. Aguarda mais um pouco antes de destruir o BodyGyro
+					task.wait(1) 
+					if bg then bg:Destroy() end
 				end)
 
-				task.wait(2)
+				task.wait(1)
 				cdMortal = false
 			end
 		end)
@@ -1166,6 +1134,109 @@ local function applyAlienPowers(alienName)
 	end
 end
 
+local function iniciarAutoDestruicao()
+	if omnitrixCooldown then return end
+
+	isOmnitrixOn = false
+	SelectionPanel.Visible = false
+	OmnitrixBtn.Visible = true
+	omnitrixCooldown = true
+	masterControlActive = false 
+
+	MainPanel.BackgroundColor3 = CORES_PAINEL.AutoDestruicao
+
+	local TimerLbl = Instance.new("TextLabel", ScreenGui)
+	TimerLbl.Size = UDim2.new(0, 300, 0, 50)
+	TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
+	TimerLbl.TextColor3 = Color3.new(1,0,0); TimerLbl.TextSize = 40;
+	TimerLbl.ZIndex = 6
+	TimerLbl.BackgroundTransparency = 1
+
+	for i = 20, 1, -1 do
+		TimerLbl.Text = "AUTO-DESTRUIÇÃO: " .. i
+		pcall(function() playSound(IDS.Sons.Descarregando) end)
+		task.wait(1)
+	end
+
+	TimerLbl:Destroy()
+	resetPlayerPhysics()
+	ScreenGui:Destroy()
+
+	local char = lplayer.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		local randomDirection = Vector3.new(math.random(-100, 100), math.random(10, 100), math.random(-100, 100)).Unit
+		local att = Instance.new("Attachment", hrp)
+		local linVel = Instance.new("LinearVelocity")
+		linVel.Attachment0 = att
+		linVel.MaxForce = math.huge 
+		linVel.VectorVelocity = randomDirection * 250
+		linVel.Parent = hrp
+		task.wait(0.1)
+		linVel:Destroy()
+		att:Destroy()
+	end
+end
+
+-- Função auxiliar para limpar e validar a mensagem (reutilizando a lógica que criamos)
+local function validarComandoAutoDestruicao(msg)
+	-- 1. Transforma em minúsculo
+	local msgLimpa = string.lower(msg)
+
+	-- 2. Remove todos os caracteres que NÃO são letras (a-z) ou espaços
+	-- Isso elimina automaticamente acentos, til, cedilha, hífens e pontuação
+	msgLimpa = string.gsub(msgLimpa, "[^a-z%s]", "")
+
+	-- 3. Remove espaços extras para garantir que a frase fique compacta
+	msgLimpa = string.gsub(msgLimpa, "%s+", "")
+
+	-- 4. Agora a busca fica muito mais fácil
+	-- "ativar modo de auto-destruição" vira "ativarmododeautodestruicao"
+	return string.find(msgLimpa, "ativarmododeautodestruicao")
+end
+
+-- Monitoramento do SEU chat (jogador local)
+lplayer.Chatted:Connect(function(msg)
+	if validarComandoAutoDestruicao(msg) then
+		iniciarAutoDestruicao()
+	end
+end)
+
+-- Monitoramento do chat dos OUTROS jogadores próximos
+Players.PlayerAdded:Connect(function(player)
+	player.Chatted:Connect(function(msg)
+		if validarComandoAutoDestruicao(msg) then
+			-- Verifica se o seu personagem e o do outro jogador existem e têm HRP
+			local meuChar = lplayer.Character
+			local outroChar = player.Character
+
+			if meuChar and outroChar and meuChar:FindFirstChild("HumanoidRootPart") and outroChar:FindFirstChild("HumanoidRootPart") then
+				local dist = (meuChar.HumanoidRootPart.Position - outroChar.HumanoidRootPart.Position).Magnitude
+				if dist <= 20 then
+					iniciarAutoDestruicao()
+				end
+			end
+		end
+	end)
+end)
+
+-- Opcional: Monitorar os jogadores que já estão no servidor quando o script iniciar
+for _, player in pairs(Players:GetPlayers()) do
+	if player ~= lplayer then
+		player.Chatted:Connect(function(msg)
+			if validarComandoAutoDestruicao(msg) then
+				local char = lplayer.Character
+				local otherChar = player.Character
+				if char and otherChar and char:FindFirstChild("HumanoidRootPart") and otherChar:FindFirstChild("HumanoidRootPart") then
+					if (char.HumanoidRootPart.Position - otherChar.HumanoidRootPart.Position).Magnitude <= 20 then
+						iniciarAutoDestruicao()
+					end
+				end
+			end
+		end)
+	end
+end
+
 local function getAliensDisponiveis()
 	local lista = {}
 	-- Adiciona todos os primários
@@ -1347,7 +1418,7 @@ local function registerComboClick(arrow)
 	end
 
 	-- 2. CHECA CONTROLE MESTRE (Só se não desbloqueou nada)
-	if comboHistory:sub(-30) == ">><<>>" then
+	if comboHistory:sub(-30) == "><>><<<>>><<<<>>><><>><<<>>><<<" then
 		comboHistory = ""
 		masterControlActive = true
 		MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
@@ -1445,59 +1516,4 @@ lplayer.CharacterAdded:Connect(function(newChar)
 		ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
 	end
 	resetPlayerPhysics()
-end)
-
--- === AUTO-DESTRUIÇÃO ===
-lplayer.Chatted:Connect(function(msg)
-	if string.lower(msg) == "ativar modo de auto-destruição" then
-		if omnitrixCooldown then return end
-
-		isOmnitrixOn = false
-		SelectionPanel.Visible = false
-		OmnitrixBtn.Visible = true
-		omnitrixCooldown = true
-		masterControlActive = false -- Desliga o Master Control na auto-destruição
-
-		MainPanel.BackgroundColor3 = CORES_PAINEL.AutoDestruicao
-
-		local TimerLbl = Instance.new("TextLabel", ScreenGui)
-		TimerLbl.Size = UDim2.new(0, 300, 0, 50)
-		TimerLbl.Position = UDim2.new(0.5, -150, 0.1, 0)
-		TimerLbl.TextColor3 = Color3.new(1,0,0); TimerLbl.TextSize = 40;
-		TimerLbl.ZIndex = 6
-		TimerLbl.BackgroundTransparency = 1
-
-		for i = 20, 1, -1 do
-			TimerLbl.Text = "AUTO-DESTRUIÇÃO: " .. i
-			pcall(function() playSound(IDS.Sons.Descarregando) end)
-			task.wait(1)
-		end
-
-		TimerLbl:Destroy()
-		resetPlayerPhysics()
-		ScreenGui:Destroy()
-
-		local char = lplayer.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			local randomDirection = Vector3.new(
-				math.random(-100, 100),
-				math.random(10, 100), 
-				math.random(-100, 100)
-			).Unit
-
-			local att = Instance.new("Attachment", hrp)
-
-			local linVel = Instance.new("LinearVelocity")
-			linVel.Attachment0 = att
-			linVel.MaxForce = math.huge 
-			linVel.VectorVelocity = randomDirection * 250
-			linVel.Parent = hrp
-
-			task.wait(0.1)
-
-			linVel:Destroy()
-			att:Destroy()
-		end
-	end
 end)
