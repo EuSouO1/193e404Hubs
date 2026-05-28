@@ -1725,10 +1725,23 @@ SilhouetteImg.MouseButton1Click:Connect(function()
 	transform(alienSelecionado)
 end)
 
-lplayer.CharacterAdded:Connect(function(newChar)
-	task.wait(1)
-	if ScreenGui and ScreenGui.Parent then
-		ScreenGui.Parent = lplayer:WaitForChild("PlayerGui")
-	end
+-- Garante que a gravidade volte ao normal no respawn
+lplayer.CharacterAdded:Connect(function(newCharacter)
+	task.wait(0.5)
+	
 	resetPlayerPhysics()
+	
+	-- Aguarda o personagem carregar totalmente
+	newCharacter:WaitForChild("HumanoidRootPart")
+
+	-- Reseta a gravidade para o valor original do Workspace
+	workspace.Gravity = originalGravity
+
+	-- Opcional: Garante que estados de física de aliens não fiquem presos
+	-- caso algo falhe na limpeza anterior
+	local hum = newCharacter:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = 16
+		hum.JumpPower = 50
+	end
 end)
