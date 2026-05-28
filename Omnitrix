@@ -1,5 +1,3 @@
--- [[ OMNITRIX - POWERS SYSTEM WITH DRAGGABLE CENTRAL PANEL (EMOJI & COLORS FIXED) ]] --
-
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -16,19 +14,23 @@ local AliensSecundarios = {
 	[2] = {Nome = "Glutão", Emoji = "🍽️"},
 	[3] = {Nome = "A Múmia", Emoji = "🧻"},
 	[4] = {Nome = "BlitzWolfer", Emoji = "🐺"},
-	[5] = {Nome = "Gigante", Emoji = "👤"}
+	[5] = {Nome = "Gigante", Emoji = "👤"},
+	[6] = {Nome = "Mega-Olhos", Emoji = "👁️"},
+	[7] = {Nome = "FrankenStrike", Emoji = "🧟"}
 }
 
 -- Tabela que guarda quais aliens o jogador já desbloqueou fazendo a combinação
 local AliensDesbloqueadosPeloJogador = {}
 
--- Tabela oficial com as combinações de setas para cada alien
+-- Adicione ao final da tabela COMBINACOES_ALIENS
 local COMBINACOES_ALIENS = {
 	["Cipó Selvagem"] = ">>><><><",
 	["Glutão"] = "><><>><<",
 	["A Múmia"] = "<<<>>>><<",
 	["BlitzWolfer"] = ">>><<<><><",
-	["Gigante"] = ">>>><<<<>><<"
+	["Gigante"] = ">>>><<<<>><<",
+	["Mega-Olhos"] = "<<>><<>>",
+	["FrankenStrike"] = "<><>><<><>>"
 }
 
 -- === CONFIGURAÇÃO DE EMOJIS E SONS ===
@@ -45,7 +47,7 @@ local IDS = {
 	Silhuetas = {
 		[1] = {Nome = "Chama", Emoji = "🔥"},
 		[2] = {Nome = "Quatro Braços", Emoji = "💪"},
-		[3] = {Nome = "XLR8", Emoji = "🏃‍♂️"},
+		[3] = {Nome = "XLR8", Emoji = "🏃‍"},
 		[4] = {Nome = "Bala de Canhão", Emoji = "⚫"},
 		[5] = {Nome = "Ultra T", Emoji = "💻"},
 		[6] = {Nome = "Diamante", Emoji = "💎"},
@@ -1183,6 +1185,148 @@ local function applyAlienPowers(alienName)
 	elseif alienName == "Gigante" then
 		targetSpeed = 100
 		targetJump = 175
+	
+	elseif alienName == "Mega-Olhos" then
+		targetSpeed = 24
+		targetJump = 67
+
+		-- Loop de visão Raio-X (ESP em qualquer objeto atrás de paredes)
+		local megaEspActive = true
+		local megaESPThread = task.spawn(function()
+			while megaEspActive do
+				if char and char:FindFirstChild("HumanoidRootPart") then
+					local cam = workspace.CurrentCamera
+					local myPos = cam.CFrame.Position
+
+					-- Escaneia todos os objetos no workspace
+					for _, p in pairs(workspace:GetDescendants()) do
+						-- Filtra apenas peças sólidas e ignora o próprio personagem
+						if p:IsA("BasePart") and not p:IsDescendantOf(char) and p.Transparency < 1 then
+							local dist = (p.Position - char.HumanoidRootPart.Position).Magnitude
+
+							if dist <= 150 then
+								-- Verifica se há obstáculo entre a câmera e o objeto
+								local ray = Ray.new(myPos, (p.Position - myPos).Unit * dist)
+								local hit, pos = workspace:FindPartOnRayWithIgnoreList(ray, {char})
+
+								-- Se o Raycast colidir com algo que não é o objeto (ou um descendant dele), está atrás de obstáculo
+								if hit and not hit:IsDescendantOf(p.Parent) and not p:IsDescendantOf(hit) then
+									if not p:FindFirstChild("MegaESP") then
+										local hl = Instance.new("Highlight", p)
+										hl.Name = "MegaESP"
+										hl.FillColor = Color3.fromRGB(255, 100, 0)
+										hl.FillTransparency = 0.5
+										hl.OutlineTransparency = 0.5
+									end
+								else
+									-- Se estiver visível (sem obstáculo), remove o ESP
+									if p:FindFirstChild("MegaESP") then p.MegaESP:Destroy() end
+								end
+							else
+								-- Fora de alcance, remove
+								if p:FindFirstChild("MegaESP") then p.MegaESP:Destroy() end
+							end
+						end
+					end
+				end
+				task.wait(0.5) -- Delay para não pesar o script
+			end
+		end)
+
+		table.insert(activeLoops, {Disconnect = function() 
+			megaEspActive = false
+			task.cancel(megaESPThread)
+			-- Limpeza geral ao sair
+			for _, p in pairs(workspace:GetDescendants()) do
+				if p.Name == "MegaESP" then p:Destroy() end
+			end
+		end})
+
+	elseif alienName == "FrankenStrike" then
+		targetSpeed = 25
+		targetJump = 75
+
+		local ChargeBtn = Instance.new("TextButton", ScreenGui)
+		ChargeBtn.Size = UDim2.new(0, 140, 0, 40)
+		ChargeBtn.Position = UDim2.new(0.85, -20, 0.35, 0)
+		ChargeBtn.Text = "Carregar Raio"
+		ChargeBtn.BackgroundColor3 = Color3.fromRGB(68, 93, 60)
+		ChargeBtn.TextColor3 = Color3.new(1, 1, 1)
+		ChargeBtn.ZIndex = 6
+		Instance.new("UICorner", ChargeBtn).CornerRadius = UDim.new(0, 6)
+
+		-- Círculo de Raio (usando Decal para parecer um círculo no chão)
+		local rangeIndicator = Instance.new("Part")
+		rangeIndicator.Shape = Enum.PartType.Cylinder
+		rangeIndicator.Size = Vector3.new(0.1, 1, 1)
+		rangeIndicator.Anchored = true
+		rangeIndicator.CanCollide = false
+		rangeIndicator.Transparency = 1 -- Invisível inicialmente
+		rangeIndicator.Color = Color3.fromRGB(68, 93, 60)
+		rangeIndicator.Parent = workspace
+
+		-- Adiciona um Decal para ser o "círculo" que aparece no chão
+		local circleDecal = Instance.new("Decal", rangeIndicator)
+		circleDecal.Texture = "rbxassetid://625907409" -- Textura padrão de círculo do Roblox
+		circleDecal.Face = Enum.NormalId.Top
+
+		local tempoInicio = 0
+		local carregando = false
+
+		-- Loop para seguir o player e atualizar tamanho
+		local updateLoop = RunService.RenderStepped:Connect(function()
+			if carregando and char and char:FindFirstChild("HumanoidRootPart") then
+				local duracao = math.min(os.clock() - tempoInicio, 10)
+				local raio = 25 + (duracao / 10) * 175
+
+				rangeIndicator.Transparency = 0.5
+				-- Rotação de 90 graus apenas no eixo Y (o segundo argumento)
+				rangeIndicator.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, -2.99, 0) * CFrame.Angles(0, 0, math.rad(90))
+				rangeIndicator.Size = Vector3.new(0.1, raio * 2, raio * 2)
+			else
+				rangeIndicator.Transparency = 1
+			end
+		end)
+
+		ChargeBtn.MouseButton1Down:Connect(function()
+			tempoInicio = os.clock()
+			carregando = true
+			targetSpeed = 0
+			targetJump = 0
+		end)
+
+		ChargeBtn.MouseButton1Up:Connect(function()
+			carregando = false
+			local duracao = math.min(os.clock() - tempoInicio, 10)
+			local alcance = 25 + (duracao / 10) * 175
+
+			targetSpeed = 25
+			targetJump = 75
+
+			for _, item in pairs(workspace:GetDescendants()) do
+				if item:IsA("Tool") and item.Parent ~= char and item:FindFirstChild("Handle") then
+					local dist = (item.Handle.Position - char.HumanoidRootPart.Position).Magnitude
+					if dist <= alcance then
+						local hl = Instance.new("Highlight", item)
+						hl.FillColor = Color3.fromRGB(150, 0, 200)
+						hl.FillTransparency = 0.2
+						task.spawn(function()
+							for i = 1, 30 do
+								task.wait(0.1)
+								hl.FillTransparency = 0.2 + (i/30 * 0.8)
+							end
+							hl:Destroy()
+						end)
+					end
+				end
+			end
+		end)
+
+		table.insert(activeLoops, {Disconnect = function() 
+			ChargeBtn:Destroy() 
+			rangeIndicator:Destroy()
+			updateLoop:Disconnect()
+		end})
 	end
 
 	if not isCustomSpeedLoop then
@@ -1394,6 +1538,8 @@ local function transform(alienName)
 
 	if finalAlien == "Besta" then
 		shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH")
+	elseif finalAlien == "A Múmia" then
+		shoutInChat("A múmia?")
 	else
 		shoutInChat(finalAlien)
 	end
@@ -1487,7 +1633,7 @@ local function registerComboClick(arrow)
 	end
 
 	-- 2. CHECA CONTROLE MESTRE (Só se não desbloqueou nada)
-	if comboHistory:sub(-30) == ">><<>>" then
+	if comboHistory:sub(-30) == "><>><<<>>><<<<>>><><>><<<>>><<<" then
 		comboHistory = ""
 		masterControlActive = true
 		MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
