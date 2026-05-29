@@ -591,9 +591,64 @@ local function applyAlienPowers(alienName)
 
 	elseif alienName == "Ultra T" then
 		targetSpeed = 20
-		targetJump = 25  
+		targetJump = 25
 		workspace.Gravity = originalGravity / 6
 
+		local vehicleButtons = {}
+		local cdImpulso, cdPulo = false, false
+
+		local function cleanupVehicle()
+			for _, btn in pairs(vehicleButtons) do btn:Destroy() end
+			vehicleButtons = {}
+			workspace.Gravity = originalGravity / 6 -- Mantém gravidade reduzida geral
+		end
+
+		local checkSeat = RunService.Heartbeat:Connect(function()
+			local hum = char and char:FindFirstChild("Humanoid")
+			local seat = hum and hum.SeatPart
+
+			if seat and seat:IsA("VehicleSeat") then
+				-- Restaura gravidade normal enquanto sentado
+				workspace.Gravity = originalGravity
+
+				if #vehicleButtons == 0 then
+					local bNames = {"Impulso", "Pulo"}
+					for i, name in ipairs(bNames) do
+						local btn = Instance.new("TextButton", ScreenGui)
+						btn.Size = UDim2.new(0, 120, 0, 40); btn.Position = UDim2.new(0.02, 0, 0.2 + (i * 0.08), 0)
+						btn.Text = name; btn.BackgroundColor3 = Color3.fromRGB(34, 139, 34); btn.TextColor3 = Color3.new(1,1,1); btn.ZIndex = 6
+						Instance.new("UICorner", btn)
+
+						btn.MouseButton1Click:Connect(function()
+							if name == "Impulso" and not cdImpulso then
+								cdImpulso = true
+								local bv = Instance.new("BodyVelocity", seat)
+								bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = seat.CFrame.LookVector * 300
+								task.wait(0.1); bv:Destroy(); task.wait(5); cdImpulso = false
+							elseif name == "Pulo" and not cdPulo then
+								cdPulo = true
+								local bv = Instance.new("BodyVelocity", seat)
+								bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = Vector3.new(0, 100, 0)
+								task.wait(0.1); bv:Destroy(); task.wait(1); cdPulo = false
+							end
+						end)
+						table.insert(vehicleButtons, btn)
+					end
+				end
+			else
+				-- Retorna a gravidade reduzida ao sair do banco
+				workspace.Gravity = originalGravity / 6
+				if #vehicleButtons > 0 then cleanupVehicle() end
+			end
+		end)
+
+		table.insert(activeLoops, checkSeat)
+		table.insert(activeLoops, {Disconnect = function() 
+			checkSeat:Disconnect()
+			cleanupVehicle()
+			workspace.Gravity = originalGravity / 6
+		end})
+		
 	elseif alienName == "Diamante" then
 		targetSpeed = 25
 		targetJump = 70
@@ -910,6 +965,7 @@ local function applyAlienPowers(alienName)
 			local hrp = char.HumanoidRootPart
 			local naAgua = false
 
+			-- Verificação original de PlaceId
 			if game.PlaceId == 4924922222 then
 				local alturaY = hrp.Position.Y
 				if alturaY >= -6 and alturaY <= -3 then
@@ -917,6 +973,7 @@ local function applyAlienPowers(alienName)
 				end
 			end
 
+			-- Verificação de Parts (Mantida conforme você pediu)
 			if not naAgua then
 				local parts = workspace:GetPartsInPart(hrp, overlapParams)
 				for _, part in pairs(parts) do
@@ -949,11 +1006,17 @@ local function applyAlienPowers(alienName)
 				end
 			end
 
+			-- Lógica de Estado e Física
 			if naAgua then
 				hum.WalkSpeed = 100
 				hum.JumpPower = 110
-				timerForaDaAgua = 0 
 				targetJump = 110
+				timerForaDaAgua = 0 
+
+				-- Força o player a nadar caso ele não esteja
+				if hum:GetState() ~= Enum.HumanoidStateType.Swimming then
+					hum:ChangeState(Enum.HumanoidStateType.Swimming)
+				end
 			else
 				timerForaDaAgua = timerForaDaAgua + task.wait()
 				targetJump = 55
