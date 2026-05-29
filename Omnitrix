@@ -16,7 +16,8 @@ local AliensSecundarios = {
 	[4] = {Nome = "BlitzWolfer", Emoji = "🐺"},
 	[5] = {Nome = "Gigante", Emoji = "👤"},
 	[6] = {Nome = "Mega-Olhos", Emoji = "👁️"},
-	[7] = {Nome = "FrankenStrike", Emoji = "🧟"}
+	[7] = {Nome = "FrankenStrike", Emoji = "🧟"},
+	[8] = {Nome = "Feedback", Emoji = "🔌"}
 }
 
 -- Tabela que guarda quais aliens o jogador já desbloqueou fazendo a combinação
@@ -30,7 +31,8 @@ local COMBINACOES_ALIENS = {
 	["BlitzWolfer"] = ">>><<<><><",
 	["Gigante"] = ">>>><<<<>><<",
 	["Mega-Olhos"] = "<<>><<>>",
-	["FrankenStrike"] = "<><>><<><>>"
+	["FrankenStrike"] = "<><>><<><>>",
+	["Feedback"] = "<><>><><>><<"
 }
 
 -- === CONFIGURAÇÃO DE EMOJIS E SONS ===
@@ -1751,76 +1753,28 @@ SilhouetteImg.MouseButton1Click:Connect(function()
 	transform(alienSelecionado)
 end)
 
--- === MODO DE PROTEÇÃO (FAIL-SAFE) ===
-local lastHealth = 100
-local protectionCooldown = false
-
--- === GERENCIAMENTO DO PERSONAGEM (RESPAWN, FÍSICA E PROTEÇÃO) ===
+-- Garante que a gravidade volte ao normal no respawn
 lplayer.CharacterAdded:Connect(function(newCharacter)
-	-- 1. Reset de Física Inicial
+	-- 1. Aguarda o personagem carregar
+	local hrp = newCharacter:WaitForChild("HumanoidRootPart", 5)
+	local hum = newCharacter:WaitForChild("Humanoid", 5)
+	if not hrp or not hum then return end
+
 	task.wait(0.5)
 
-	-- DESTRANSFORMAÇÃO AUTOMÁTICA
-	if isTransformed then
-		-- Força a destransformação chamando o sistema de reset
-		-- Isso depende de como seu script encerra a transformação
-		-- Caso você tenha uma função específica para isso, use-a aqui.
-		-- Se não, garantimos o reset do estado:
-		isTransformed = false
-		isTransformingQueue = false
-		if currentAlienActive then
-			-- Aqui chamamos a função que remove os poderes/loops do alien atual
-			local disconnectFunc = getDisconnectFunction(currentAlienActive)
-			if disconnectFunc then disconnectFunc() end
-			currentAlienActive = nil
-		end
-		resetPlayerPhysics()
-	end
+	-- 2. Destransformação e Reset de Física
+	isTransformed = false
+	currentAlienActive = nil
+	resetPlayerPhysics()
 
-	-- 2. Recarrega o Omnitrix (reseta cooldown e painéis)
+	-- 3. Recarrega o Omnitrix
 	omnitrixCooldown = false
 	if OmnitrixBtn then OmnitrixBtn.Visible = true end
 	if SelectionPanel then SelectionPanel.Visible = false end
+	if MainPanel then MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado end
 
-	local hrp = newCharacter:WaitForChild("HumanoidRootPart")
-	local hum = newCharacter:WaitForChild("Humanoid")
-
-	-- 3. Reseta gravidade e estado padrão
+	-- 4. Reseta gravidade e estado padrão
 	workspace.Gravity = originalGravity
 	hum.WalkSpeed = 16
 	hum.JumpPower = 50
-
-	-- 4. Modo de Proteção (Fail-Safe)
-	lastHealth = hum.Health
-
-	hum.HealthChanged:Connect(function(currentHealth)
-		if not isTransformed and not protectionCooldown then
-			local lifeLost = lastHealth - currentHealth
-
-			if lifeLost >= 30 then
-				protectionCooldown = true
-
-				-- Efeito de lançamento
-				local randomDirection = Vector3.new(math.random(-100, 100), math.random(10, 100), math.random(-100, 100)).Unit
-				local att = Instance.new("Attachment", hrp)
-				local linVel = Instance.new("LinearVelocity")
-				linVel.Attachment0 = att
-				linVel.MaxForce = Vector3.new(math.huge, math.huge, math.huge) 
-				linVel.VectorVelocity = randomDirection * 250
-				linVel.Parent = hrp
-
-				task.wait(0.1)
-				linVel:Destroy()
-				att:Destroy()
-
-				-- Recarrega o Omnitrix
-				omnitrixCooldown = false
-
-				-- Cooldown do sistema
-				task.wait(10)
-				protectionCooldown = false
-			end
-		end
-		lastHealth = currentHealth
-	end)
 end)
