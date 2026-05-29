@@ -424,8 +424,9 @@ local function applyAlienPowers(alienName)
 
 	if alienName == "Chama" then
 		targetSpeed = 20
-		targetJump = 25  
-		workspace.Gravity = originalGravity / 3
+		targetJump = 50
+		enableInfiniteJump(targetSpeed, 25)
+		workspace.Gravity = originalGravity / 6
 
 	elseif alienName == "Quatro Braços" then
 		targetSpeed = 40  
@@ -442,14 +443,19 @@ local function applyAlienPowers(alienName)
 		waterFloat.Velocity = Vector3.new(0, 0, 0)
 
 		local hrp = char:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			waterFloat.Parent = hrp
-		end
+		if hrp then waterFloat.Parent = hrp end
+
+		local overlapParams = OverlapParams.new()
+		overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+		overlapParams.FilterDescendantsInstances = {char}
+		local azulPuro, cianoPuro = Color3.fromRGB(0, 0, 255), Color3.fromRGB(0, 255, 255)
+		local nomesAgua = {"water", "ocean", "sea", "agua", "rio", "lake"}
 
 		local xxlr8Loop = RunService.Heartbeat:Connect(function()
 			if not char:FindFirstChild("HumanoidRootPart") then return end
 			hrp = char.HumanoidRootPart
 
+			-- 1. LÓGICA ORIGINAL DE MOVIMENTO
 			if hum.MoveDirection.Magnitude > 0 then
 				if hum.WalkSpeed < 500 then hum.WalkSpeed = hum.WalkSpeed + 2 end
 			else
@@ -462,30 +468,50 @@ local function applyAlienPowers(alienName)
 			end
 			if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
 
+			-- 2. DETECÇÃO DE ÁGUA
+			local naAgua = false
+			if game.PlaceId == 4924922222 then
+				if hrp.Position.Y >= -6 and hrp.Position.Y <= -3 then naAgua = true end
+			end
+			if not naAgua then
+				local parts = workspace:GetPartsInPart(hrp, overlapParams)
+				for _, part in pairs(parts) do
+					local n = string.lower(part.Name)
+					for _, p in ipairs(nomesAgua) do if string.find(n, p) then naAgua = true break end end
+					if naAgua then break end
+					local r, g, b = part.Color.R, part.Color.G, part.Color.B
+					local distAzul = math.sqrt((r-azulPuro.R)^2 + (g-azulPuro.G)^2 + (b-azulPuro.B)^2)
+					local distCiano = math.sqrt((r-cianoPuro.R)^2 + (g-cianoPuro.G)^2 + (b-cianoPuro.B)^2)
+					if (distAzul < 0.85 or distCiano < 0.85) and (b > r or g > r) then naAgua = true break end
+				end
+			end
+
+			-- 3. FORÇAR COLLIDE (Corrigido: True se na água OU se correndo rápido)
+			local deveColidir = (naAgua or hum.WalkSpeed > 75)
+			for _, p in pairs(char:GetChildren()) do
+				if p:IsA("BasePart") and p.CanCollide ~= deveColidir then 
+					p.CanCollide = deveColidir 
+				end
+			end
+
+			-- 4. FLUTUAÇÃO
 			if game.PlaceId == 4924922222 then
 				local alturaY = hrp.Position.Y
-				if hum.WalkSpeed > 75 and hum.MoveDirection.Magnitude > 0 and alturaY < 0 then
+				if hum.WalkSpeed > 150 and hum.MoveDirection.Magnitude > 0 and alturaY < 0 then
 					waterFloat.MaxForce = Vector3.new(0, math.huge, 0)
-					local forcaY = (0 - alturaY) * 10
-					waterFloat.Velocity = Vector3.new(0, forcaY, 0)
-
-					if hum:GetState() ~= Enum.HumanoidStateType.Running then
-						hum:ChangeState(Enum.HumanoidStateType.Running)
-					end
-				elseif alturaY > 0.01 or hum.WalkSpeed <= 75 or hum.MoveDirection.Magnitude == 0 then
-					if waterFloat.MaxForce.Y ~= 0 then
-						waterFloat.MaxForce = Vector3.new(0, 0, 0)
-						waterFloat.Velocity = Vector3.new(0, 0, 0)
-					end
+					waterFloat.Velocity = Vector3.new(0, (0 - alturaY) * 10, 0)
+					if hum:GetState() ~= Enum.HumanoidStateType.Running then hum:ChangeState(Enum.HumanoidStateType.Running) end
+				else
+					waterFloat.MaxForce = Vector3.new(0, 0, 0)
+					waterFloat.Velocity = Vector3.new(0, 0, 0)
 				end
 			end
 		end)
 
 		table.insert(activeLoops, xxlr8Loop)
 		table.insert(activeLoops, {Disconnect = function() 
-			if hrp and hrp:FindFirstChild("XLR8WaterRun") then 
-				hrp.XLR8WaterRun:Destroy() 
-			end 
+			if hrp and hrp:FindFirstChild("XLR8WaterRun") then hrp.XLR8WaterRun:Destroy() end
+			for _, p in pairs(char:GetChildren()) do if p:IsA("BasePart") then p.CanCollide = true end end
 		end})
 
 	elseif alienName == "Bala de Canhão" then
@@ -573,9 +599,9 @@ local function applyAlienPowers(alienName)
 	elseif alienName == "Fantasmatico" then
 		isCustomSpeedLoop = true
 		targetSpeed = 26
-		targetJump = 30 
-		workspace.Gravity = originalGravity / 2
-		enableInfiniteJump(targetSpeed, 30)
+		targetJump = 20 
+		workspace.Gravity = originalGravity / 6
+		enableInfiniteJump(targetSpeed, 15)
 
 		local noclipLoop = RunService.Stepped:Connect(function()
 			if char then
@@ -1725,23 +1751,76 @@ SilhouetteImg.MouseButton1Click:Connect(function()
 	transform(alienSelecionado)
 end)
 
--- Garante que a gravidade volte ao normal no respawn
+-- === MODO DE PROTEÇÃO (FAIL-SAFE) ===
+local lastHealth = 100
+local protectionCooldown = false
+
+-- === GERENCIAMENTO DO PERSONAGEM (RESPAWN, FÍSICA E PROTEÇÃO) ===
 lplayer.CharacterAdded:Connect(function(newCharacter)
+	-- 1. Reset de Física Inicial
 	task.wait(0.5)
-	
-	resetPlayerPhysics()
-	
-	-- Aguarda o personagem carregar totalmente
-	newCharacter:WaitForChild("HumanoidRootPart")
 
-	-- Reseta a gravidade para o valor original do Workspace
-	workspace.Gravity = originalGravity
-
-	-- Opcional: Garante que estados de física de aliens não fiquem presos
-	-- caso algo falhe na limpeza anterior
-	local hum = newCharacter:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.WalkSpeed = 16
-		hum.JumpPower = 50
+	-- DESTRANSFORMAÇÃO AUTOMÁTICA
+	if isTransformed then
+		-- Força a destransformação chamando o sistema de reset
+		-- Isso depende de como seu script encerra a transformação
+		-- Caso você tenha uma função específica para isso, use-a aqui.
+		-- Se não, garantimos o reset do estado:
+		isTransformed = false
+		isTransformingQueue = false
+		if currentAlienActive then
+			-- Aqui chamamos a função que remove os poderes/loops do alien atual
+			local disconnectFunc = getDisconnectFunction(currentAlienActive)
+			if disconnectFunc then disconnectFunc() end
+			currentAlienActive = nil
+		end
+		resetPlayerPhysics()
 	end
+
+	-- 2. Recarrega o Omnitrix (reseta cooldown e painéis)
+	omnitrixCooldown = false
+	if OmnitrixBtn then OmnitrixBtn.Visible = true end
+	if SelectionPanel then SelectionPanel.Visible = false end
+
+	local hrp = newCharacter:WaitForChild("HumanoidRootPart")
+	local hum = newCharacter:WaitForChild("Humanoid")
+
+	-- 3. Reseta gravidade e estado padrão
+	workspace.Gravity = originalGravity
+	hum.WalkSpeed = 16
+	hum.JumpPower = 50
+
+	-- 4. Modo de Proteção (Fail-Safe)
+	lastHealth = hum.Health
+
+	hum.HealthChanged:Connect(function(currentHealth)
+		if not isTransformed and not protectionCooldown then
+			local lifeLost = lastHealth - currentHealth
+
+			if lifeLost >= 30 then
+				protectionCooldown = true
+
+				-- Efeito de lançamento
+				local randomDirection = Vector3.new(math.random(-100, 100), math.random(10, 100), math.random(-100, 100)).Unit
+				local att = Instance.new("Attachment", hrp)
+				local linVel = Instance.new("LinearVelocity")
+				linVel.Attachment0 = att
+				linVel.MaxForce = Vector3.new(math.huge, math.huge, math.huge) 
+				linVel.VectorVelocity = randomDirection * 250
+				linVel.Parent = hrp
+
+				task.wait(0.1)
+				linVel:Destroy()
+				att:Destroy()
+
+				-- Recarrega o Omnitrix
+				omnitrixCooldown = false
+
+				-- Cooldown do sistema
+				task.wait(10)
+				protectionCooldown = false
+			end
+		end
+		lastHealth = currentHealth
+	end)
 end)
