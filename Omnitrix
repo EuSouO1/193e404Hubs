@@ -1269,6 +1269,49 @@ local function applyAlienPowers(alienName)
 				if p.Name == "MegaESP" then p:Destroy() end
 			end
 		end})
+		
+	elseif alienName == "Feedback" then
+		targetSpeed = 30
+		targetJump = 72
+
+		-- Criação do botão de habilidade
+		local SkillBtn = Instance.new("TextButton", ScreenGui)
+		SkillBtn.Size = UDim2.new(0, 130, 0, 40)
+		SkillBtn.Position = UDim2.new(0.85, -20, 0.35, 0)
+		SkillBtn.Text = "Impulso de Energia"
+		SkillBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+		SkillBtn.TextColor3 = Color3.new(1, 1, 1)
+		SkillBtn.ZIndex = 6
+		Instance.new("UICorner", SkillBtn)
+
+		local cdImpulso = false
+
+		SkillBtn.MouseButton1Click:Connect(function()
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			if hrp and not cdImpulso then
+				cdImpulso = true
+
+				-- Cria o impulso
+				local bv = Instance.new("BodyVelocity")
+				bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+				bv.Velocity = (hrp.CFrame.LookVector * 200) + Vector3.new(0, 50, 0)
+				bv.Parent = hrp
+
+				-- Duração de 0.1 segundos
+				task.wait(0.1)
+				if bv then bv:Destroy() end
+
+				-- Cooldown de 10 segundos
+				task.wait(10)
+
+				cdImpulso = false
+			end
+		end)
+
+		-- Limpeza ao sair da forma
+		table.insert(activeLoops, {Disconnect = function() 
+			SkillBtn:Destroy() 
+		end})
 
 	elseif alienName == "FrankenStrike" then
 		targetSpeed = 25
