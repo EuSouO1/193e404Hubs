@@ -80,6 +80,7 @@ local clickCount = 0
 local lastClickTime = 0
 local activeLoops = {}
 local originalGravity = workspace.Gravity
+local dnaScanActive = false
 
 -- Controle Mestre e Histórico de Setas
 local masterControlActive = false
@@ -1481,6 +1482,67 @@ local function applyAlienPowers(alienName)
 	end
 end
 
+-- === SISTEMA DE DNA SCAN ===
+local dnaConnections = {}
+
+local function ativarDnaScan()
+	if isTransformed or dnaScanActive then return end
+	dnaScanActive = true
+
+	local char = lplayer.Character
+	if not char then return end
+
+	-- Limpa conexões antigas
+	for _, conn in pairs(dnaConnections) do
+		conn:Disconnect()
+	end
+	dnaConnections = {}
+
+	for _, part in pairs(char:GetDescendants()) do
+		if part:IsA("BasePart") then
+			local conn = part.Touched:Connect(function(hit)
+				if not dnaScanActive then return end
+
+				local model = hit:FindFirstAncestorOfClass("Model")
+				local hum = model and model:FindFirstChildOfClass("Humanoid")
+
+				if hum and model ~= char then
+					-- Lógica de busca: Prioridade para TextBox no NameGUI, senão usa o nome do Model
+					local head = model:FindFirstChild("Head")
+					local gui = head and head:FindFirstChild("NameGUI")
+					local textBox = gui and gui:FindFirstChild("TextBox")
+
+					local nomeAlvoParaValidar = (textBox and textBox:IsA("TextLabel")) and textBox.Text or model.Name
+
+					for nomeAlien, _ in pairs(COMBINACOES_ALIENS) do
+						local busca = string.lower(string.gsub(nomeAlien, "%s+", ""))
+						local alvoLimpo = string.lower(string.gsub(nomeAlvoParaValidar, "%s+", ""))
+
+						if string.find(alvoLimpo, busca) then
+							-- DNA Encontrado!
+							dnaScanActive = false
+							omnitrixCooldown = true
+							MainPanel.BackgroundColor3 = CORES_PAINEL.DnaDetec
+							pcall(function() playSound(IDS.Sons.Trocar) end)
+
+							task.wait(120)
+
+							AliensDesbloqueadosPeloJogador[nomeAlien] = true
+							shoutInChat("DNA de " .. nomeAlien .. " Desbloqueado")
+
+							omnitrixCooldown = false
+							MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
+							pcall(function() playSound(IDS.Sons.Recarregar) end)
+							break
+						end
+					end
+				end
+			end)
+			table.insert(dnaConnections, conn)
+		end
+	end
+end
+
 local function iniciarAutoDestruicao()
 	if omnitrixCooldown then return end
 
@@ -1601,6 +1663,13 @@ end
 -- === LÓGICA DE TRANSFORMAÇÃO ===
 local function transform(alienName)
 	if omnitrixCooldown or (isTransformed and not masterControlActive) then return end
+	
+	-- Dentro da função de transformar:
+	dnaScanActive = false
+	for _, conn in pairs(dnaConnections) do
+		conn:Disconnect() -- Mata as conexões ativas imediatamente
+	end
+	dnaConnections = {}
 
 	-- Se o Controle Mestre estiver ativado, ignora o delay e transforma direto (perfeito)
 	if masterControlActive then
@@ -1630,10 +1699,15 @@ local function transform(alienName)
 					resetPlayerPhysics()
 					omnitrixCooldown = true
 					MainPanel.BackgroundColor3 = CORES_PAINEL.Descarregaged
+
 					task.wait(480)
+
 					omnitrixCooldown = false
 					MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
 					pcall(function() playSound(IDS.Sons.Recarregar) end)
+
+					-- ADICIONE ISSO AQUI:
+					ativarDnaScan() 
 				end
 			end
 		end)
@@ -1671,7 +1745,7 @@ local function transform(alienName)
 	pcall(function() playSound(IDS.Sons.Transformar) end)
 
 	if finalAlien == "Besta" then
-		shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH")
+		shoutInChat("RAAAHHHHHHHHHHHHHHHHHHH!!!!!!!!!!")
 	elseif finalAlien == "A Múmia" then
 		shoutInChat("A múmia?")
 	else
@@ -1716,6 +1790,9 @@ local function transform(alienName)
 				omnitrixCooldown = false
 				MainPanel.BackgroundColor3 = CORES_PAINEL.Carregado
 				pcall(function() playSound(IDS.Sons.Recarregar) end)
+				
+				-- ADICIONE ISSO AQUI:
+				ativarDnaScan() 
 			end
 		end
 	end)
@@ -1767,7 +1844,7 @@ local function registerComboClick(arrow)
 	end
 
 	-- 2. CHECA CONTROLE MESTRE (Só se não desbloqueou nada)
-	if comboHistory:sub(-30) == ">>>>>" then
+	if comboHistory:sub(-30) == "><>><<<>>><<<<>>><><>><<<>>><<<" then
 		comboHistory = ""
 		masterControlActive = true
 		MainPanel.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
@@ -1867,6 +1944,8 @@ lplayer.CharacterAdded:Connect(function(newCharacter)
 	if not hrp or not hum then return end
 
 	task.wait(0.5)
+	
+	ativarDnaScan()
 
 	-- 2. Destransformação e Reset de Física
 	isTransformed = false
@@ -1884,3 +1963,5 @@ lplayer.CharacterAdded:Connect(function(newCharacter)
 	hum.WalkSpeed = 16
 	hum.JumpPower = 50
 end)
+
+ativarDnaScan()
