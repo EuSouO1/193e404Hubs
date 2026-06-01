@@ -435,30 +435,28 @@ local function applyAlienPowers(alienName)
 		targetSpeed = 40  
 		targetJump = 150  
 
+		-- === DENTRO DO BLOCO DO XLR8 ===
 	elseif alienName == "XLR8" then
 		isCustomSpeedLoop = true
 		targetJump = 50
 		hum.WalkSpeed = 50
 
-		local waterFloat = Instance.new("BodyVelocity")
-		waterFloat.Name = "XLR8WaterRun"
-		waterFloat.MaxForce = Vector3.new(0, 0, 0)
-		waterFloat.Velocity = Vector3.new(0, 0, 0)
-
 		local hrp = char:FindFirstChild("HumanoidRootPart")
-		if hrp then waterFloat.Parent = hrp end
-
 		local overlapParams = OverlapParams.new()
 		overlapParams.FilterType = Enum.RaycastFilterType.Exclude
 		overlapParams.FilterDescendantsInstances = {char}
+
 		local azulPuro, cianoPuro = Color3.fromRGB(0, 0, 255), Color3.fromRGB(0, 255, 255)
 		local nomesAgua = {"water", "ocean", "sea", "agua", "rio", "lake"}
+
+		-- Tabela para rastrear quais partes de água foram alteradas para podermos resetar depois
+		local partesAguaAlteradas = {}
 
 		local xxlr8Loop = RunService.Heartbeat:Connect(function()
 			if not char:FindFirstChild("HumanoidRootPart") then return end
 			hrp = char.HumanoidRootPart
 
-			-- 1. LÓGICA ORIGINAL DE MOVIMENTO
+			-- 1. LÓGICA DE VELOCIDADE
 			if hum.MoveDirection.Magnitude > 0 then
 				if hum.WalkSpeed < 500 then hum.WalkSpeed = hum.WalkSpeed + 2 end
 			else
@@ -471,50 +469,51 @@ local function applyAlienPowers(alienName)
 			end
 			if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
 
-			-- 2. DETECÇÃO DE ÁGUA
-			local naAgua = false
-			if game.PlaceId == 4924922222 then
-				if hrp.Position.Y >= -6 and hrp.Position.Y <= -3 then naAgua = true end
+			-- 2. DETECÇÃO DE ÁGUA AO REDOR
+			-- Verifica se o XLR8 está rápido o suficiente (150+)
+			local estaRapido = hum.WalkSpeed >= 150
+
+			-- Busca partes de água próximas ao player
+			local parts = workspace:GetPartsInPart(hrp, overlapParams)
+
+			-- Reseta colisão de partes que não estão mais perto (limpeza)
+			for part, _ in pairs(partesAguaAlteradas) do
+				local aindaEstaPerto = false
+				for _, p in pairs(parts) do if p == part then aindaEstaPerto = true break end end
+
+				if not aindaEstaPerto then
+					part.CanCollide = false
+					partesAguaAlteradas[part] = nil
+				end
 			end
-			if not naAgua then
-				local parts = workspace:GetPartsInPart(hrp, overlapParams)
-				for _, part in pairs(parts) do
-					local n = string.lower(part.Name)
-					for _, p in ipairs(nomesAgua) do if string.find(n, p) then naAgua = true break end end
-					if naAgua then break end
+
+			-- Aplica colisão se estiver rápido
+			for _, part in pairs(parts) do
+				local n = string.lower(part.Name)
+				local ehAgua = false
+
+				for _, p in ipairs(nomesAgua) do if string.find(n, p) then ehAgua = true break end end
+
+				if not ehAgua then
 					local r, g, b = part.Color.R, part.Color.G, part.Color.B
 					local distAzul = math.sqrt((r-azulPuro.R)^2 + (g-azulPuro.G)^2 + (b-azulPuro.B)^2)
 					local distCiano = math.sqrt((r-cianoPuro.R)^2 + (g-cianoPuro.G)^2 + (b-cianoPuro.B)^2)
-					if (distAzul < 0.85 or distCiano < 0.85) and (b > r or g > r) then naAgua = true break end
+					if (distAzul < 0.85 or distCiano < 0.85) and (b > r or g > r) then ehAgua = true end
 				end
-			end
 
-			-- 3. FORÇAR COLLIDE (Corrigido: True se na água OU se correndo rápido)
-			local deveColidir = (naAgua or hum.WalkSpeed > 75)
-			for _, p in pairs(char:GetChildren()) do
-				if p:IsA("BasePart") and p.CanCollide ~= deveColidir then 
-					p.CanCollide = deveColidir 
-				end
-			end
-
-			-- 4. FLUTUAÇÃO
-			if game.PlaceId == 4924922222 then
-				local alturaY = hrp.Position.Y
-				if hum.WalkSpeed > 150 and hum.MoveDirection.Magnitude > 0 and alturaY < 0 then
-					waterFloat.MaxForce = Vector3.new(0, math.huge, 0)
-					waterFloat.Velocity = Vector3.new(0, (0 - alturaY) * 10, 0)
-					if hum:GetState() ~= Enum.HumanoidStateType.Running then hum:ChangeState(Enum.HumanoidStateType.Running) end
-				else
-					waterFloat.MaxForce = Vector3.new(0, 0, 0)
-					waterFloat.Velocity = Vector3.new(0, 0, 0)
+				if ehAgua then
+					part.CanCollide = estaRapido
+					if estaRapido then partesAguaAlteradas[part] = true end
 				end
 			end
 		end)
 
 		table.insert(activeLoops, xxlr8Loop)
 		table.insert(activeLoops, {Disconnect = function() 
-			if hrp and hrp:FindFirstChild("XLR8WaterRun") then hrp.XLR8WaterRun:Destroy() end
-			for _, p in pairs(char:GetChildren()) do if p:IsA("BasePart") then p.CanCollide = true end end
+			-- Garante que toda água alterada volte a ser não-colidível ao sair do modo XLR8
+			for part, _ in pairs(partesAguaAlteradas) do
+				if part then part.CanCollide = false end
+			end
 		end})
 
 	elseif alienName == "Bala de Canhão" then
