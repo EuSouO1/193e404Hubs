@@ -438,7 +438,6 @@ local function applyAlienPowers(alienName)
 		targetJump = 150  
 
 		-- === DENTRO DO BLOCO DO XLR8 ===
-		-- === DENTRO DO BLOCO DO XLR8 ===
 	elseif alienName == "XLR8" then
 		isCustomSpeedLoop = true
 		targetJump = 50
@@ -452,11 +451,11 @@ local function applyAlienPowers(alienName)
 		local azulPuro, cianoPuro = Color3.fromRGB(0, 0, 255), Color3.fromRGB(0, 255, 255)
 		local nomesAgua = {"water", "ocean", "sea", "agua", "rio", "lake"}
 
-		local partesAguaAlteradas = {}
-		local waterFloat = nil -- Variável para o impulso
+		local waterFloat = nil 
+		local partesSolidificadas = {} -- Tabela para rastrear o que alteramos
 
 		local xxlr8Loop = RunService.Heartbeat:Connect(function()
-			if not char:FindFirstChild("HumanoidRootPart") then return end
+			if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 			hrp = char.HumanoidRootPart
 
 			-- 1. LÓGICA DE VELOCIDADE
@@ -470,14 +469,14 @@ local function applyAlienPowers(alienName)
 					hum.WalkSpeed = 50
 				end
 			end
-			if hum.JumpPower ~= targetJump then hum.JumpPower = targetJump end
 
-			-- 2. DETECÇÃO DE ÁGUA E IMPULSO
+			-- 2. DETECÇÃO DE ÁGUA E LIMPEZA
 			local estaRapido = hum.WalkSpeed >= 150
-			local partes = workspace:GetPartsInPart(hrp, overlapParams)
+			local partesAoRedor = workspace:GetPartsInPart(hrp, overlapParams)
 			local tocandoAgua = false
+			local listaPartesAtuais = {}
 
-			for _, part in pairs(partes) do
+			for _, part in pairs(partesAoRedor) do
 				local n = string.lower(part.Name)
 				local ehAgua = false
 
@@ -491,20 +490,33 @@ local function applyAlienPowers(alienName)
 
 				if ehAgua then
 					tocandoAgua = true
+					listaPartesAtuais[part] = true
+
+					-- Se estiver rápido, solidifica
 					if estaRapido then
 						part.CanCollide = true
-						partesAguaAlteradas[part] = true
+						partesSolidificadas[part] = true
 					end
 				end
 			end
 
-			-- 3. GESTÃO DO IMPULSO (BodyVelocity)
-			if tocandoAgua and estaRapido then
+			-- Limpeza: Se a parte estava sólida mas não estamos mais tocando ou rápido, desfaz
+			for part, _ in pairs(partesSolidificadas) do
+				if not listaPartesAtuais[part] or not estaRapido then
+					part.CanCollide = false
+					partesSolidificadas[part] = nil
+				end
+			end
+
+			-- 3. GESTÃO DO IMPULSO
+			local estaNaAlturaCerta = (game.PlaceId == 4924922222 and hrp.Position.Y < -0.05)
+
+			if tocandoAgua and estaRapido and estaNaAlturaCerta then
 				if not waterFloat then
 					waterFloat = Instance.new("BodyVelocity")
 					waterFloat.Name = "XLR8WaterImpulse"
-					waterFloat.MaxForce = Vector3.new(0, 50000, 0) -- Força vertical
-					waterFloat.Velocity = Vector3.new(0, 25, 0) -- Velocidade para cima
+					waterFloat.MaxForce = Vector3.new(0, 50000, 0)
+					waterFloat.Velocity = Vector3.new(0, 25, 0)
 					waterFloat.Parent = hrp
 				end
 			else
@@ -513,22 +525,12 @@ local function applyAlienPowers(alienName)
 					waterFloat = nil
 				end
 			end
-
-			-- Limpeza de colisão
-			for part, _ in pairs(partesAguaAlteradas) do
-				local aindaEstaPerto = false
-				for _, p in pairs(partes) do if p == part then aindaEstaPerto = true break end end
-				if not aindaEstaPerto then
-					part.CanCollide = false
-					partesAguaAlteradas[part] = nil
-				end
-			end
 		end)
 
 		table.insert(activeLoops, xxlr8Loop)
 		table.insert(activeLoops, {Disconnect = function() 
 			if waterFloat then waterFloat:Destroy() end
-			for part, _ in pairs(partesAguaAlteradas) do
+			for part, _ in pairs(partesSolidificadas) do
 				if part then part.CanCollide = false end
 			end
 		end})
