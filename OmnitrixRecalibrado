@@ -171,7 +171,7 @@ ConfigsMenu.Visible = false
 ConfigsMenu.ZIndex = 8
 
 local ConfigsCorner = Instance.new("UICorner", ConfigsMenu)
-ConfigsCorner.CornerRadius = UDim.new(0, 12)
+ConfigsCorner.CornerRadius = UDim.new(1, 0)
 
 local ConfigsTitle = Instance.new("TextLabel", ConfigsMenu)
 ConfigsTitle.Size = UDim2.new(1, 0, 0, 30)
