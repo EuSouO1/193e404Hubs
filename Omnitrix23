@@ -633,12 +633,12 @@ local function applyAlienPowers(alienName)
 							if name == "Impulso" and not cdImpulso then
 								cdImpulso = true
 								local bv = Instance.new("BodyVelocity", seat)
-								bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = seat.CFrame.LookVector * 100
+								bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = seat.CFrame.LookVector * 375
 								task.wait(0.1); bv:Destroy(); task.wait(3); cdImpulso = false
 							elseif name == "Pulo" and not cdPulo then
 								cdPulo = true
 								local bv = Instance.new("BodyVelocity", seat)
-								bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = Vector3.new(0, 150, 0)
+								bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = Vector3.new(0, 200, 0)
 								task.wait(0.1); bv:Destroy(); task.wait(0.25); cdPulo = false
 							end
 						end)
