@@ -10,15 +10,9 @@ local lplayer = Players.LocalPlayer
 local TEST_SHOW_UNLOCKED_ALIENS = false -- MUDADO PARA FALSE!
 local isSecondarySelected = false -- Controla se estamos navegando na lista secundária
 local AliensSecundarios = {
-	[1] = {Nome = "Cipó Selvagem", Emoji = "🌱"},
-	[2] = {Nome = "Glutão", Emoji = "🍽️"},
-	[3] = {Nome = "A Múmia", Emoji = "🧻"},
-	[4] = {Nome = "BlitzWolfer", Emoji = "🐺"},
-	[5] = {Nome = "Gigante", Emoji = "👤"},
-	[6] = {Nome = "Mega-Olhos", Emoji = "👁️"},
-	[7] = {Nome = "FrankenStrike", Emoji = "🧟"},
-	[8] = {Nome = "Feedback", Emoji = "🔌"},
-	[9] = {Nome = "Alien A", Emoji = "🧬"}
+	[1] = {Nome = "FrankenStrike", Emoji = "🧟"},
+	[2] = {Nome = "Feedback", Emoji = "🔌"},
+	[3] = {Nome = "Alien A", Emoji = "🧬"}
 }
 
 -- Tabela que guarda quais aliens o jogador já desbloqueou fazendo a combinação
@@ -26,12 +20,6 @@ local AliensDesbloqueadosPeloJogador = {}
 
 -- Adicione ao final da tabela COMBINACOES_ALIENS
 local COMBINACOES_ALIENS = {
-	["Cipó Selvagem"] = ">>><><><",
-	["Glutão"] = "><><>><<",
-	["A Múmia"] = "<<<>>>><<",
-	["BlitzWolfer"] = ">>><<<><><",
-	["Gigante"] = ">>>><<<<>><<",
-	["Mega-Olhos"] = "<<>><<>>",
 	["FrankenStrike"] = "<><>><<><>>",
 	["Alien A"] = ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>><",
 	["Feedback"] = "<><>><><>><<"
