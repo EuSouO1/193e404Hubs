@@ -1,0 +1,23 @@
+-- Avisa que o sistema tá online
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Oruam Script",
+    Text = "Prompt's Tempo de Espera : Removidos",
+    Duration = 3
+})
+
+-- Função pra remover o tempo de qualquer prompt
+local function removerTempo(obj)
+    if obj:IsA("ProximityPrompt") then
+        obj.HoldDuration = 0
+    end
+end
+
+-- Limpa os que já estão no Workspace agora
+for _, v in pairs(game:GetService("Workspace"):GetDescendants()) do
+    removerTempo(v)
+end
+
+-- Loop que fica de olho se aparecer algo novo no Workspace
+game:GetService("Workspace").DescendantAdded:Connect(function(child)
+    removerTempo(child)
+end)
