@@ -538,8 +538,8 @@ local function applyAlienPowers(alienName)
 				local bv = Instance.new("BodyVelocity", hrp)
 				bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
 				bv.Velocity = direcao * 100
-				game.Debris:AddItem(bv, 0.1)
-				task.wait(5)
+				game.Debris:AddItem(bv, 1)
+				task.wait(1.5)
 				cooldowns[2] = false
 			end
 		end)
