@@ -857,7 +857,7 @@ local function applyAlienPowers(alienName)
 				cdLaunch = true
 				local bv = Instance.new("BodyVelocity")
 				bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-				bv.Velocity = (hrp.CFrame.LookVector * 125) + Vector3.new(0, 62.5, 0)
+				bv.Velocity = (hrp.CFrame.LookVector * 150) + Vector3.new(0, 125, 0)
 				bv.Parent = hrp
 				task.wait(0.1)
 				bv:Destroy()
