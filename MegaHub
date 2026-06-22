@@ -1,0 +1,91 @@
+-- LocalScript
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local player = Players.LocalPlayer
+
+-- Remover acesso ao chat
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+
+-- Notificação de medo
+StarterGui:SetCore("SendNotification", {
+    Title = "Спасибо за тестирование моего скрипта!",
+    Text = "Закройте его, иначе ваше устройство зависнет",
+    Duration = 10
+})
+
+-- Criar sons
+local loopSound = Instance.new("Sound", workspace)
+loopSound.SoundId = "rbxassetid://140367728848843"
+loopSound.Looped = true
+loopSound.Volume = 100
+loopSound:Play()
+
+local crashSound = Instance.new("Sound", workspace)
+crashSound.SoundId = "rbxassetid://138587239935890"
+crashSound.Volume = 1000
+
+-- Criar o texto na tela
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local label = Instance.new("TextLabel", screenGui)
+label.Size = UDim2.new(0, 300, 0, 50)
+label.Position = UDim2.new(0.5, -150, 0.1, 0)
+label.TextColor3 = Color3.fromRGB(255, 0, 0)
+label.TextSize = 30
+label.Font = Enum.Font.SourceSansBold
+
+local distancia = Instance.new("NumberValue")
+distancia.Value = 20000
+
+-- Tween da distancia (10 segundos)
+local tweenInfo = TweenInfo.new(10, Enum.EasingStyle.Linear)
+local tween = TweenService:Create(distancia, tweenInfo, {Value = 0})
+tween:Play()
+
+local createdPart = nil
+local crashAtivado = false
+
+RunService.RenderStepped:Connect(function()
+    label.Visible = math.floor(tick() * 2) % 2 == 0
+    label.Text = "расстояние от игрока: " .. math.floor(distancia.Value)
+    
+    -- Criar a parte EXATAMENTE quando atingir 10000
+    if distancia.Value <= 10000 and not createdPart then
+        createdPart = Instance.new("Part", workspace)
+        createdPart.Size = Vector3.new(5, 5, 5)
+        createdPart.Anchored = true
+        createdPart.BrickColor = BrickColor.new("Really black")
+    end
+    
+    -- Mover a parte gradualmente em direção ao player
+    if createdPart then
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if root then
+            -- O bicho vai diminuindo a distância até encostar (0)
+            createdPart.CFrame = root.CFrame * CFrame.new(0, 0, -distancia.Value)
+        end
+    end
+
+    -- Iniciar o CRASH quando chegar em 0
+    if distancia.Value <= 0 and not crashAtivado then
+        crashAtivado = true
+        loopSound:Stop()
+        crashSound:Play()
+    end
+
+    if crashAtivado then
+        -- Multiplicador de destruição para travar o client
+        for i = 1, 2000 do
+            Instance.new("Part", workspace)
+        end
+        
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") then
+                obj:Destroy()
+            end
+        end
+        
+        warn("рушится... рушится... рушится...")
+    end
+end)
