@@ -1,0 +1,414 @@
+-- Script brabo do Oruam (Atualizado com os Sons de DBZ)
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local Mouse = Player:GetMouse()
+
+-- Variáveis de Estado
+local Energia = 25
+local TransformacaoAtual = "Base"
+local VooAtivado = false
+local AguardandoTeleporte = false
+local TeleportCooldown = false
+local ImpulsoCooldown = false
+local AtalhosAtivos = {}
+
+-- IDs dos Sons
+local SoundIDs = {
+	Transformar = "rbxassetid://107705845357163",
+	Teleporte = "rbxassetid://124934430745275",
+	LoopForm = "rbxassetid://113241850049300",
+	Impulso = "rbxassetid://117648889501183",
+	VooToggle = "rbxassetid://136268605001101"
+}
+
+-- Criando a pasta e os objetos de som no Player
+local SoundHolder = Instance.new("Folder")
+SoundHolder.Name = "OruamSoundHolder"
+SoundHolder.Parent = Player
+
+local function CriarSom(nome, id, loopear)
+	local sound = Instance.new("Sound")
+	sound.Name = nome
+	sound.SoundId = id
+	sound.Looped = loopear or false
+	sound.Volume = 1
+	sound.Parent = SoundHolder
+	return sound
+end
+
+local SomTransformar = CriarSom("Transformar", SoundIDs.Transformar, false)
+local SomTeleporte = CriarSom("Teleporte", SoundIDs.Teleporte, false)
+local SomLoopForm = CriarSom("LoopForm", SoundIDs.LoopForm, true)
+local SomImpulso = CriarSom("Impulso", SoundIDs.Impulso, false)
+local SomVooToggle = CriarSom("VooToggle", SoundIDs.VooToggle, false)
+
+-- Configurações das Transformações
+local Forms = {
+	Base = { minEnergia = 0, speed = 16, tpBonus = 0, impulsoSpeed = 100, drain = 0, color = Color3.new(1, 1, 1), intensity = 0 },
+	Kaioken = { minEnergia = 25, speed = 24, tpBonus = 50, impulsoSpeed = 150, drain = 4, color = Color3.fromRGB(255, 50, 50), intensity = 0.2 },
+	SSJ1 = { minEnergia = 50, speed = 24, tpBonus = 75, impulsoSpeed = 200, drain = 3, color = Color3.fromRGB(255, 255, 50), intensity = 0.4 },
+	SSJ2 = { minEnergia = 75, speed = 32, tpBonus = 100, impulsoSpeed = 250, drain = 2, color = Color3.fromRGB(255, 200, 0), intensity = 0.6 },
+	SSJ3 = { minEnergia = 100, speed = 50, tpBonus = 200, impulsoSpeed = 300, drain = 1, color = Color3.fromRGB(255, 150, 0), intensity = 0.9 }
+}
+
+-- Criando a UI diretamente no PlayerGui do LocalPlayer
+local OruamGui = Instance.new("ScreenGui")
+OruamGui.Name = "OruamDBZGui"
+OruamGui.ResetOnSpawn = false
+OruamGui.Parent = PlayerGui
+
+-- Barra de Energia (Topo)
+local TopBar = Instance.new("Frame", OruamGui)
+TopBar.Size = UDim2.new(0, 300, 0, 30)
+TopBar.Position = UDim2.new(0.5, -150, 0, 10)
+TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TopBar.BorderSizePixel = 2
+TopBar.BorderColor3 = Color3.fromRGB(0, 0, 0)
+
+local EnergyFill = Instance.new("Frame", TopBar)
+EnergyFill.Size = UDim2.new(Energia/100, 0, 1, 0)
+EnergyFill.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+EnergyFill.BorderSizePixel = 0
+
+local EnergyText = Instance.new("TextLabel", TopBar)
+EnergyText.Size = UDim2.new(1, 0, 1, 0)
+EnergyText.BackgroundTransparency = 1
+EnergyText.Text = "Energia: " .. Energia
+EnergyText.TextColor3 = Color3.fromRGB(255, 255, 255)
+EnergyText.Font = Enum.Font.Code
+EnergyText.TextSize = 18
+
+-- Botão de abrir/fechar Menu
+local ToggleMenuBtn = Instance.new("TextButton", TopBar)
+ToggleMenuBtn.Size = UDim2.new(0, 40, 0, 20)
+ToggleMenuBtn.Position = UDim2.new(0.5, -20, 1, 0)
+ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleMenuBtn.Text = "V"
+ToggleMenuBtn.TextColor3 = Color3.fromRGB(255,255,255)
+
+-- Menu Principal
+local MainMenu = Instance.new("Frame", TopBar)
+MainMenu.Size = UDim2.new(1, 0, 0, 0)
+MainMenu.Position = UDim2.new(0, 0, 1, 20)
+MainMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainMenu.ClipsDescendants = true
+MainMenu.BorderSizePixel = 0
+
+local UIListLayout = Instance.new("UIListLayout", MainMenu)
+UIListLayout.Padding = UDim.new(0, 5)
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local function CriarBotaoMenu(nome, texto, parent)
+	local btn = Instance.new("TextButton", parent)
+	btn.Name = nome
+	btn.Size = UDim2.new(0.9, 0, 0, 30)
+	btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = Enum.Font.Code
+	btn.TextSize = 14
+	btn.Text = texto
+	return btn
+end
+
+local BtnVoo = CriarBotaoMenu("BtnVoo", "Voo: OFF", MainMenu)
+local BtnTransformar = CriarBotaoMenu("BtnTransformar", "Transformar", MainMenu)
+local BtnDestransformar = CriarBotaoMenu("BtnDestransformar", "Destransformar", MainMenu)
+local BtnTeleporte = CriarBotaoMenu("BtnTeleporte", "Teleporte (Mirar)", MainMenu)
+local BtnImpulso = CriarBotaoMenu("BtnImpulso", "Impulso", MainMenu)
+local BtnGerarAtalho = CriarBotaoMenu("BtnGerarAtalho", "Gerar Atalho >", MainMenu)
+
+-- Menu de Atalhos (Lateral)
+local AtalhoMenu = Instance.new("Frame", OruamGui)
+AtalhoMenu.Size = UDim2.new(0, 150, 0, 210)
+AtalhoMenu.Position = UDim2.new(0.5, 160, 0, 60)
+AtalhoMenu.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+AtalhoMenu.Visible = false
+
+local AtalhoListLayout = Instance.new("UIListLayout", AtalhoMenu)
+AtalhoListLayout.Padding = UDim.new(0, 5)
+AtalhoListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local TituloAtalho = Instance.new("TextLabel", AtalhoMenu)
+TituloAtalho.Size = UDim2.new(1, 0, 0, 20)
+TituloAtalho.BackgroundTransparency = 1
+TituloAtalho.Text = "Escolha p/ Atalho"
+TituloAtalho.TextColor3 = Color3.new(1,1,1)
+
+local OpcAtalhos = {"Voo", "Transformar", "Destransformar", "Teleporte", "Impulso"}
+for _, opc in pairs(OpcAtalhos) do
+	local btn = CriarBotaoMenu("Opc_"..opc, opc, AtalhoMenu)
+	btn.MouseButton1Click:Connect(function()
+		AdicionarRemoverAtalho(opc)
+	end)
+end
+
+-- Container dos Atalhos Ativos na tela
+local ContainerAtalhos = Instance.new("Frame", OruamGui)
+ContainerAtalhos.Size = UDim2.new(0, 120, 0, 350)
+ContainerAtalhos.Position = UDim2.new(1, -130, 0.5, -175)
+ContainerAtalhos.BackgroundTransparency = 1
+local ContainerList = Instance.new("UIListLayout", ContainerAtalhos)
+ContainerList.Padding = UDim.new(0, 10)
+
+-- Efeito de Tela (ColorCorrection)
+local ColorEffect = Instance.new("ColorCorrectionEffect", Lighting)
+ColorEffect.Name = "OruamTransformEffect"
+ColorEffect.Enabled = false
+local TweenPulse
+
+-- Lógica de Abrir/Fechar Menu
+local MenuAberto = false
+ToggleMenuBtn.MouseButton1Click:Connect(function()
+	MenuAberto = not MenuAberto
+	if MenuAberto then
+		ToggleMenuBtn.Text = "^"
+		TweenService:Create(MainMenu, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, 210)}):Play()
+	else
+		ToggleMenuBtn.Text = "V"
+		TweenService:Create(MainMenu, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+		AtalhoMenu.Visible = false
+	end
+end)
+
+BtnGerarAtalho.MouseButton1Click:Connect(function()
+	AtalhoMenu.Visible = not AtalhoMenu.Visible
+end)
+
+-- Sistema de Energia (Loop)
+local TickRegen = 0
+local TickDrain = 0
+
+RunService.Heartbeat:Connect(function(dt)
+	Energia = math.clamp(Energia, 0, 100)
+	EnergyFill.Size = UDim2.new(Energia/100, 0, 1, 0)
+	EnergyText.Text = "Energia: " .. Energia .. " | Form: " .. TransformacaoAtual
+
+	if TransformacaoAtual == "Base" then
+		TickRegen = TickRegen + dt
+		if TickRegen >= 2 then
+			TickRegen = 0
+			if Energia < 100 then Energia = Energia + 1 end
+		end
+	else
+		local formInfo = Forms[TransformacaoAtual]
+		if formInfo then
+			TickDrain = TickDrain + dt
+			if TickDrain >= formInfo.drain then
+				TickDrain = 0
+				Energia = Energia - 1
+				if Energia <= 0 then
+					Destransformar()
+				end
+			end
+		end
+	end
+end)
+
+-- Sistema de Voo
+UserInputService.JumpRequest:Connect(function()
+	if VooAtivado then
+		local char = Player.Character
+		if char and char:FindFirstChildOfClass("Humanoid") then
+			char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+		end
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	local char = Player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") then
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		local formSpeed = Forms[TransformacaoAtual].speed
+
+		if VooAtivado and hum.FloorMaterial == Enum.Material.Air then
+			hum.WalkSpeed = formSpeed * 5
+			Workspace.Gravity = 196.2 / 3
+		else
+			hum.WalkSpeed = formSpeed
+			Workspace.Gravity = 196.2
+		end
+	end
+end)
+
+local function ToggleVoo()
+	VooAtivado = not VooAtivado
+	BtnVoo.Text = VooAtivado and "Voo: ON" or "Voo: OFF"
+	SomVooToggle:Play()
+	if not VooAtivado then
+		Workspace.Gravity = 196.2
+	end
+	AtualizarTextoAtalhos()
+end
+BtnVoo.MouseButton1Click:Connect(ToggleVoo)
+
+-- Lógica de Transformação
+function AplicarEfeitoVisual(formName)
+	local dados = Forms[formName]
+	if formName == "Base" then
+		ColorEffect.Enabled = false
+		if TweenPulse then TweenPulse:Cancel() end
+		SomLoopForm:Stop()
+	else
+		ColorEffect.Enabled = true
+		ColorEffect.TintColor = dados.color
+		ColorEffect.Brightness = 0
+
+		if TweenPulse then TweenPulse:Cancel() end
+
+		local info = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+		TweenPulse = TweenService:Create(ColorEffect, info, {Brightness = dados.intensity})
+		TweenPulse:Play()
+
+		if not SomLoopForm.IsPlaying then
+			SomLoopForm:Play()
+		end
+	end
+end
+
+function Transformar()
+	local antTrans = TransformacaoAtual
+	if Energia >= 100 then
+		TransformacaoAtual = "SSJ3"
+	elseif Energia >= 75 then
+		TransformacaoAtual = "SSJ2"
+	elseif Energia >= 50 then
+		TransformacaoAtual = "SSJ1"
+	elseif Energia >= 25 then
+		TransformacaoAtual = "Kaioken"
+	else
+		return
+	end
+
+	if antTrans == "Base" then
+		SomTransformar:Play()
+	end
+
+	AplicarEfeitoVisual(TransformacaoAtual)
+end
+
+function Destransformar()
+	TransformacaoAtual = "Base"
+	AplicarEfeitoVisual("Base")
+end
+
+BtnTransformar.MouseButton1Click:Connect(Transformar)
+BtnDestransformar.MouseButton1Click:Connect(Destransformar)
+
+-- Habilidade de Impulso
+function UsarImpulso()
+	if ImpulsoCooldown then return end
+
+	local char = Player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		local hrp = char.HumanoidRootPart
+		ImpulsoCooldown = true
+		BtnImpulso.Text = "Impulso (CD)"
+		AtualizarTextoAtalhos()
+
+		SomImpulso:Play()
+
+		local velMagnitude = Forms[TransformacaoAtual].impulsoSpeed
+
+		local bv = Instance.new("BodyVelocity")
+		bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		bv.Velocity = (hrp.CFrame.LookVector * velMagnitude) + Vector3.new(0, 25, 0)
+		bv.Parent = hrp
+
+		task.delay(0.1, function()
+			if bv then bv:Destroy() end
+		end)
+
+		task.delay(3, function()
+			ImpulsoCooldown = false
+			BtnImpulso.Text = "Impulso"
+			AtualizarTextoAtalhos()
+		end)
+	end
+end
+BtnImpulso.MouseButton1Click:Connect(UsarImpulso)
+
+-- Lógica de Teleporte
+BtnTeleporte.MouseButton1Click:Connect(function()
+	if not TeleportCooldown then
+		AguardandoTeleporte = true
+		BtnTeleporte.Text = "Mirando..."
+		AtualizarTextoAtalhos()
+	end
+end)
+
+Mouse.Button1Down:Connect(function()
+	if AguardandoTeleporte then
+		AguardandoTeleporte = false
+		BtnTeleporte.Text = "Teleporte (Mirar)"
+		AtualizarTextoAtalhos()
+
+		local char = Player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			local hrp = char.HumanoidRootPart
+			local targetPos = Mouse.Hit.Position
+			local dist = (hrp.Position - targetPos).Magnitude
+			local maxDist = 25 + Forms[TransformacaoAtual].tpBonus
+
+			if dist <= maxDist then
+				hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+				SomTeleporte:Play()
+				TeleportCooldown = true
+				task.delay(0.2, function() TeleportCooldown = false end)
+			end
+		end
+	end
+end)
+
+-- Sistema de Atalhos Dinâmicos (Limite de 5)
+function AtualizarTextoAtalhos()
+	for _, btn in pairs(ContainerAtalhos:GetChildren()) do
+		if btn:IsA("TextButton") then
+			if btn.Name == "Voo" then
+				btn.Text = VooAtivado and "Voo: ON" or "Voo: OFF"
+			elseif btn.Name == "Teleporte" then
+				btn.Text = AguardandoTeleporte and "Mirando..." or "Teleporte"
+			elseif btn.Name == "Impulso" then
+				btn.Text = ImpulsoCooldown and "Impulso (CD)" or "Impulso"
+			end
+		end
+	end
+end
+
+function AdicionarRemoverAtalho(nome)
+	if ContainerAtalhos:FindFirstChild(nome) then
+		ContainerAtalhos:FindFirstChild(nome):Destroy()
+		for i, v in ipairs(AtalhosAtivos) do
+			if v == nome then table.remove(AtalhosAtivos, i) break end
+		end
+		return
+	end
+
+	if #AtalhosAtivos >= 5 then return end
+
+	table.insert(AtalhosAtivos, nome)
+	local btnAtalho = CriarBotaoMenu(nome, nome, ContainerAtalhos)
+
+	if nome == "Voo" then btnAtalho.Text = VooAtivado and "Voo: ON" or "Voo: OFF"
+	elseif nome == "Impulso" then btnAtalho.Text = ImpulsoCooldown and "Impulso (CD)" or "Impulso" end
+
+	btnAtalho.MouseButton1Click:Connect(function()
+		if nome == "Voo" then ToggleVoo()
+		elseif nome == "Transformar" then Transformar()
+		elseif nome == "Destransformar" then Destransformar()
+		elseif nome == "Teleporte" then
+			if not TeleportCooldown then
+				AguardandoTeleporte = true
+				btnAtalho.Text = "Mirando..."
+			end
+		elseif nome == "Impulso" then
+			UsarImpulso()
+		end
+	end)
+end
