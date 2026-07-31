@@ -55,10 +55,10 @@ local SomVooToggle = CriarSom("VooToggle", SoundIDs.VooToggle, false)
 -- Configurações das Transformações
 local Forms = {
 	Base = { minEnergia = 0, speed = 16, tpBonus = 0, impulsoSpeed = 100, drain = 0, color = Color3.new(1, 1, 1), intensity = 0 },
-	Kaioken = { minEnergia = 25, speed = 24, tpBonus = 50, impulsoSpeed = 150, drain = 4, color = Color3.fromRGB(255, 50, 50), intensity = 0.2 },
-	SSJ1 = { minEnergia = 50, speed = 24, tpBonus = 75, impulsoSpeed = 200, drain = 3, color = Color3.fromRGB(255, 255, 50), intensity = 0.4 },
-	SSJ2 = { minEnergia = 75, speed = 32, tpBonus = 100, impulsoSpeed = 250, drain = 2, color = Color3.fromRGB(255, 200, 0), intensity = 0.6 },
-	SSJ3 = { minEnergia = 100, speed = 50, tpBonus = 200, impulsoSpeed = 300, drain = 1, color = Color3.fromRGB(255, 150, 0), intensity = 0.9 }
+	Kaioken = { minEnergia = 25, speed = 28, tpBonus = 50, impulsoSpeed = 150, drain = 4, color = Color3.fromRGB(255, 50, 50), intensity = 0.2 },
+	SSJ1 = { minEnergia = 50, speed = 32, tpBonus = 75, impulsoSpeed = 200, drain = 3, color = Color3.fromRGB(255, 255, 50), intensity = 0.4 },
+	SSJ2 = { minEnergia = 75, speed = 50, tpBonus = 100, impulsoSpeed = 250, drain = 2, color = Color3.fromRGB(255, 200, 0), intensity = 0.6 },
+	SSJ3 = { minEnergia = 100, speed = 65, tpBonus = 200, impulsoSpeed = 300, drain = 1, color = Color3.fromRGB(255, 150, 0), intensity = 0.9 }
 }
 
 -- Criando a UI diretamente no PlayerGui do LocalPlayer
