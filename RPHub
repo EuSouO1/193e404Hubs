@@ -1,0 +1,225 @@
+-- RP Hub feito na visão, pique Oruam (Versão PlayerGui)
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+-- Remover versão anterior se existir pra não bugar a tela
+if PlayerGui:FindFirstChild("RPHub_Oruam") then
+	PlayerGui.RPHub_Oruam:Destroy()
+end
+
+-- Variáveis de controle dos Toggles
+local Toggles = {
+	Caminhar = false,
+	Escalar = false,
+	Correr = false
+}
+
+local defaultSpeed = 16
+local walkSpeed = defaultSpeed / 2.5
+local runSpeed = defaultSpeed * 2
+
+-- Criando a Interface (GUI) direto no PlayerGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RPHub_Oruam"
+ScreenGui.ResetOnSpawn = false -- Pra interface não sumir quando morrer
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopCorner = Instance.new("UICorner")
+TopCorner.CornerRadius = UDim.new(0, 12)
+TopCorner.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -50, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "RP Hub"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 20
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 40, 0, 40)
+MinimizeBtn.Position = UDim2.new(1, -40, 0, 0)
+MinimizeBtn.BackgroundTransparency = 1
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 24
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Parent = TopBar
+
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, 0, 1, -40)
+ContentFrame.Position = UDim2.new(0, 0, 0, 40)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 10)
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = ContentFrame
+
+local Padding = Instance.new("UIPadding")
+Padding.PaddingTop = UDim.new(0, 15)
+Padding.Parent = ContentFrame
+
+-- Função pra criar botão com Toggle e efeito suave
+local function CreateToggle(name, emoji, key)
+	local Btn = Instance.new("TextButton")
+	Btn.Size = UDim2.new(0, 260, 0, 45)
+	Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+	Btn.Text = ""
+	Btn.AutoButtonColor = false
+	Btn.Parent = ContentFrame
+
+	local BtnCorner = Instance.new("UICorner")
+	BtnCorner.CornerRadius = UDim.new(0, 8)
+	BtnCorner.Parent = Btn
+
+	local Label = Instance.new("TextLabel")
+	Label.Size = UDim2.new(1, -20, 1, 0)
+	Label.Position = UDim2.new(0, 15, 0, 0)
+	Label.BackgroundTransparency = 1
+	Label.Text = emoji .. " " .. name
+	Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+	Label.TextSize = 18
+	Label.Font = Enum.Font.GothamSemibold
+	Label.TextXAlignment = Enum.TextXAlignment.Left
+	Label.Parent = Btn
+
+	local Status = Instance.new("Frame")
+	Status.Size = UDim2.new(0, 12, 0, 12)
+	Status.Position = UDim2.new(1, -25, 0.5, -6)
+	Status.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Vermelho (Off)
+	Status.Parent = Btn
+
+	local StatusCorner = Instance.new("UICorner")
+	StatusCorner.CornerRadius = UDim.new(1, 0)
+	StatusCorner.Parent = Status
+
+	-- Lógica de click e fade na régua
+	Btn.MouseButton1Click:Connect(function()
+		Toggles[key] = not Toggles[key]
+
+		-- Se ativar um, desativa o outro (Caminhar e Correr não rola junto)
+		if key == "Caminhar" and Toggles[key] then Toggles.Correr = false end
+		if key == "Correr" and Toggles[key] then Toggles.Caminhar = false end
+
+		local goalColor = Toggles[key] and Color3.fromRGB(50, 255, 50) or Color3.fromRGB(255, 50, 50)
+		TweenService:Create(Status, TweenInfo.new(0.3), {BackgroundColor3 = goalColor}):Play()
+		TweenService:Create(Label, TweenInfo.new(0.3), {TextColor3 = Toggles[key] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(200, 200, 200)}):Play()
+	end)
+end
+
+CreateToggle("Caminhar", "🚶", "Caminhar")
+CreateToggle("Correr", "🏃", "Correr")
+CreateToggle("Escalar", "🧗‍♂️", "Escalar")
+
+-- Lógica de minimizar / maximizar com Fade
+local minimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	if minimized then
+		MinimizeBtn.Text = "+"
+		TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, 40)}):Play()
+		TweenService:Create(ContentFrame, TweenInfo.new(0.2), {GroupTransparency = 1}):Play()
+	else
+		MinimizeBtn.Text = "-"
+		TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, 250)}):Play()
+		TweenService:Create(ContentFrame, TweenInfo.new(0.2), {GroupTransparency = 0}):Play()
+	end
+end)
+
+-- Dragging (Arrastar a UI pelo TopBar)
+local dragging, dragInput, dragStart, startPos
+TopBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+TopBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- Lógica dos Cheats/Funções do RP Hub
+
+-- Loop para forçar a velocidade do personagem se mudar
+RunService.Heartbeat:Connect(function()
+	local char = Player.Character
+	if char and char:FindFirstChild("Humanoid") then
+		local hum = char.Humanoid
+
+		-- Mantém atualizado caso o jogo tente forçar outra velocidade
+		if Toggles.Caminhar then
+			hum.WalkSpeed = walkSpeed
+		elseif Toggles.Correr then
+			hum.WalkSpeed = runSpeed
+		elseif not Toggles.Caminhar and not Toggles.Correr and (hum.WalkSpeed == walkSpeed or hum.WalkSpeed == runSpeed) then
+			-- Volta pro normal se desligar os toggles
+			hum.WalkSpeed = defaultSpeed
+		end
+	end
+end)
+
+-- Lógica de Escalar (Wall Hop)
+UserInputService.JumpRequest:Connect(function()
+	if Toggles.Escalar then
+		local char = Player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+			local hrp = char.HumanoidRootPart
+			local hum = char.Humanoid
+
+			-- Lança um Raycast pra frente do peito do boneco
+			local rayParams = RaycastParams.new()
+			rayParams.FilterDescendantsInstances = {char}
+			rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+			local rayResult = workspace:Raycast(hrp.Position, hrp.CFrame.LookVector * 2.5, rayParams)
+
+			if rayResult and rayResult.Instance then
+				local hitPart = rayResult.Instance
+				if hitPart.Anchored and hitPart.CanCollide then
+					-- Impulso pra escalar (pula no ar na parede)
+					hum:ChangeState(Enum.HumanoidStateType.Jumping)
+					hrp.Velocity = Vector3.new(hrp.Velocity.X, 45, hrp.Velocity.Z)
+				end
+			end
+		end
+	end
+end)
