@@ -543,7 +543,7 @@ RunService.Heartbeat:Connect(function()
 			local bv = rootPart:FindFirstChild("HubBodyVelocity") or Instance.new("BodyVelocity")
 			bv.Name = "HubBodyVelocity"
 			bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-			bv.Velocity = (tRoot.Position - (tRoot.CFrame.LookVector * 5) - rootPart.Position) * 10
+			bv.Velocity = (tRoot.Position - (tRoot.CFrame.LookVector * 1) - rootPart.Position) * 2
 			bv.Parent = rootPart
 		end
 
