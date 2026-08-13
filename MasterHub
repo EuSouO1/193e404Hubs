@@ -83,7 +83,7 @@ topBar.InputBegan:Connect(function(input)
 		dragging = true
 		dragStart = input.Position
 		startPos = mainFrame.Position
-		
+
 		input.Changed:Connect(function()
 			if input.UserInputState == Enum.UserInputState.End then
 				dragging = false
@@ -531,7 +531,8 @@ RunService.Heartbeat:Connect(function()
 			selectedRock.CanCollide = false
 			selectedRock.Anchored = true
 			selectedRock.Size = Vector3.new(0.1, 0.1, 0.1)
-			selectedRock.CFrame = torso.CFrame * CFrame.new(0, 0, -7.5)
+			-- Agora a pedra fica posicionada a 2 studs na sua frente
+			selectedRock.CFrame = torso.CFrame * CFrame.new(0, 0, -2) 
 		end
 
 		-- Processamento de Kill Player
