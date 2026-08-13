@@ -68,7 +68,7 @@ titleLabel.Size = UDim2.new(0, 200, 1, 0)
 titleLabel.Position = UDim2.new(0, 10, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Text = "Master Hub"
+titleLabel.Text = "Master Hub V2"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.TextSize = 16
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -532,7 +532,7 @@ RunService.Heartbeat:Connect(function()
 			selectedRock.Anchored = true
 			selectedRock.Size = Vector3.new(0.1, 0.1, 0.1)
 			-- Agora a pedra fica posicionada a 2 studs na sua frente
-			selectedRock.CFrame = torso.CFrame * CFrame.new(0, 0, -2) 
+			selectedRock.CFrame = torso.CFrame * CFrame.new(0, -0.1, -1.5) 
 		end
 
 		-- Processamento de Kill Player
@@ -544,7 +544,7 @@ RunService.Heartbeat:Connect(function()
 			local bv = rootPart:FindFirstChild("HubBodyVelocity") or Instance.new("BodyVelocity")
 			bv.Name = "HubBodyVelocity"
 			bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-			bv.Velocity = (tRoot.Position - (tRoot.CFrame.LookVector * 1) - rootPart.Position) * 2
+			bv.Velocity = (tRoot.Position - (tRoot.CFrame.LookVector * 5) - rootPart.Position) * 10
 			bv.Parent = rootPart
 		end
 
