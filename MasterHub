@@ -351,6 +351,7 @@ end)
 --// SISTEMA DE AUTO ROCK
 local selectedRock = nil
 local rockOriginalCFrame = nil
+local rockOriginalSize = nil
 local autoRockActive = false
 
 local rockDropdownFrame = Instance.new("Frame")
@@ -400,6 +401,7 @@ local function refreshRocks()
 			if part then
 				selectedRock = part
 				rockOriginalCFrame = part.CFrame
+				rockOriginalSize = part.Size
 				titleLabel.Text = "Rock Selecionada!"
 				task.delay(1, function() titleLabel.Text = "Master Hub" end)
 			else
@@ -423,6 +425,9 @@ createToggle(autoFarmPage, "Auto Rock", function(state)
 			selectedRock.Anchored = true
 			if rockOriginalCFrame then
 				selectedRock.CFrame = rockOriginalCFrame
+			end
+			if rockOriginalSize then
+				selectedRock.Size = rockOriginalSize
 			end
 		end
 	end
@@ -520,10 +525,14 @@ RunService.Heartbeat:Connect(function()
 		useToolRoutine("Pushups")
 	elseif activeFeature == "AutoPunch" then
 		useToolRoutine("Punch")
-	elseif activeFeature == "AutoRock" and selectedRock and rootPart then
-		selectedRock.CanCollide = false
-		selectedRock.Anchored = true
-		selectedRock.CFrame = rootPart.CFrame * CFrame.new(0, 0, -3)
+	elseif activeFeature == "AutoRock" and selectedRock then
+		local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or rootPart
+		if torso then
+			selectedRock.CanCollide = false
+			selectedRock.Anchored = true
+			selectedRock.Size = Vector3.new(0.1, 0.1, 0.1)
+			selectedRock.CFrame = torso.CFrame * CFrame.new(0, 0, -7.5)
+		end
 
 		-- Processamento de Kill Player
 	elseif activeFeature == "KillPlayer" and selectedTarget and rootPart then
