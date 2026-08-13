@@ -1,0 +1,546 @@
+--// Master Hub - Criado para Executores do Roblox
+--// Estilo e Funcionalidades completas (Com Draggable na barra superior)
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Remove hub anterior se já existir
+if playerGui:FindFirstChild("MasterHub") then
+	playerGui.MasterHub:Destroy()
+end
+
+--// Criação da UI principal no PlayerGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MasterHub"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 520, 0, 350)
+mainFrame.Position = UDim2.new(0.5, -260, 0.5, -175)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = mainFrame
+
+--// Barra Superior
+local topBar = Instance.new("Frame")
+topBar.Name = "TopBar"
+topBar.Size = UDim2.new(1, 0, 0, 35)
+topBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+topBar.BorderSizePixel = 0
+topBar.Parent = mainFrame
+
+local topCorner = Instance.new("UICorner")
+topCorner.CornerRadius = UDim.new(0, 8)
+topCorner.Parent = topBar
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(0, 200, 1, 0)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Text = "Master Hub"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 16
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = topBar
+
+--// Sistema de Arrastar (Draggable) pela Barra Superior
+local dragging = false
+local dragInput, dragStart, startPos
+
+topBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	if dragging and dragInput then
+		local delta = dragInput.Position - dragStart
+		mainFrame.Position = UDim2.new(
+			startPos.X.Scale, 
+			startPos.X.Offset + delta.X, 
+			startPos.Y.Scale, 
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- Botão Minimizar
+local minButton = Instance.new("TextButton")
+minButton.Size = UDim2.new(0, 30, 0, 30)
+minButton.Position = UDim2.new(1, -35, 0, 2)
+minButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+minButton.Font = Enum.Font.GothamBold
+minButton.Text = "-"
+minButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minButton.TextSize = 16
+minButton.Parent = topBar
+
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 6)
+minCorner.Parent = minButton
+
+--// Sistema de Abas (Menu Esquerdo)
+local tabContainer = Instance.new("ScrollingFrame")
+tabContainer.Size = UDim2.new(0, 130, 1, -35)
+tabContainer.Position = UDim2.new(0, 0, 0, 35)
+tabContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+tabContainer.BorderSizePixel = 0
+tabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+tabContainer.ScrollBarThickness = 2
+tabContainer.Parent = mainFrame
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tabLayout.Padding = UDim.new(0, 5)
+tabLayout.Parent = tabContainer
+
+--// Container de Páginas
+local pagesContainer = Instance.new("Frame")
+pagesContainer.Size = UDim2.new(1, -130, 1, -35)
+pagesContainer.Position = UDim2.new(0, 130, 0, 35)
+pagesContainer.BackgroundTransparency = 1
+pagesContainer.Parent = mainFrame
+
+local currentTab = nil
+local pages = {}
+
+local function createTab(name)
+	local tabBtn = Instance.new("TextButton")
+	tabBtn.Size = UDim2.new(1, -10, 0, 35)
+	tabBtn.Position = UDim2.new(0, 5, 0, 0)
+	tabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	tabBtn.Font = Enum.Font.GothamSemibold
+	tabBtn.Text = name
+	tabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+	tabBtn.TextSize = 14
+	tabBtn.Parent = tabContainer
+
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(0, 6)
+	btnCorner.Parent = tabBtn
+
+	local page = Instance.new("ScrollingFrame")
+	page.Size = UDim2.new(1, 0, 1, 0)
+	page.BackgroundTransparency = 1
+	page.Visible = false
+	page.CanvasSize = UDim2.new(0, 0, 0, 0)
+	page.ScrollBarThickness = 4
+	page.Parent = pagesContainer
+
+	local pageLayout = Instance.new("UIListLayout")
+	pageLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	pageLayout.Padding = UDim.new(0, 8)
+	pageLayout.Parent = page
+
+	local pagePadding = Instance.new("UIPadding")
+	pagePadding.PaddingTop = UDim.new(0, 10)
+	pagePadding.PaddingLeft = UDim.new(0, 10)
+	pagePadding.PaddingRight = UDim.new(0, 10)
+	pagePadding.Parent = page
+
+	pageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		page.CanvasSize = UDim2.new(0, 0, 0, pageLayout.AbsoluteContentSize.Y + 20)
+	end)
+
+	tabBtn.MouseButton1Click:Connect(function()
+		for _, p in pairs(pages) do
+			p.Visible = false
+		end
+		for _, b in pairs(tabContainer:GetChildren()) do
+			if b:IsA("TextButton") then
+				b.TextColor3 = Color3.fromRGB(180, 180, 180)
+				b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+			end
+		end
+		page.Visible = true
+		tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		tabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	end)
+
+	if not currentTab then
+		currentTab = page
+		page.Visible = true
+		tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		tabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	end
+
+	table.insert(pages, page)
+	return page
+end
+
+local autoFarmPage = createTab("Auto Farm")
+local killPage = createTab("Kill Hub")
+
+--// Minimização Suave
+local minimized = false
+minButton.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	local targetSize = minimized and UDim2.new(0, 520, 0, 35) or UDim2.new(0, 520, 0, 350)
+	local tween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize})
+	tween:Play()
+	tabContainer.Visible = not minimized
+	pagesContainer.Visible = not minimized
+	minButton.Text = minimized and "+" or "-"
+end)
+
+--// Variáveis de Controle de Estado Global (Apenas 1 ativo por vez)
+local activeFeature = nil
+
+local function stopAllFeatures()
+	activeFeature = nil
+end
+
+-- Função auxiliar para gerenciar Tools e Remotes
+local function useToolRoutine(toolName)
+	local character = player.Character
+	if not character then return end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local tool = character:FindFirstChild(toolName) or (backpack and backpack:FindFirstChild(toolName))
+
+	if tool then
+		if character:FindFirstChild(toolName) then
+			-- Já está equipada, verifica remote ou ativação
+			local remote = tool:FindFirstChildOfClass("RemoteEvent") or tool:FindFirstChildOfClass("RemoteFunction")
+			if remote then
+				if remote:IsA("RemoteEvent") then
+					remote:FireServer()
+				end
+			else
+				tool:Activate()
+			end
+		else
+			humanoid:EquipTool(tool)
+		end
+	end
+end
+
+--// Criação de Elementos UI (Toggle Genérico)
+local function createToggle(parent, title, callback)
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1, 0, 0, 40)
+	frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	frame.BorderSizePixel = 0
+	frame.Parent = parent
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 6)
+	corner.Parent = frame
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -60, 1, 0)
+	label.Position = UDim2.new(0, 10, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamMedium
+	label.Text = title
+	label.TextColor3 = Color3.fromRGB(220, 220, 220)
+	label.TextSize = 14
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = frame
+
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0, 40, 0, 22)
+	btn.Position = UDim2.new(1, -50, 0.5, -11)
+	btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	btn.Text = ""
+	btn.Parent = frame
+
+	local btnCorner = Instance.new("UICorner")
+	btnCorner.CornerRadius = UDim.new(1, 0)
+	btnCorner.Parent = btn
+
+	local circle = Instance.new("Frame")
+	circle.Size = UDim2.new(0, 18, 0, 18)
+	circle.Position = UDim2.new(0, 2, 0.5, -9)
+	circle.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+	circle.Parent = btn
+
+	local circleCorner = Instance.new("UICorner")
+	circleCorner.CornerRadius = UDim.new(1, 0)
+	circleCorner.Parent = circle
+
+	local toggled = false
+	btn.MouseButton1Click:Connect(function()
+		toggled = not toggled
+		local targetPos = toggled and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+		local targetColor = toggled and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(60, 60, 60)
+
+		TweenService:Create(circle, TweenInfo.new(0.2), {Position = targetPos}):Play()
+		TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+
+		callback(toggled)
+	end)
+end
+
+--// ABA AUTO FARM
+createToggle(autoFarmPage, "Auto Weight", function(state)
+	if state then
+		stopAllFeatures()
+		activeFeature = "AutoWeight"
+	else
+		if activeFeature == "AutoWeight" then activeFeature = nil end
+	end
+end)
+
+createToggle(autoFarmPage, "Auto Pushups", function(state)
+	if state then
+		stopAllFeatures()
+		activeFeature = "AutoPushups"
+	else
+		if activeFeature == "AutoPushups" then activeFeature = nil end
+	end
+end)
+
+createToggle(autoFarmPage, "Auto Punch", function(state)
+	if state then
+		stopAllFeatures()
+		activeFeature = "AutoPunch"
+	else
+		if activeFeature == "AutoPunch" then activeFeature = nil end
+	end
+end)
+
+--// SISTEMA DE AUTO ROCK
+local selectedRock = nil
+local rockOriginalCFrame = nil
+local autoRockActive = false
+
+local rockDropdownFrame = Instance.new("Frame")
+rockDropdownFrame.Size = UDim2.new(1, 0, 0, 100)
+rockDropdownFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+rockDropdownFrame.BorderSizePixel = 0
+rockDropdownFrame.Parent = autoFarmPage
+
+local rockCorner = Instance.new("UICorner")
+rockCorner.CornerRadius = UDim.new(0, 6)
+rockCorner.Parent = rockDropdownFrame
+
+local rockScroll = Instance.new("ScrollingFrame")
+rockScroll.Size = UDim2.new(1, -10, 1, -10)
+rockScroll.Position = UDim2.new(0, 5, 0, 5)
+rockScroll.BackgroundTransparency = 1
+rockScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+rockScroll.ScrollBarThickness = 4
+rockScroll.Parent = rockDropdownFrame
+
+local rockLayout = Instance.new("UIListLayout")
+rockLayout.SortOrder = Enum.SortOrder.LayoutOrder
+rockLayout.Padding = UDim.new(0, 4)
+rockLayout.Parent = rockScroll
+
+rockLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	rockScroll.CanvasSize = UDim2.new(0, 0, 0, rockLayout.AbsoluteContentSize.Y)
+end)
+
+local function refreshRocks()
+	for _, child in pairs(rockScroll:GetChildren()) do
+		if child:IsA("TextButton") then child:Destroy() end
+	end
+	for _, obj in pairs(Workspace:GetDescendants()) do
+		if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "rock") then
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(1, 0, 0, 25)
+			btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+			btn.Font = Enum.Font.Gotham
+			btn.Text = obj.Name .. " (" .. obj.Parent.Name .. ")"
+			btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+			btn.TextSize = 12
+			btn.Parent = rockScroll
+
+			btn.MouseButton1Click:Connect(function()
+				selectedRock = obj
+				rockOriginalCFrame = obj.CFrame
+				titleLabel.Text = "Rock Selecionada!"
+				task.delay(1, function() titleLabel.Text = "Master Hub" end)
+			end)
+		end
+	end
+end
+
+refreshRocks()
+
+createToggle(autoFarmPage, "Auto Rock", function(state)
+	if state then
+		stopAllFeatures()
+		activeFeature = "AutoRock"
+	else
+		if activeFeature == "AutoRock" then activeFeature = nil end
+		if selectedRock and selectedRock.Parent then
+			selectedRock.CanCollide = true
+			selectedRock.Anchored = true
+			if rockOriginalCFrame then
+				selectedRock.CFrame = rockOriginalCFrame
+			end
+		end
+	end
+end)
+
+
+--// ABA KILL HUB
+local selectedTarget = nil
+
+local targetDropdownFrame = Instance.new("Frame")
+targetDropdownFrame.Size = UDim2.new(1, 0, 0, 100)
+targetDropdownFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+targetDropdownFrame.BorderSizePixel = 0
+targetDropdownFrame.Parent = killPage
+
+local targetCorner = Instance.new("UICorner")
+targetCorner.CornerRadius = UDim.new(0, 6)
+targetCorner.Parent = targetDropdownFrame
+
+local targetScroll = Instance.new("ScrollingFrame")
+targetScroll.Size = UDim2.new(1, -10, 1, -10)
+targetScroll.Position = UDim2.new(0, 5, 0, 5)
+targetScroll.BackgroundTransparency = 1
+targetScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+targetScroll.ScrollBarThickness = 4
+targetScroll.Parent = targetDropdownFrame
+
+local targetLayout = Instance.new("UIListLayout")
+targetLayout.SortOrder = Enum.SortOrder.LayoutOrder
+targetLayout.Padding = UDim.new(0, 4)
+targetLayout.Parent = targetScroll
+
+targetLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	targetScroll.CanvasSize = UDim2.new(0, 0, 0, targetLayout.AbsoluteContentSize.Y)
+end)
+
+local function refreshTargets()
+	for _, child in pairs(targetScroll:GetChildren()) do
+		if child:IsA("TextButton") then child:Destroy() end
+	end
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= player then
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(1, 0, 0, 25)
+			btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+			btn.Font = Enum.Font.Gotham
+			btn.Text = p.Name
+			btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+			btn.TextSize = 12
+			btn.Parent = targetScroll
+
+			btn.MouseButton1Click:Connect(function()
+				selectedTarget = p
+				titleLabel.Text = "Alvo: " .. p.Name
+				task.delay(1, function() titleLabel.Text = "Master Hub" end)
+			end)
+		end
+	end
+end
+
+refreshTargets()
+Players.PlayerAdded:Connect(refreshTargets)
+Players.PlayerRemoving:Connect(refreshTargets)
+
+createToggle(killPage, "Kill Player (Alvo)", function(state)
+	if state then
+		stopAllFeatures()
+		activeFeature = "KillPlayer"
+	else
+		if activeFeature == "KillPlayer" then activeFeature = nil end
+	end
+end)
+
+createToggle(killPage, "Kill All", function(state)
+	if state then
+		stopAllFeatures()
+		activeFeature = "KillAll"
+	else
+		if activeFeature == "KillAll" then activeFeature = nil end
+	end
+end)
+
+
+--// LOOP PRINCIPAL DE EXECUÇÃO (Heartbeat)
+RunService.Heartbeat:Connect(function()
+	local char = player.Character
+	if not char then return end
+	local rootPart = char:FindFirstChild("HumanoidRootPart")
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+	-- Processamento de Auto Farm
+	if activeFeature == "AutoWeight" then
+		useToolRoutine("Weight")
+	elseif activeFeature == "AutoPushups" then
+		useToolRoutine("Pushups")
+	elseif activeFeature == "AutoPunch" then
+		useToolRoutine("Punch")
+	elseif activeFeature == "AutoRock" and selectedRock and rootPart then
+		selectedRock.CanCollide = false
+		selectedRock.Anchored = true
+		selectedRock.CFrame = rootPart.CFrame
+
+		-- Processamento de Kill Player
+	elseif activeFeature == "KillPlayer" and selectedTarget and rootPart then
+		useToolRoutine("Punch")
+		local targetChar = selectedTarget.Character
+		if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+			local tRoot = targetChar.HumanoidRootPart
+			local bv = rootPart:FindFirstChild("HubBodyVelocity") or Instance.new("BodyVelocity")
+			bv.Name = "HubBodyVelocity"
+			bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+			bv.Velocity = (tRoot.Position - (tRoot.CFrame.LookVector * 5) - rootPart.Position) * 10
+			bv.Parent = rootPart
+		end
+
+		-- Processamento de Kill All
+	elseif activeFeature == "KillAll" and rootPart then
+		useToolRoutine("Punch")
+		local targetP = nil
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= player and p.Character and p.Character:FindFirstChildOfClass("Humanoid") then
+				if p.Character.Humanoid.Health > 0 then
+					targetP = p
+					break
+				end
+			end
+		end
+		if targetP and targetP.Character and targetP.Character:FindFirstChild("HumanoidRootPart") then
+			local tRoot = targetP.Character.HumanoidRootPart
+			local bv = rootPart:FindFirstChild("HubBodyVelocity") or Instance.new("BodyVelocity")
+			bv.Name = "HubBodyVelocity"
+			bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+			bv.Velocity = (tRoot.Position - (tRoot.CFrame.LookVector * 5) - rootPart.Position) * 10
+			bv.Parent = rootPart
+		end
+	else
+		-- Remove BodyVelocity caso nenhuma função de kill esteja ativa
+		if rootPart and rootPart:FindFirstChild("HubBodyVelocity") then
+			rootPart.HubBodyVelocity:Destroy()
+		end
+	end
+end)
