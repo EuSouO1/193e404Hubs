@@ -530,9 +530,9 @@ RunService.Heartbeat:Connect(function()
 		if torso then
 			selectedRock.CanCollide = false
 			selectedRock.Anchored = true
-			selectedRock.Size = Vector3.new(0.1, 0.1, 0.1)
+			selectedRock.Size = Vector3.new(0.3, 0.3, 0.3)
 			-- Agora a pedra fica posicionada a 2 studs na sua frente
-			selectedRock.CFrame = torso.CFrame * CFrame.new(0, -0.2, -2.25) 
+			selectedRock.CFrame = torso.CFrame * CFrame.new(0, -0.25, -2.5) 
 		end
 
 		-- Processamento de Kill Player
